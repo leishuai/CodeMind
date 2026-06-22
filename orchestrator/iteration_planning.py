@@ -46,6 +46,8 @@ def build_exploration_context(task_dir: Path, limit: int = 8) -> dict[str, Any]:
             "progressKinds": _safe_list(item.get("progressKinds")),
             "ruledOut": _safe_list(item.get("ruledOut")),
             "remainingHypotheses": _safe_list(item.get("remainingHypotheses")),
+            "nextSelectorCandidates": _safe_list(item.get("nextSelectorCandidates")),
+            "narrowingRounds": int(item.get("narrowingRounds") or 0),
             "latestOutcome": str(item.get("latestOutcome") or ""),
             "latestHypothesis": str(latest_attempt.get("hypothesis") or ""),
             "latestExpectedSignal": str(latest_attempt.get("expectedSignal") or ""),
@@ -128,13 +130,20 @@ def render_iteration_purpose_md(purpose: dict[str, Any]) -> str:
         if not isinstance(item, dict):
             continue
         lines.extend([
-            f"- `{item.get('testCaseId')}` attempts={item.get('attemptCount', 0)} kinds={', '.join(item.get('progressKinds') or []) or '-'}",
+            f"- `{item.get('testCaseId')}` attempts={item.get('attemptCount', 0)} narrowingRounds={item.get('narrowingRounds', 0)} kinds={', '.join(item.get('progressKinds') or []) or '-'}",
             f"  - latest hypothesis: {item.get('latestHypothesis') or '-'}",
             f"  - latest expected signal: {item.get('latestExpectedSignal') or '-'}",
             f"  - latest outcome: {item.get('latestOutcome') or '-'}",
             f"  - ruled out: {', '.join(item.get('ruledOut') or []) or '-'}",
             f"  - remaining hypotheses: {', '.join(item.get('remainingHypotheses') or []) or '-'}",
+            f"  - next selector candidates: {', '.join(item.get('nextSelectorCandidates') or []) or '-'}",
         ])
+        if int(item.get("attemptCount") or 0) >= 2 and int(item.get("narrowingRounds") or 0) == 0:
+            lines.append(
+                "  - WARNING: repeated attempts but nothing ruled out and no new candidate proposed. "
+                "This is an invalid retry pattern — narrow the search space (record ruledOut / "
+                "remainingHypotheses / nextSelectorCandidates from observed evidence) or change the approach."
+            )
     return "\n".join(lines).rstrip() + "\n"
 
 

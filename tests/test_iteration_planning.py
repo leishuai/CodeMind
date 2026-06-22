@@ -70,3 +70,49 @@ def test_build_exploration_context_is_advisory_not_guard(tmp_path: Path) -> None
     context = build_exploration_context(task)
     assert context["rule"].endswith("not a hard guard.")
     assert context["items"] == []
+
+
+def test_iteration_purpose_md_warns_on_no_narrowing_invalid_retry(tmp_path: Path) -> None:
+    """P0-B: repeated attempts that never ruled anything out or proposed a new
+    candidate must render an explicit invalid-retry WARNING in the purpose md."""
+    task = tmp_path / "task01"
+    _base_task(task)
+    # Two failing rounds, both pure summaries -> narrowingRounds stays 0.
+    record_tc_attempts(task, {"iteration": 1, "testResults": [{"testCaseId": "TC-F04", "result": "fail", "summary": "no pause control found"}]})
+    record_tc_attempts(task, {"iteration": 2, "testResults": [{"testCaseId": "TC-F04", "result": "fail", "summary": "still no pause control"}]})
+    iter_dir = task / "logs" / "iter-3"
+
+    purpose = write_iteration_purpose(task, 3, "generator", iter_dir)
+
+    item = purpose["explorationContext"]["items"][0]
+    assert item["narrowingRounds"] == 0
+    assert item["attemptCount"] >= 2
+    md = (iter_dir / "iteration-purpose.md").read_text()
+    assert "WARNING" in md
+    assert "invalid retry pattern" in md
+
+
+def test_iteration_purpose_md_no_warning_when_narrowing(tmp_path: Path) -> None:
+    """P0-B: when attempts ruled paths out / proposed candidates, no invalid-retry
+    WARNING should appear."""
+    task = tmp_path / "task01"
+    _base_task(task)
+    record_tc_attempts(task, {"iteration": 1, "testResults": [{
+        "testCaseId": "TC-F04",
+        "result": "partial",
+        "ruledOut": ["catalog tab play button"],
+        "remainingHypotheses": ["detail page play button"],
+    }]})
+    record_tc_attempts(task, {"iteration": 2, "testResults": [{
+        "testCaseId": "TC-F04",
+        "result": "partial",
+        "nextSelectorCandidates": ["identifier == 'player_pause'"],
+    }]})
+    iter_dir = task / "logs" / "iter-3"
+
+    purpose = write_iteration_purpose(task, 3, "generator", iter_dir)
+
+    item = purpose["explorationContext"]["items"][0]
+    assert item["narrowingRounds"] >= 1
+    md = (iter_dir / "iteration-purpose.md").read_text()
+    assert "WARNING" not in md

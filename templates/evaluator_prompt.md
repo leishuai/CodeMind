@@ -70,7 +70,7 @@ Session handoff / resume hygiene:
 Iteration purpose / exploration convergence:
 - Treat `iteration-purpose.md` as this round's verification objective. Prefer TC-level proof or narrowed hypotheses over broad rediscovery.
 - Use `tc-attempts.json` / context-pack exploration notes to avoid re-testing already ruled-out paths unless new evidence changes the exclusion. This is advisory; do not implement a hard repeat guard.
-- For each failed route/control/proof attempt, update `testResults[].uiExploration` or equivalent fields with `hypothesis`, `actionTried`, `expectedSignal`, `outcome`, `ruledOut`, and `remainingHypotheses`, so later rounds become more focused.
+- For each failed route/control/proof attempt, you MUST update `testResults[].uiExploration` with `hypothesis`, `actionTried`, `expectedSignal`, `outcome`, `ruledOut`, `remainingHypotheses`, and (for UI/selector paths) `nextSelectorCandidates` derived from the observed UI hierarchy, so later rounds become more focused. This is not optional when `result` is `fail`/`partial`/`blocked` on a runtime/UI path: a failed round that ruled nothing out and proposed no new candidate is an invalid retry — the loop cannot narrow without it. These fields feed `tc-attempts.json`, which the Generator reads to avoid repeating ruled-out paths.
 - For each failed/partial/blocked runtime path, also write compact path classification fields directly on the relevant `evaluation.json.testResults[]` or `failedChecks[]` row: `runtimePath`, `failureClass`, `observedSignals`, optional `shouldRetry`, and `retryAdvice`. Use the generic taxonomy from `docs/phase3-verification.md` (`unknown`, `entry_invalid`, `entered_but_no_actionable_state`, `action_target_not_found`, `wrong_surface_or_target`, `action_failed`, `automation_timeout`, `signal_missing`, `proof_mismatch`, `environment_blocked`, `authorization_blocked`, `diagnostic_needed`). Prefer `unknown` over inventing project-specific classes when evidence is ambiguous, and narrow it on the next run.
 
 Temporary target-project logs: if existing evidence is insufficient and you need to add logs inside the iOS/Android/Web/Server project to prove a testcase, prefix every temporary verification log with `[AutoMind][Verify]`. Keep logs minimal and non-secret; record the changed files and evidence path, and remove or explicitly promote the logs before finish.
@@ -366,6 +366,15 @@ JSON schema convention:
       "observedSignals": {"optional": "machine-observed signal counts/values"},
       "shouldRetry": false,
       "retryAdvice": "optional: what must change before repeating this path",
+      "uiExploration": {
+        "hypothesis": "for failed/partial/blocked runtime/UI paths: the concrete hypothesis tested this round (e.g. 'pause control lives on the now-playing bar')",
+        "actionTried": "the concrete action/selector tried this round",
+        "expectedSignal": "the signal that would have proved the hypothesis",
+        "outcome": "what actually happened",
+        "ruledOut": ["paths/selectors/hypotheses now disproven by this round's evidence"],
+        "remainingHypotheses": ["not-yet-tried hypotheses to try next, most-likely first"],
+        "nextSelectorCandidates": ["concrete next selectors/identifiers to try, derived from the observed UI hierarchy"]
+      },
       "reason": "short explanation when not pass"
     }
   ],

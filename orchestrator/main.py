@@ -2335,8 +2335,19 @@ def apply_tc_reflection_budget(task_dir: Path, evaluation: dict, iteration: int)
     if evaluation.get("nextAction") not in {"retry_generator", "replan"}:
         return evaluation
 
+    _budget_ledger = read_tc_attempts(task_dir)
+    _budget_progress_by_tc = _budget_ledger.get("progressByTc") if isinstance(_budget_ledger.get("progressByTc"), dict) else {}
     replan_attempts = int(state.get("autonomousReplanAttempts") or 0)
     replan_last_iter = int(state.get("autonomousReplanLastIteration", -1) or -1)
+    # Detect the "invalid retry" pattern: repeated failures on an exhausted TC
+    # that never narrowed the search space (nothing ruled out, no new candidate).
+    # This is the loop spinning in place, and the replan prompt must demand
+    # structured narrowing rather than another identical attempt.
+    no_narrowing = sorted(
+        tc_id
+        for tc_id in exhausted
+        if int((_budget_progress_by_tc.get(tc_id) or {}).get("narrowingRounds") or 0) == 0
+    )
     if replan_attempts < AUTONOMOUS_REPLAN_AFTER_BUDGET:
         # Try an autonomous replan before interrupting the human. Guard the
         # increment so multiple budget calls within one iteration count once.
@@ -2354,8 +2365,14 @@ def apply_tc_reflection_budget(task_dir: Path, evaluation: dict, iteration: int)
                 f"Same failure signature repeated for {', '.join(exhausted)} "
                 f"(budget max={MAX_REFLECTIONS_PER_TC}); attempting autonomous replan "
                 f"{replan_attempts}/{AUTONOMOUS_REPLAN_AFTER_BUDGET} before asking the user."
+                + (
+                    f" No-narrowing detected for {', '.join(no_narrowing)}: prior failing "
+                    "attempts ruled nothing out and proposed no new candidate (invalid retry)."
+                    if no_narrowing else ""
+                )
             ),
             "testCaseIds": exhausted,
+            **({"noNarrowingTestCaseIds": no_narrowing} if no_narrowing else {}),
         })
         evaluation["nextAction"] = "replan"
         evaluation["nextActionPrompt"] = (
@@ -2367,6 +2384,16 @@ def apply_tc_reflection_budget(task_dir: Path, evaluation: dict, iteration: int)
             "is exhausted, choose a materially different approach (different command, "
             "build target, verifier, or assumption) and record why in the owning artifact. "
             "Only escalate to ask_user for genuinely sensitive/blocked steps."
+            + (
+                " CRITICAL: the last attempts narrowed nothing (no ruledOut, no new "
+                "selector/hypothesis candidate). This is the invalid-retry pattern that "
+                "made the loop spin in place. Before the next attempt you MUST extract "
+                "concrete next candidates from the latest observed evidence (UI hierarchy "
+                "dump, logs, screenshots) and record them in testResults[].uiExploration "
+                "(ruledOut + remainingHypotheses + nextSelectorCandidates). An attempt that "
+                "cannot name what it ruled out or what it will try differently is not allowed."
+                if no_narrowing else ""
+            )
         )
         evaluation["summary"] = (
             "Autonomous replan after repeated same-signature failure: "

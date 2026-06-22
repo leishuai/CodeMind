@@ -31,6 +31,140 @@ except ModuleNotFoundError:
 SUPPORTED_ACTIONS = {"tap", "tap_if_present", "input", "scroll", "assert_exists", "assert_text", "wait"}
 SELECTOR_ACTIONS = {"tap", "tap_if_present", "input", "assert_exists", "assert_text"}
 
+# Interactive XCUIElement types worth surfacing as selector candidates when
+# parsing a prior round's UI hierarchy dump. Static/decoration types are kept
+# too (they carry the labels a predicate often matches on) but ranked lower.
+_INTERACTIVE_TYPES = {"Button", "Cell", "Link", "MenuItem", "SegmentedControl", "Switch", "Slider", "TabBar"}
+_LABELLED_TYPES = _INTERACTIVE_TYPES | {"StaticText", "Image", "Other"}
+_HIERARCHY_TYPE_RE = re.compile(r"^\s*([A-Za-z][A-Za-z0-9]*)\b")
+_HIERARCHY_LABEL_RE = re.compile(r"label:\s*'([^']*)'")
+_HIERARCHY_IDENTIFIER_RE = re.compile(r"identifier:\s*'([^']*)'")
+
+
+def parse_ui_hierarchy(text: str) -> list[dict[str, str]]:
+    """Extract observed controls from an XCUITest debug-description dump.
+
+    Lines look like ``Button, 0x..., {{x,y},{w,h}}, label: '暂停', identifier: 'id'``.
+    Returns de-duplicated control descriptors with type/label/identifier so the
+    next probe-flow round can narrow selectors from real on-screen controls
+    instead of retrying a blind predicate.
+    """
+    controls: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for raw in text.splitlines():
+        type_match = _HIERARCHY_TYPE_RE.match(raw)
+        if not type_match:
+            continue
+        el_type = type_match.group(1)
+        if el_type not in _LABELLED_TYPES:
+            continue
+        label_match = _HIERARCHY_LABEL_RE.search(raw)
+        id_match = _HIERARCHY_IDENTIFIER_RE.search(raw)
+        label = (label_match.group(1) if label_match else "").strip()
+        identifier = (id_match.group(1) if id_match else "").strip()
+        if not label and not identifier:
+            continue
+        key = (el_type, label, identifier)
+        if key in seen:
+            continue
+        seen.add(key)
+        controls.append({"type": el_type, "label": label, "identifier": identifier})
+    return controls
+
+
+def collect_source_ui_map(task_dir: pathlib.Path, iteration: int, limit: int = 60) -> dict[str, Any]:
+    """Scan recent iteration logs for UI hierarchy dumps and build a control map.
+
+    Looks at the current and prior iterations (most recent first) for any text
+    artifact whose name suggests a UI hierarchy / accessibility / debug
+    description dump, parses observed controls, and ranks interactive ones first.
+    Best-effort: returns an empty map when no dump is available.
+    """
+    logs_dir = task_dir / "logs"
+    if not logs_dir.is_dir():
+        return {}
+    iter_dirs: list[tuple[int, pathlib.Path]] = []
+    for child in logs_dir.iterdir():
+        if not child.is_dir() or not child.name.startswith("iter-"):
+            continue
+        try:
+            num = int(child.name.split("iter-", 1)[1])
+        except ValueError:
+            continue
+        if num <= iteration:
+            iter_dirs.append((num, child))
+    iter_dirs.sort(key=lambda x: -x[0])
+
+    controls: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str]] = set()
+    source_files: list[str] = []
+    for _num, idir in iter_dirs:
+        for path in sorted(idir.rglob("*.txt")):
+            lower = path.name.lower()
+            if not any(token in lower for token in ("hierarchy", "accessibility", "debug description", "debug-description", "snapshot")):
+                # Also accept exported xcresult attachment txts whose human name
+                # was hierarchy/debug-description (they keep uuid filenames), by
+                # sniffing the first lines cheaply.
+                try:
+                    head = path.read_text(errors="ignore")[:400]
+                except OSError:
+                    continue
+                if "label:" not in head and "Application," not in head and "Window" not in head:
+                    continue
+            try:
+                text = path.read_text(errors="ignore")
+            except OSError:
+                continue
+            parsed = parse_ui_hierarchy(text)
+            if not parsed:
+                continue
+            try:
+                source_files.append(str(path.relative_to(task_dir)))
+            except ValueError:
+                source_files.append(str(path))
+            for control in parsed:
+                key = (control["type"], control["label"], control["identifier"])
+                if key in seen:
+                    continue
+                seen.add(key)
+                controls.append(control)
+        if controls:
+            # First iteration that yields controls is the freshest signal; stop.
+            break
+    if not controls:
+        return {}
+    controls.sort(key=lambda c: (0 if c["type"] in _INTERACTIVE_TYPES else 1, c["type"]))
+    return {
+        "schema": "automind.source_ui_map.v1",
+        "sourceFiles": source_files,
+        "controlCount": len(controls),
+        "controls": controls[:limit],
+    }
+
+
+def derived_selector_candidates(ui_map: dict[str, Any], limit: int = 12) -> list[str]:
+    """Turn observed controls into concrete XCUITest predicate candidates.
+
+    Interactive controls with an identifier/label become precise predicates the
+    next round can try; this is the hierarchy-derived narrowing that replaces a
+    blind label-substring retry.
+    """
+    candidates: list[str] = []
+    for control in ui_map.get("controls") or []:
+        if not isinstance(control, dict):
+            continue
+        identifier = str(control.get("identifier") or "").strip()
+        label = str(control.get("label") or "").strip()
+        if identifier:
+            cand = f"identifier == '{identifier}'"
+        elif label:
+            cand = f"label == '{label}'"
+        else:
+            continue
+        if cand not in candidates:
+            candidates.append(cand)
+    return candidates[:limit]
+
 
 def q(value: Any) -> str:
     return str(value).replace("\\", "\\\\").replace('"', '\\"')
@@ -208,18 +342,24 @@ def swift_for_step(step: dict[str, Any], idx: int) -> list[str]:
     return lines + ["        // unsupported step skipped by generator"]
 
 
-def generate_swift(flow: dict[str, Any], app_config: dict[str, Any], intent: dict[str, Any]) -> str:
+def generate_swift(flow: dict[str, Any], app_config: dict[str, Any], intent: dict[str, Any], derived_candidates: list[str] | None = None) -> str:
     test_name = swift_identifier(str(flow.get("name") or intent.get("goal") or "ProbeFlow"))
     target_bundle = q(app_config.get("targetBundleId") or app_config.get("target_bundle_id") or flow.get("targetBundleId") or "")
     # If target app bundle is absent, use runner app launch. External runner flows should set targetBundleId, e.g. com.example.app.
     launch_line = f'        let app = XCUIApplication(bundleIdentifier: "{target_bundle}")' if target_bundle else "        let app = XCUIApplication()"
-    lines = [
+    header = [
         "import XCTest",
         "",
         "// Auto-generated by AutoMind ios_probe_flow_materialize.py",
         "// Review before copying into an external runner or target app project.",
         f"// Goal: {q(intent.get('goal') or '')}",
         f"// Sources: {q(', '.join(intent.get('sources') or []))}",
+    ]
+    if derived_candidates:
+        header.append("// Hierarchy-derived selector candidates from the prior round (use these to narrow a failing selector):")
+        for cand in derived_candidates:
+            header.append(f"//   - {q(cand)}")
+    lines = header + [
         "",
         "final class AutoMindProbeFlowGeneratedTests: XCTestCase {",
         "    func attachScreenshot(_ name: String) {",
@@ -282,7 +422,17 @@ def main() -> int:
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 2
 
-    swift = generate_swift(flow, app_config, intent)
+    # P1-A: feed the prior round's observed UI hierarchy back into this round so
+    # a failing blind selector can be narrowed from real on-screen controls.
+    ui_map = collect_source_ui_map(task_dir, int(args.iteration))
+    derived_candidates = derived_selector_candidates(ui_map) if ui_map else []
+    if ui_map:
+        write_json(iter_dir / "source-ui-map.json", {
+            **ui_map,
+            "derivedSelectorCandidates": derived_candidates,
+        })
+
+    swift = generate_swift(flow, app_config, intent, derived_candidates)
     swift_path = iter_dir / "GeneratedProbeFlowIntentTests.swift"
     swift_path.write_text(swift)
     result = {
@@ -294,6 +444,10 @@ def main() -> int:
         "screenshotAttachments": True,
         "generatedAt": datetime.now().isoformat(timespec="seconds"),
     }
+    if ui_map:
+        result["sourceUiMap"] = f"logs/iter-{args.iteration}/source-ui-map.json"
+        result["derivedSelectorCandidates"] = derived_candidates
+        result["observedControlCount"] = ui_map.get("controlCount", 0)
     write_json(iter_dir / "ios-probe-flow-materialize-summary.json", result)
     (iter_dir / "commands-materialize.md").write_text(
         "# Commands\n\n```bash\n"

@@ -27,24 +27,46 @@ def _string_list(value: Any) -> list[str]:
     return [str(x).strip() for x in value if str(x).strip()]
 
 
+def _lookup_sources(row: dict[str, Any]) -> list[dict[str, Any]]:
+    """Ordered fallback sources for convergence fields.
+
+    The evaluator prompt instructs the model to write hypothesis/ruledOut/
+    remainingHypotheses either flat on the testResult row or nested under
+    ``uiExploration`` (and its latest ``attempts[]`` entry). Read all of these so
+    convergence context is not silently dropped depending on where the model put
+    it.
+    """
+    sources: list[dict[str, Any]] = [row]
+    attempt = row.get("attempt")
+    if isinstance(attempt, dict):
+        sources.append(attempt)
+    ui = row.get("uiExploration")
+    if isinstance(ui, dict):
+        sources.append(ui)
+        attempts = ui.get("attempts")
+        if isinstance(attempts, list):
+            for entry in reversed(attempts):
+                if isinstance(entry, dict):
+                    sources.append(entry)
+                    break
+    return sources
+
+
 def _string_value(row: dict[str, Any], *keys: str) -> str:
-    for key in keys:
-        value = row.get(key)
-        if value is None and isinstance(row.get("attempt"), dict):
-            value = row["attempt"].get(key)
-        if value is not None and str(value).strip():
-            return str(value).strip()
+    for source in _lookup_sources(row):
+        for key in keys:
+            value = source.get(key)
+            if value is not None and str(value).strip():
+                return str(value).strip()
     return ""
 
 
 def _list_value(row: dict[str, Any], *keys: str) -> list[str]:
-    for key in keys:
-        value = row.get(key)
-        if value is None and isinstance(row.get("attempt"), dict):
-            value = row["attempt"].get(key)
-        items = _string_list(value)
-        if items:
-            return items
+    for source in _lookup_sources(row):
+        for key in keys:
+            items = _string_list(source.get(key))
+            if items:
+                return items
     return []
 
 
@@ -75,6 +97,7 @@ def _attempt_from_result(row: dict[str, Any], iteration: int, source: str) -> di
         "missingSignals": missing,
         "ruledOut": _list_value(row, "ruledOut", "ruledOutHypotheses"),
         "remainingHypotheses": _list_value(row, "remainingHypotheses"),
+        "nextSelectorCandidates": _list_value(row, "nextSelectorCandidates", "selectorCandidates"),
     }
 
 
@@ -114,24 +137,42 @@ def record_tc_attempts(task_dir: Path, evaluation: dict[str, Any], source: str =
         latest[tc_id] = rows[-1]
         ruled_out: list[str] = []
         remaining: list[str] = []
+        selector_candidates: list[str] = []
         progress_kinds: list[str] = []
+        narrowing_rounds = 0
         for item in rows:
             if not isinstance(item, dict):
                 continue
+            item_narrowed = False
             for value in item.get("ruledOut") or []:
                 if value and value not in ruled_out:
                     ruled_out.append(value)
+                    item_narrowed = True
             for value in item.get("remainingHypotheses") or []:
                 if value and value not in remaining:
                     remaining.append(value)
+                    item_narrowed = True
+            for value in item.get("nextSelectorCandidates") or []:
+                if value and value not in selector_candidates:
+                    selector_candidates.append(value)
+                    item_narrowed = True
+            if item_narrowed:
+                narrowing_rounds += 1
             kind = str(item.get("progressKind") or "").strip()
             if kind and kind not in progress_kinds:
                 progress_kinds.append(kind)
+        attempt_count = len([x for x in rows if isinstance(x, dict)])
         progress_by_tc[tc_id] = {
-            "attemptCount": len([x for x in rows if isinstance(x, dict)]),
+            "attemptCount": attempt_count,
             "progressKinds": progress_kinds,
             "ruledOut": ruled_out,
             "remainingHypotheses": remaining,
+            "nextSelectorCandidates": selector_candidates,
+            # How many attempts actually narrowed the search space. When this
+            # stays at 0 across repeated failing attempts, the loop is retrying
+            # without convergence (an "invalid retry" pattern the budget guard
+            # surfaces as a no-narrowing warning).
+            "narrowingRounds": narrowing_rounds,
             "latestOutcome": str(rows[-1].get("outcome") or rows[-1].get("summary") or "") if isinstance(rows[-1], dict) else "",
         }
     ledger = {

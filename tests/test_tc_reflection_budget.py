@@ -96,6 +96,74 @@ def test_tc_reflection_budget_tries_autonomous_replan_before_ask_user(tmp_path: 
     assert four["askUserQuestion"]["category"] == "repeated_same_failure"
 
 
+def test_tc_reflection_budget_flags_no_narrowing_invalid_retry(tmp_path: Path, monkeypatch) -> None:
+    """P0-B: when an exhausted TC keeps failing with narrowingRounds==0 (nothing
+    ruled out, no new candidate) the autonomous replan must mark it as an
+    invalid-retry pattern and demand structured narrowing in the prompt."""
+    import json
+
+    main = _load_main()
+    monkeypatch.setattr(main, "MAX_REFLECTIONS_PER_TC", 2)
+    monkeypatch.setattr(main, "AUTONOMOUS_REPLAN_AFTER_BUDGET", 2)
+    task_dir = tmp_path / "task"
+    task_dir.mkdir()
+    # Ledger shows TC-F02 retried but never narrowed the search space.
+    (task_dir / "tc-attempts.json").write_text(json.dumps({
+        "schema": "automind.tc_attempts.v1",
+        "progressByTc": {"TC-F02": {"attemptCount": 2, "narrowingRounds": 0}},
+    }))
+    evaluation = {
+        "iteration": 1,
+        "result": "fail",
+        "summary": "TC keeps failing",
+        "failedChecks": [{"name": "case", "category": "build_failure", "reason": "TC-F02 libtool failed"}],
+        "nextAction": "retry_generator",
+    }
+
+    main.apply_tc_reflection_budget(task_dir, dict(evaluation, iteration=1), 1)
+    two = main.apply_tc_reflection_budget(task_dir, dict(evaluation, iteration=2), 2)
+
+    assert two["nextAction"] == "replan"
+    replan_check = next(c for c in two["failedChecks"] if c.get("name") == "tc_reflection_budget_autonomous_replan")
+    assert replan_check["noNarrowingTestCaseIds"] == ["TC-F02"]
+    assert "invalid retry" in replan_check["reason"].lower()
+    assert "CRITICAL" in two["nextActionPrompt"]
+    assert "nextSelectorCandidates" in two["nextActionPrompt"]
+
+
+def test_tc_reflection_budget_does_not_flag_when_narrowing_progressed(tmp_path: Path, monkeypatch) -> None:
+    """P0-B: a TC that ruled paths out / proposed candidates (narrowingRounds>=1)
+    is making real progress, so it must NOT be flagged as an invalid retry even
+    when the per-signature budget is exhausted."""
+    import json
+
+    main = _load_main()
+    monkeypatch.setattr(main, "MAX_REFLECTIONS_PER_TC", 2)
+    monkeypatch.setattr(main, "AUTONOMOUS_REPLAN_AFTER_BUDGET", 2)
+    task_dir = tmp_path / "task"
+    task_dir.mkdir()
+    (task_dir / "tc-attempts.json").write_text(json.dumps({
+        "schema": "automind.tc_attempts.v1",
+        "progressByTc": {"TC-F02": {"attemptCount": 2, "narrowingRounds": 2}},
+    }))
+    evaluation = {
+        "iteration": 1,
+        "result": "fail",
+        "summary": "TC keeps failing",
+        "failedChecks": [{"name": "case", "category": "build_failure", "reason": "TC-F02 libtool failed"}],
+        "nextAction": "retry_generator",
+    }
+
+    main.apply_tc_reflection_budget(task_dir, dict(evaluation, iteration=1), 1)
+    two = main.apply_tc_reflection_budget(task_dir, dict(evaluation, iteration=2), 2)
+
+    assert two["nextAction"] == "replan"
+    replan_check = next(c for c in two["failedChecks"] if c.get("name") == "tc_reflection_budget_autonomous_replan")
+    assert "noNarrowingTestCaseIds" not in replan_check
+    assert "invalid retry" not in replan_check["reason"].lower()
+    assert "CRITICAL" not in two["nextActionPrompt"]
+
+
 def test_tc_reflection_budget_changed_signature_resets_path(tmp_path: Path, monkeypatch) -> None:
     main = _load_main()
     monkeypatch.setattr(main, "MAX_REFLECTIONS_PER_TC", 2)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from orchestrator.evaluation_result import apply_evaluation_result
@@ -458,7 +459,13 @@ def test_write_evaluation_json_syncs_and_reads_from_stage_state(tmp_path: Path) 
 
     # Migration compatibility: if an old/direct writer updates evaluation.json
     # after the stage-state projection, do not let stale stage state mask it.
-    (task_dir / "evaluation.json").write_text(json.dumps({"result": "fail", "nextAction": "stop", "testResults": []}) + "\n")
+    evaluation_path = task_dir / "evaluation.json"
+    evaluation_path.write_text(json.dumps({"result": "fail", "nextAction": "stop", "testResults": []}) + "\n")
+    # Make the direct write deterministically newer than the stage projection;
+    # coarse filesystem mtime granularity can otherwise tie the two writes.
+    stage_path = task_dir / "stages" / "verification-loop-stage-state.json"
+    stage_mtime = stage_path.stat().st_mtime
+    os.utime(evaluation_path, (stage_mtime + 1, stage_mtime + 1))
     assert read_evaluation_json(task_dir)["nextAction"] == "stop"
 
 

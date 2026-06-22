@@ -61,3 +61,62 @@ def test_record_tc_attempts_and_completion_distinguishes_attempted_from_not_run(
     assert tc["sources"] == ["tc-attempts"]
     assert "required testcase not_run: TC-F04" not in report["issues"]
     assert "required testcase failed or blocked: TC-F04" in report["issues"]
+
+
+def test_record_tc_attempts_extracts_nested_ui_exploration(tmp_path: Path) -> None:
+    """P0-A: convergence fields nested under testResults[].uiExploration must be
+    extracted, not silently dropped (the evaluator prompt writes them there)."""
+    task_dir = tmp_path / "task02"
+    write_testcases(task_dir)
+    evaluation = {
+        "iteration": 3,
+        "result": "fail",
+        "nextAction": "retry_generator",
+        "testResults": [{
+            "testCaseId": "TC-F04",
+            "result": "fail",
+            "attemptIteration": 3,
+            "uiExploration": {
+                "mode": "control_discovery",
+                "attempts": [{
+                    "progressKind": "control_discovery",
+                    "hypothesis": "Pause control lives on the now-playing bar.",
+                    "ruledOut": ["home tab pause button"],
+                    "remainingHypotheses": ["mini player bar"],
+                    "nextSelectorCandidates": ["type==.button AND label CONTAINS '暂停'"],
+                }],
+            },
+        }],
+    }
+
+    record_tc_attempts(task_dir, evaluation, source="evaluation")
+    saved = read_tc_attempts(task_dir)
+    progress = saved["progressByTc"]["TC-F04"]
+    assert progress["ruledOut"] == ["home tab pause button"]
+    assert progress["remainingHypotheses"] == ["mini player bar"]
+    assert progress["nextSelectorCandidates"] == ["type==.button AND label CONTAINS '暂停'"]
+    assert progress["narrowingRounds"] == 1
+
+
+def test_record_tc_attempts_flags_no_narrowing(tmp_path: Path) -> None:
+    """P0-B: repeated failing attempts that rule nothing out and propose no new
+    candidate must show narrowingRounds == 0 (invalid retry pattern)."""
+    task_dir = tmp_path / "task03"
+    write_testcases(task_dir)
+    for it in (1, 2, 3):
+        record_tc_attempts(task_dir, {
+            "iteration": it,
+            "result": "fail",
+            "nextAction": "retry_generator",
+            "testResults": [{
+                "testCaseId": "TC-F04",
+                "result": "fail",
+                "attemptIteration": it,
+                "summary": "stop control not found",
+            }],
+        }, source="evaluation")
+    progress = read_tc_attempts(task_dir)["progressByTc"]["TC-F04"]
+    assert progress["attemptCount"] == 3
+    assert progress["narrowingRounds"] == 0
+    assert progress["ruledOut"] == []
+    assert progress["remainingHypotheses"] == []
