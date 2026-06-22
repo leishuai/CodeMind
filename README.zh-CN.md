@@ -89,6 +89,18 @@ automind smoke offline-demo
 
 这个不需要设备的 smoke test 会创建 `.automind/tasks/offline_demo_smoke/`，并验证基础 loop：命令证据、`evaluation.json`、completion check、summary 和 record check。
 
+### 手动导出 skill 文件夹
+
+安装器会在检测到用户级 agent 目录时，自动把 `automind-skill` 安装到 Claude Code、Codex、Trae、Trae-CN 等支持的 skill 目录。如果某个 agent 使用自定义 skill 目录，或者你想把 AutoMind skill 文件夹整体分享/导入给其他 agent，可以手动导出一份：
+
+```bash
+automind export-skill "$HOME/Downloads/automind-skill" --clean
+```
+
+然后把整个 `automind-skill` 文件夹导入或复制到对应 agent 的 skill 目录，例如 `~/.codex/skills/automind-skill`、`~/.claude/skills/automind-skill`、`~/.trae/skills/automind-skill`，或其它 agent 自己定义的 skills 目录。
+
+这个导出的文件夹包含 AutoMind skill 指令、workflow 文档、prompt templates、schemas、examples、requirements 和 public-safe summary packs。它不是完整 runtime 的替代品；最佳体验仍然建议保留 full install，这样 agent 可以调用 `automind` helper、gate 和验证工具。
+
 ### 更新
 
 更新到最新版本，只需重新跑同一条安装命令：

@@ -79,6 +79,26 @@ The smoke test requires no device. It creates `.automind/tasks/offline_demo_smok
 and verifies command evidence, `evaluation.json`, workflow/completion gates,
 summary, and record checks.
 
+### Export the skill folder manually
+
+The installer tries to place `automind-skill` into the user-level skill folders
+for supported agents when those folders already exist. If an agent uses a
+custom skill directory, or you want to share/import the skill folder manually,
+export a standalone copy:
+
+```bash
+automind export-skill "$HOME/Downloads/automind-skill" --clean
+```
+
+Then import or copy the whole folder into that agent's skill directory, for
+example `~/.codex/skills/automind-skill`,
+`~/.claude/skills/automind-skill`, `~/.trae/skills/automind-skill`, or another
+agent-specific skills folder. This exported folder contains the AutoMind skill
+instructions, workflow docs, templates, schemas, examples, requirements, and
+public-safe summary packs. It does not replace the full runtime; for best
+results, keep the full install so agents can call `automind` helpers and
+verification tools.
+
 ### Update
 
 Install and update use the same command:
