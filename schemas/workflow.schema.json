@@ -1,0 +1,332 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automind.local/schemas/workflow.schema.json",
+  "title": "AutoMind workflow.json",
+  "description": "Derived AutoMind orchestration contract/gate surface. workflow.json indexes phase inputs/outputs/gates plus testcase/runtime policy for deterministic gates and adapters; live current/next task state lives in runtime-state.json.stateSummary.",
+  "type": "object",
+  "required": [
+    "version",
+    "task",
+    "phases",
+    "taskType",
+    "runtimeProofRequired",
+    "verificationTarget",
+    "requirements",
+    "acceptanceCriteria",
+    "testcases",
+    "phaseGraph",
+    "expectedNext",
+    "target"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 2
+    },
+    "generatedAt": {
+      "type": "string"
+    },
+    "sourceArtifacts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "task": {
+      "type": "object",
+      "required": [
+        "code",
+        "type",
+        "userInputRef"
+      ],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "type": {
+          "type": "string"
+        },
+        "userInputRef": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "phases": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "status",
+          "inputRefs",
+          "outputRefs",
+          "schema",
+          "gate",
+          "id",
+          "cluster",
+          "guideRefs",
+          "artifactRefs",
+          "checker",
+          "next"
+        ],
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "inputRefs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "outputRefs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "schema": {
+            "type": "string"
+          },
+          "gate": {
+            "type": "object"
+          },
+          "dependencies": {
+            "type": "object"
+          },
+          "blockedBy": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "cluster": {
+            "type": "string"
+          },
+          "guideRefs": {
+            "type": "object",
+            "required": [
+              "workflow",
+              "macro",
+              "phase"
+            ],
+            "properties": {
+              "workflow": {
+                "type": "string"
+              },
+              "macro": {
+                "type": "string"
+              },
+              "phase": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "artifactRefs": {
+            "type": "object",
+            "required": [
+              "markdown",
+              "json",
+              "schema"
+            ],
+            "properties": {
+              "markdown": {
+                "type": "string"
+              },
+              "json": {
+                "type": "string"
+              },
+              "schema": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "checker": {
+            "type": "object",
+            "required": [
+              "name",
+              "result"
+            ],
+            "additionalProperties": true
+          },
+          "next": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "taskType": {
+      "type": "string"
+    },
+    "runtimeProofRequired": {
+      "type": "boolean"
+    },
+    "runtimeProofRequiredRaw": {
+      "type": "string"
+    },
+    "verificationTarget": {
+      "type": "string",
+      "enum": [
+        "real_device",
+        "simulator_emulator",
+        "both",
+        "not_applicable",
+        "unknown",
+        ""
+      ]
+    },
+    "runtimeDowngradeApproval": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "runtimeDowngradeApprovalApproved": {
+      "type": "boolean"
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "acceptanceCriteria": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "testcases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "required",
+          "runtimeLevel",
+          "executor",
+          "intent",
+          "skipPolicy"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "requirements": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "acceptanceCriteria": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "type": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "quality": {
+            "type": "boolean"
+          },
+          "runtimeLevel": {
+            "type": "string"
+          },
+          "executor": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
+          },
+          "dependency": {
+            "type": "string"
+          },
+          "intent": {
+            "type": "object"
+          },
+          "skipPolicy": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "phaseGraph": {
+      "type": "object",
+      "required": [
+        "start",
+        "final",
+        "nodes",
+        "edges"
+      ],
+      "properties": {
+        "start": {
+          "type": "string"
+        },
+        "final": {
+          "type": "string"
+        },
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "expectedNext": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "target": {
+      "type": "object",
+      "required": [
+        "finalPhase",
+        "successCondition",
+        "requiredResult"
+      ],
+      "properties": {
+        "finalPhase": {
+          "type": "string"
+        },
+        "successCondition": {
+          "type": "string"
+        },
+        "requiredResult": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

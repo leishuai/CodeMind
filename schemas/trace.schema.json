@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automind.local/schemas/trace.schema.json",
+  "title": "AutoMind Trace",
+  "type": "object",
+  "required": ["schemaVersion", "traceId", "runId", "taskCode", "summary", "spans"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "traceId": {"type": "string"},
+    "runId": {"type": "string"},
+    "taskCode": {"type": "string"},
+    "taskDir": {"type": "string"},
+    "startTime": {"type": ["string", "null"]},
+    "endTime": {"type": ["string", "null"]},
+    "durationMs": {"type": ["integer", "null"], "minimum": 0},
+    "summary": {
+      "type": "object",
+      "required": ["spanCount", "phaseCounts", "errorCount", "errors"],
+      "properties": {
+        "spanCount": {"type": "integer", "minimum": 0},
+        "phaseCounts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+        "errorCount": {"type": "integer", "minimum": 0},
+        "errors": {"type": "array", "items": {"type": "object"}}
+      },
+      "additionalProperties": true
+    },
+    "spans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["spanId", "name", "phase", "actor", "action", "status", "attributes"],
+        "properties": {
+          "spanId": {"type": "string"},
+          "parentSpanId": {"type": ["string", "null"]},
+          "name": {"type": "string"},
+          "phase": {"type": "string"},
+          "actor": {"type": "string"},
+          "action": {"type": "string"},
+          "status": {"type": "string"},
+          "startTime": {"type": ["string", "null"]},
+          "endTime": {"type": ["string", "null"]},
+          "durationMs": {"type": ["integer", "null"], "minimum": 0},
+          "message": {"type": "string"},
+          "artifactRefs": {"type": "array", "items": {"type": "string"}},
+          "evidenceRefs": {"type": "array", "items": {"type": "string"}},
+          "attributes": {"type": "object"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

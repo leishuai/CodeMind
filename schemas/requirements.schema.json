@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automind.local/schemas/requirements.schema.json",
+  "title": "AutoMind requirements.json",
+  "type": "object",
+  "required": ["version", "phase", "sourceRefs", "goal", "requirements", "acceptanceCriteria"],
+  "properties": {
+    "version": {"type": "integer", "const": 1},
+    "phase": {"type": "string", "const": "requirements"},
+    "generatedAt": {"type": "string"},
+    "sourceRefs": {"type": "array", "items": {"type": "string"}},
+    "goal": {"type": "string"},
+    "scope": {"type": "array", "items": {"type": "string"}},
+    "nonGoals": {"type": "array", "items": {"type": "string"}},
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "acceptanceCriteria"],
+        "properties": {
+          "id": {"type": "string"},
+          "text": {"type": "string"},
+          "acceptanceCriteria": {"type": "array", "items": {"type": "object"}}
+        },
+        "additionalProperties": true
+      }
+    },
+    "acceptanceCriteria": {"type": "array", "items": {"type": "object"}}
+  },
+  "additionalProperties": true
+}

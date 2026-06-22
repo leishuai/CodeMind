@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/automind-workflow-event.schema.json",
+  "title": "AutoMind Workflow Event",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema", "id", "at", "type"],
+  "properties": {
+    "schema": {"const": "automind.workflow_event.v1"},
+    "id": {"type": "string", "pattern": "^evt_[0-9]{6,}$"},
+    "at": {"type": "string"},
+    "type": {"type": "string"},
+    "stage": {"enum": ["initialization", "requirement", "verification_loop", "summary"]},
+    "phase": {"type": "string"},
+    "action": {"type": ["string", "null"]},
+    "owner": {"type": ["string", "null"]},
+    "nextAction": {"type": ["string", "null"]},
+    "nextPhase": {"type": ["string", "null"]},
+    "plannedNextPhase": {"type": ["string", "null"]},
+    "iteration": {"type": ["integer", "null"], "minimum": 0},
+    "reason": {"type": ["string", "null"]}
+  }
+}

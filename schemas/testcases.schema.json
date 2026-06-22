@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automind.local/schemas/testcases.schema.json",
+  "title": "AutoMind testcases.json",
+  "type": "object",
+  "required": ["version", "phase", "sourceRefs", "runtimePolicy", "testcases"],
+  "properties": {
+    "version": {"type": "integer", "const": 1},
+    "phase": {"type": "string", "const": "testcases"},
+    "generatedAt": {"type": "string"},
+    "sourceRefs": {"type": "array", "items": {"type": "string"}},
+    "runtimePolicy": {"type": "object"},
+    "testcases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "required", "runtimeLevel", "runbook", "skipPolicy"],
+        "properties": {
+          "id": {"type": "string"},
+          "requirementRefs": {"type": "array", "items": {"type": "string"}},
+          "acceptanceCriteriaRefs": {"type": "array", "items": {"type": "string"}},
+          "type": {"type": "string"},
+          "required": {"type": "boolean"},
+          "quality": {"type": "boolean"},
+          "runtimeLevel": {"type": "string"},
+          "executor": {"type": "string"},
+          "runbook": {"type": "object"},
+          "dependency": {"type": "string"},
+          "skipPolicy": {"type": "object"}
+        },
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}

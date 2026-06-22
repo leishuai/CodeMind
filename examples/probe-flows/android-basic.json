@@ -1,0 +1,81 @@
+{
+  "platform": "android",
+  "name": "<task-name> Android probe-flow",
+  "app": {
+    "apk": "<path-to-debug.apk>",
+    "package": "<android.package.name>",
+    "activity": "<entry.Activity>"
+  },
+  "uiUnblock": {
+    "enabled": true,
+    "policy": "safe_non_destructive_only",
+    "maxAttempts": 3,
+    "afterLaunch": true,
+    "beforeActions": true
+  },
+  "steps": [
+    {
+      "type": "install",
+      "name": "install apk",
+      "uninstall": false,
+      "intentMode": "setup",
+      "risk": {
+        "level": "medium",
+        "reversibility": "recoverable",
+        "requiresApproval": false
+      }
+    },
+    {
+      "type": "launch",
+      "name": "launch app",
+      "intentMode": "setup"
+    },
+    {
+      "type": "tap_if_present",
+      "name": "handle optional non-destructive blocker",
+      "intentMode": "setup",
+      "optional": true,
+      "selector": {
+        "text": "Close"
+      },
+      "confidence": {
+        "required": 0.7,
+        "source": "text"
+      },
+      "risk": {
+        "level": "low",
+        "reversibility": "reversible",
+        "requiresApproval": false
+      },
+      "guards": {
+        "fallback": {
+          "onMissingElement": "skip_optional"
+        }
+      },
+      "timeout": 2
+    },
+    {
+      "type": "assert_app_hierarchy",
+      "name": "assert target app exposes verifiable UI",
+      "intentMode": "verify",
+      "minNodes": 1,
+      "timeout": 8,
+      "interval": 1,
+      "postChecks": [
+        {
+          "type": "ui_hierarchy_nodes",
+          "strength": "medium"
+        }
+      ]
+    },
+    {
+      "type": "screenshot",
+      "name": "capture final screenshot",
+      "output": "final-screenshot"
+    },
+    {
+      "type": "stop",
+      "name": "stop app"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/automind-stage-state.schema.json",
+  "title": "AutoMind Stage State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "stage", "version", "status", "currentPhase", "currentAction", "owner", "nextAction", "nextPhase", "lastEventId", "updatedAt"],
+  "properties": {
+    "schema": {"const": "automind.stage_state.v1"},
+    "stage": {"enum": ["initialization", "requirement", "verification_loop", "summary"]},
+    "version": {"type": "integer", "minimum": 0},
+    "status": {"enum": ["created", "active", "waiting_user", "waiting_tool", "completed", "failed_retryable", "failed", "paused", "cancelled"]},
+    "currentPhase": {"type": "string"},
+    "currentAction": {"type": ["string", "null"]},
+    "owner": {"enum": ["runtime", "planner", "generator", "evaluator", "reporter", "user", "tool", "host"]},
+    "nextAction": {"type": ["string", "null"]},
+    "nextPhase": {"type": ["string", "null"]},
+    "plannedNextPhase": {"type": ["string", "null"]},
+    "iteration": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "current": {"type": "integer", "minimum": 0},
+        "max": {"type": ["integer", "null"], "minimum": 1},
+        "phase": {"type": "string"},
+        "lastResult": {"type": ["string", "null"]},
+        "retryable": {"type": ["boolean", "null"]},
+        "updatedAt": {"type": "string"}
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "description": "Preferred projection of the latest Evaluator result; evaluation.json is a compatibility artifact.",
+      "additionalProperties": true
+    },
+    "completion": {
+      "type": "object",
+      "description": "Preferred projection of the latest completion gate report; completion-report.json is a compatibility artifact.",
+      "additionalProperties": true
+    },
+    "lastEventId": {"type": ["string", "null"]},
+    "updatedAt": {"type": "string"}
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automind.local/schemas/plan.schema.json",
+  "title": "AutoMind plan.json",
+  "type": "object",
+  "required": ["version", "phase", "sourceRefs", "verificationStrategy", "implementationChecklist", "verificationChecklist"],
+  "properties": {
+    "version": {"type": "integer", "const": 1},
+    "phase": {"type": "string", "const": "plan"},
+    "generatedAt": {"type": "string"},
+    "sourceRefs": {"type": "array", "items": {"type": "string"}},
+    "firstFunctionalBatch": {"type": "string"},
+    "implementationChecklist": {"type": "array", "items": {"type": "object"}},
+    "verificationChecklist": {"type": "array", "items": {"type": "object"}},
+    "verificationStrategy": {
+      "type": "object",
+      "required": ["scriptDiscovery", "commands"],
+      "properties": {
+        "scriptDiscovery": {"type": "object", "required": ["checked"]},
+        "commands": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    },
+    "risks": {"type": "array", "items": {"type": "string"}},
+    "blockedRoutes": {"type": "array", "items": {"type": "string"}}
+  },
+  "additionalProperties": true
+}

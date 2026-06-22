@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automind.local/schemas/brainstorm.schema.json",
+  "title": "AutoMind brainstorm.json",
+  "type": "object",
+  "required": [
+    "version",
+    "phase",
+    "sourceRefs",
+    "summary",
+    "questions",
+    "needsUserInput",
+    "preImplementationReview",
+    "repositoryContext",
+    "demandAnalysis"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "phase": {
+      "type": "string",
+      "const": "brainstorm"
+    },
+    "generatedAt": {
+      "type": "string"
+    },
+    "sourceRefs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "summary": {
+      "type": "string"
+    },
+    "assumptions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "needsUserInput": {
+      "type": "boolean"
+    },
+    "preImplementationReview": {
+      "type": "object"
+    },
+    "demandAnalysis": {
+      "type": "object",
+      "properties": {
+        "intentDigest": {"type": "array", "items": {"type": "string"}},
+        "businessSuggestions": {"type": "array", "items": {"type": "string"}},
+        "riskAndOpportunityRegister": {"type": "array", "items": {"type": "string"}},
+        "approachOptions": {"type": "array", "items": {"type": "string"}},
+        "recommendation": {"type": "string"},
+        "hasIntentDigest": {"type": "boolean"},
+        "hasBusinessSuggestions": {"type": "boolean"},
+        "hasRiskRegister": {"type": "boolean"},
+        "hasApproachOptions": {"type": "boolean"}
+      },
+      "additionalProperties": true
+    },
+    "repositoryContext": {
+      "type": "object",
+      "required": [
+        "observations",
+        "sectionPresent"
+      ],
+      "properties": {
+        "observations": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "agentsInstructions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "docsRead": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "scriptsAndTools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "constraints": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "sectionPresent": {
+          "type": "boolean"
+        },
+        "mentionsAgents": {
+          "type": "boolean"
+        },
+        "mentionsScriptsOrDocs": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

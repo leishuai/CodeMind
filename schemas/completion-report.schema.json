@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automind.local/schemas/completion-report.schema.json",
+  "title": "AutoMind completion-report.json",
+  "type": "object",
+  "required": ["version", "phase", "result", "issues", "requiredTestcases", "acceptanceCriteriaCoverage", "runtimeProof", "evidenceCheck"],
+  "properties": {
+    "version": {"type": "integer", "const": 1},
+    "phase": {"type": "string", "const": "completion"},
+    "generatedAt": {"type": "string"},
+    "result": {"type": "string"},
+    "issues": {"type": "array"},
+    "requiredTestcases": {"type": "array"},
+    "acceptanceCriteriaCoverage": {"type": "array"},
+    "runtimeProof": {"type": "object"},
+    "evidenceCheck": {"type": "object"}
+  },
+  "additionalProperties": true
+}

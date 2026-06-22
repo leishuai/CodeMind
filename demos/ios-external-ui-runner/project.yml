@@ -1,0 +1,23 @@
+name: AutoMindExternalUIRunner
+options:
+  deploymentTarget:
+    iOS: '15.0'
+targets:
+  AutoMindExternalUIRunner:
+    type: application
+    platform: iOS
+    sources:
+      - App
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: ai.openclaw.automind.external.demo
+      INFOPLIST_FILE: App/Info.plist
+  AutoMindExternalUIRunnerUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - UITests
+    dependencies:
+      - target: AutoMindExternalUIRunner
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: ai.openclaw.automind.external.demo.uitest
+      GENERATE_INFOPLIST_FILE: YES

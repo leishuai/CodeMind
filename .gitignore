@@ -1,0 +1,45 @@
+# Runtime task data / local evidence
+.automind/
+
+# Generated exports
+dist/
+
+# Virtual environments
+.venv*/
+venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# macOS / editor noise
+.DS_Store
+*.swp
+*.swo
+
+# Build outputs / generated app artifacts
+build/
+*.apk
+*.ipa
+*.xcresult/
+DerivedData/
+
+# Xcode per-user state (not part of shareable project fixtures)
+**/xcuserdata/
+
+# Signing / key material
+*.keystore
+*.jks
+*.p12
+*.pem
+
+# Local/private notes not included in public user release
+internal/
+project-summaries/
+summaries/accumulated/business/
+summaries/accumulated/technical/*.md
+!summaries/accumulated/technical/README.md
+
+# Local temporary files
+.tmp/

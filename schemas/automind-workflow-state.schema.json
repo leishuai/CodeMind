@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "schemas/automind-workflow-state.schema.json",
+  "title": "AutoMind Workflow State",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "taskId", "version", "status", "currentStage", "currentPhase", "currentAction", "currentOwner", "nextAction", "nextPhase", "iteration", "stateHealth", "lastEventId", "updatedAt"],
+  "properties": {
+    "schema": {"const": "automind.workflow_state.v1"},
+    "taskId": {"type": "string"},
+    "version": {"type": "integer", "minimum": 0},
+    "status": {"enum": ["created", "running", "waiting_user", "waiting_tool", "paused", "completed", "failed", "cancelled"]},
+    "currentStage": {"enum": ["initialization", "requirement", "verification_loop", "summary"]},
+    "currentPhase": {"type": "string"},
+    "currentAction": {"type": ["string", "null"]},
+    "currentOwner": {"enum": ["runtime", "planner", "generator", "evaluator", "reporter", "user", "tool", "host"]},
+    "nextAction": {"type": ["string", "null"]},
+    "nextPhase": {"type": ["string", "null"]},
+    "plannedNextPhase": {"type": ["string", "null"]},
+    "iteration": {"type": "integer", "minimum": 0},
+    "stateHealth": {"enum": ["ok", "degraded", "reconciling", "invalid"]},
+    "lastEventId": {"type": ["string", "null"]},
+    "updatedAt": {"type": "string"}
+  }
+}

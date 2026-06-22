@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automind.local/schemas/run-card.schema.json",
+  "title": "AutoMind Run Card / Learning Card",
+  "type": "object",
+  "required": ["schemaVersion", "generatedAt", "taskCode", "summaryPath", "tracePath", "result", "successfulPaths", "failedAttempts", "lessons", "avoidRepeating"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "generatedAt": {"type": "string"},
+    "taskCode": {"type": "string"},
+    "taskDir": {"type": "string"},
+    "summaryPath": {"type": "string"},
+    "tracePath": {"type": "string"},
+    "result": {"type": "string"},
+    "status": {"type": "string"},
+    "iterations": {"type": "integer", "minimum": 0},
+    "recordCheck": {"type": "object"},
+    "workflowCheck": {"type": "object"},
+    "completionCheck": {"type": "object"},
+    "traceSummary": {"type": "object"},
+    "successfulPaths": {"type": "array", "items": {"type": "object"}},
+    "failedAttempts": {"type": "array", "items": {"type": "object"}},
+    "lessons": {"type": "array", "items": {"type": "string"}},
+    "avoidRepeating": {"type": "array", "items": {"type": "string"}},
+    "runtimeDowngradeCount": {"type": "integer", "minimum": 0}
+  },
+  "additionalProperties": true
+}

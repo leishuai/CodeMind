@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automind.local/schemas/pre-implementation-review.schema.json",
+  "title": "AutoMind pre-implementation-review.json",
+  "description": "Machine-readable pre-implementation review gate derived from Brainstorm.md and runtime-state.json before Generator edits product/runtime code.",
+  "type": "object",
+  "required": ["version", "phase", "sourceRefs", "dependencies", "decision", "needsUserInput", "reviewedRefs", "nextAction"],
+  "properties": {
+    "version": {"type": "integer", "const": 1},
+    "phase": {"type": "string", "const": "pre_implementation_review"},
+    "generatedAt": {"type": "string"},
+    "sourceRefs": {"type": "array", "items": {"type": "string"}},
+    "dependencies": {"type": "object"},
+    "decision": {"type": "string", "enum": ["auto_proceed", "ask_user", "replan"]},
+    "needsUserInput": {"type": "boolean"},
+    "reviewedRefs": {"type": "array", "items": {"type": "string"}},
+    "question": {"type": ["string", "object", "null"]},
+    "options": {"type": "array"},
+    "approval": {
+      "type": "object",
+      "properties": {
+        "confirmedAt": {"type": ["string", "null"]},
+        "confirmedBy": {"type": ["string", "null"]}
+      },
+      "additionalProperties": true
+    },
+    "decisionBundle": {"type": "object"},
+    "issues": {"type": "array"},
+    "nextAction": {"type": "string", "enum": ["delivery", "ask_user", "replan"]},
+    "resumeAfter": {"type": "string"}
+  },
+  "additionalProperties": true
+}

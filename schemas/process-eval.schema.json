@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automind.local/schemas/process-eval.schema.json",
+  "title": "AutoMind Process Eval",
+  "type": "object",
+  "required": ["schemaVersion", "taskCode", "generatedAt", "result", "issueCount", "warningCount", "passCount", "issues", "warnings", "passes"],
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "taskCode": {"type": "string"},
+    "generatedAt": {"type": "string"},
+    "result": {"enum": ["pass", "warn", "fail"]},
+    "issueCount": {"type": "integer", "minimum": 0},
+    "warningCount": {"type": "integer", "minimum": 0},
+    "passCount": {"type": "integer", "minimum": 0},
+    "issues": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+    "warnings": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+    "passes": {"type": "array", "items": {"$ref": "#/$defs/finding"}},
+    "tracePath": {"type": ["string", "null"]},
+    "inputs": {"type": "object"}
+  },
+  "$defs": {
+    "finding": {
+      "type": "object",
+      "required": ["id", "severity", "message", "evidence"],
+      "properties": {
+        "id": {"type": "string"},
+        "severity": {"type": "string"},
+        "message": {"type": "string"},
+        "evidence": {"type": "array", "items": {"type": "string"}}
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

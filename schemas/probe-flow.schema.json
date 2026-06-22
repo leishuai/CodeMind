@@ -1,0 +1,373 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automind.local/schemas/probe-flow.schema.json",
+  "title": "AutoMind Probe Flow",
+  "description": "Dynamic validation flow generated from Require/TestCases acceptance criteria and executed by platform-specific probe runners.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["platform"],
+  "properties": {
+    "platform": {
+      "type": "string",
+      "enum": ["android", "ios", "web", "browser", "script"]
+    },
+    "adapter": {
+      "type": "string",
+      "description": "Optional platform adapter, e.g. xcuitest for iOS."
+    },
+    "name": {
+      "type": "string"
+    },
+    "app": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "apk": {"type": "string"},
+        "package": {"type": "string"},
+        "activity": {"type": "string"},
+        "bundleId": {"type": "string"},
+        "projectPath": {"type": "string"},
+        "workspacePath": {"type": "string"},
+        "scheme": {"type": "string"},
+        "xcodebuildDeviceId": {"type": "string"},
+        "coreDeviceId": {"type": "string"},
+        "team": {"type": "string"},
+        "configuration": {"type": "string"}
+      }
+    },
+    "testPlan": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Backward-compatible iOS/XCUITest config block. New flows should prefer app + testIntent."
+    },
+    "testIntent": {
+      "$ref": "#/$defs/testIntent"
+    },
+    "intent": {
+      "$ref": "#/$defs/testIntent"
+    },
+    "steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/step"}
+    },
+    "postChecks": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/postCheck"}
+    },
+    "acceptanceCriteria": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "authorization": {
+      "$ref": "#/$defs/authorization"
+    },
+    "uiUnblock": {
+      "$ref": "#/$defs/uiUnblock"
+    },
+    "autoUnblockOverlay": {
+      "$ref": "#/$defs/uiUnblock"
+    },
+    "expect": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "anyOf": [
+    {"required": ["steps"]},
+    {"required": ["testIntent"]},
+    {"required": ["intent"]},
+    {"required": ["testPlan"]}
+  ],
+  "$defs": {
+    "testIntent": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "goal": {"type": "string"},
+        "source": {
+          "oneOf": [
+            {"type": "string"},
+            {"type": "array", "items": {"type": "string"}}
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "preconditions": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "authorization": {"$ref": "#/$defs/authorization"},
+        "acceptanceCriteria": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "steps": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/step"}
+        },
+        "postChecks": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/postCheck"}
+        }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "scopes": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "scope": {
+          "oneOf": [
+            {"type": "string"},
+            {"type": "array", "items": {"type": "string"}}
+          ]
+        },
+        "note": {"type": "string"}
+      }
+    },
+    "step": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "install",
+            "launch",
+            "stop",
+            "assert_text",
+            "assert_selector",
+            "assert_app_hierarchy",
+            "assert_exists",
+            "assert_text_present",
+            "assert_page",
+            "open",
+            "navigate",
+            "click",
+            "tap",
+            "tap_if_present",
+            "tap_visual",
+            "tap_nth",
+            "input",
+            "swipe",
+            "scroll",
+            "scroll_until_text",
+            "extract_text",
+            "extract_tags",
+            "assert_state_change",
+            "screenshot",
+            "dump_hierarchy",
+            "wait",
+            "current_app",
+            "keyevent"
+          ]
+        },
+        "name": {"type": "string"},
+        "intentMode": {
+          "type": "string",
+          "enum": ["explore", "verify", "repair", "setup"]
+        },
+        "text": {"type": "string"},
+        "expected": {"type": "string"},
+        "selector": {"$ref": "#/$defs/selector"},
+        "pageSignature": {"$ref": "#/$defs/pageSignature"},
+        "signature": {"$ref": "#/$defs/pageSignature"},
+        "url": {"type": "string"},
+        "path": {"type": "string"},
+        "confidence": {"$ref": "#/$defs/confidence"},
+        "risk": {"$ref": "#/$defs/risk"},
+        "guards": {"$ref": "#/$defs/guards"},
+        "postChecks": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/postCheck"}
+        },
+        "authorizationScope": {"type": "string"},
+        "scope": {"type": "string"},
+        "timeout": {"type": "number"},
+        "interval": {"type": "number"},
+        "seconds": {"type": "number"},
+        "x": {"type": "integer"},
+        "y": {"type": "integer"},
+        "sx": {"type": "integer"},
+        "sy": {"type": "integer"},
+        "ex": {"type": "integer"},
+        "ey": {"type": "integer"},
+        "duration": {"type": "number"},
+        "direction": {"type": "string", "enum": ["up", "down", "left", "right"]},
+        "maxSwipes": {"type": "integer", "minimum": 1},
+        "index": {"type": "integer", "minimum": 0},
+        "scope": {"type": "string"},
+        "nearText": {"type": "string"},
+        "region": {"type": "string"},
+        "extractAs": {"type": "string"},
+        "container": {"$ref": "#/$defs/selector"},
+        "signal": {"type": "string"},
+        "minDelta": {"type": "number"},
+        "output": {"type": "string"},
+        "minNodes": {"type": "integer"},
+        "continueOnFail": {"type": "boolean"},
+        "optional": {"type": "boolean"},
+        "key": {"type": "string"},
+        "code": {"type": "string"},
+        "uninstall": {"type": "boolean"},
+        "wait": {"type": "number"}
+      }
+    },
+    "uiUnblock": {
+      "oneOf": [
+        {"type": "boolean"},
+        {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "policy": {
+              "type": "string",
+              "enum": ["safe_non_destructive_only", "authorized_positive_consent"]
+            },
+            "mode": {
+              "type": "string",
+              "enum": ["runner", "project_e2e_contract", "intent_only"]
+            },
+            "maxAttempts": {"type": "integer", "minimum": 0},
+            "afterLaunch": {"type": "boolean"},
+            "beforeActions": {"type": "boolean"},
+            "betweenActions": {"type": "boolean"},
+            "allowPositiveConsent": {"type": "boolean"},
+            "safeKeywords": {"type": "array", "items": {"type": "string"}},
+            "sensitiveKeywords": {"type": "array", "items": {"type": "string"}},
+            "rules": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": true,
+                "properties": {
+                  "category": {"type": "string"},
+                  "decision": {
+                    "type": "string",
+                    "enum": ["allow", "deny", "requires_authorization"]
+                  },
+                  "terms": {"type": "array", "items": {"type": "string"}},
+                  "keywords": {"type": "array", "items": {"type": "string"}},
+                  "reason": {"type": "string"},
+                  "priority": {"type": "integer", "minimum": 0}
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "pageSignature": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "name": {"type": "string"},
+        "page": {"type": "string"},
+        "state": {"type": "string"},
+        "required": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+        "anyOf": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+        "forbidden": {"type": "array", "items": {"type": "object", "additionalProperties": true}},
+        "minAnyOf": {"type": "integer", "minimum": 0}
+      }
+    },
+    "selector": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "text": {"type": "string"},
+        "desc": {"type": "string"},
+        "resource_id": {"type": "string"},
+        "xpath": {"type": "string"},
+        "accessibilityId": {"type": "string"},
+        "accessibilityIdentifier": {"type": "string"},
+        "id": {"type": "string"},
+        "testId": {"type": "string"},
+        "test_id": {"type": "string"},
+        "data-testid": {"type": "string"},
+        "css": {"type": "string"},
+        "selector": {"type": "string"},
+        "role": {"type": "string"},
+        "name": {"type": "string"},
+        "aria": {"type": "string"},
+        "button": {"type": "string"},
+        "predicate": {"type": "string"},
+        "visualRole": {"type": "string"},
+        "nearText": {"type": "string"},
+        "positionHint": {"type": "string"},
+        "x": {"type": "integer"},
+        "y": {"type": "integer"}
+      }
+    },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "required": {"type": "number", "minimum": 0, "maximum": 1},
+        "actual": {"type": "number", "minimum": 0, "maximum": 1},
+        "source": {
+          "type": "string",
+          "enum": ["accessibility", "id", "text", "nearby_text", "ocr", "visual", "coordinate", "mixed", "unknown"]
+        },
+        "note": {"type": "string"}
+      }
+    },
+    "risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "level": {"type": "string", "enum": ["low", "medium", "high"]},
+        "reversibility": {"type": "string", "enum": ["reversible", "recoverable", "destructive"]},
+        "requiresApproval": {"type": "boolean"},
+        "approvalScope": {"type": "string"},
+        "note": {"type": "string"}
+      }
+    },
+    "guards": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "preconditions": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "fallback": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "onLowConfidence": {"type": "string", "enum": ["capture_more_evidence", "ask_user", "stop"]},
+            "onAmbiguousMatch": {"type": "string", "enum": ["ask_user", "choose_first", "stop"]},
+            "onMissingElement": {"type": "string", "enum": ["scroll_and_retry", "fail", "skip_optional"]},
+            "onHighRisk": {"type": "string", "enum": ["ask_user", "stop"]}
+          }
+        }
+      }
+    },
+    "postCheck": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type"],
+      "properties": {
+        "type": {"type": "string"},
+        "strength": {"type": "string", "enum": ["weak", "medium", "strong"]},
+        "values": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "expectedSignals": {
+          "type": "array",
+          "items": {"type": "string"}
+        },
+        "bundleId": {"type": "string"},
+        "command": {"type": "string"}
+      }
+    }
+  }
+}

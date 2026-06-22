@@ -1,0 +1,902 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automind.local/schemas/evaluation.schema.json",
+  "title": "AutoMind Evaluation Result",
+  "description": "Latest structured Evaluator result. Validation.md remains the human/agent-readable cumulative history.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "iteration",
+    "result",
+    "summary",
+    "failedChecks",
+    "nextAction"
+  ],
+  "properties": {
+    "iteration": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Current harness loop iteration number."
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "pass",
+        "fail",
+        "blocked",
+        "in_progress"
+      ],
+      "description": "Latest verification result."
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable one-line summary of the latest result."
+    },
+    "failedChecks": {
+      "type": "array",
+      "description": "Failed or blocked acceptance checks. Empty when result=pass.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "name",
+          "reason",
+          "category"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "agent_unavailable",
+              "agent_timeout",
+              "invalid_evaluation_output",
+              "environment_blocked",
+              "build_failure",
+              "install_failure",
+              "launch_failure",
+              "test_failure",
+              "validation_failure",
+              "mobile_device_unavailable",
+              "tool_missing",
+              "tool_limitation",
+              "permission_blocked",
+              "old_team_signing_available",
+              "signing_material_blocked",
+              "provisioning_profile_blocked",
+              "external_runner_root_install_unsupported",
+              "external_runner_bootstrap_abort",
+              "external_runner_capability_blocked",
+              "external_runner_signing_blocked",
+              "needs_replan",
+              "unknown",
+              "no_progress",
+              "repeated_same_failure"
+            ],
+            "description": "Standard failure category used by orchestrator and future policy logic."
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "description": "Artifacts or command evidence from this evaluation round.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "type",
+          "path"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "log",
+              "screenshot",
+              "command",
+              "ui_hierarchy",
+              "other",
+              "human_confirmation",
+              "quality-summary",
+              "architecture-review"
+            ]
+          },
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "verificationUnblockChanges": {
+      "type": "array",
+      "description": "Temporary harness/config/test-hook changes used only to unblock verification. All items must be restored or promoted before finish.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "id",
+          "status",
+          "files",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable ID such as VUC-001."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "restored",
+              "promoted",
+              "active"
+            ],
+            "description": "active cannot be accepted by completion-check."
+          },
+          "files": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string"
+          },
+          "checkpoint": {
+            "type": "string"
+          },
+          "diff": {
+            "type": "string"
+          },
+          "snapshot": {
+            "type": "string"
+          },
+          "restoreEvidence": {
+            "type": "string"
+          },
+          "verificationEvidence": {
+            "type": "string"
+          },
+          "risk": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "evaluatorChanges": {
+      "type": "array",
+      "description": "Explicit declaration of every file the Evaluator modified during this round. Generator owns product/runtime-code repair; Evaluator may only touch verifier/probe-flow/test-harness/evidence files. Any item with category=product_code or with files outside the allowed scope must trigger nextAction=retry_generator and is rejected by the completion gate.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "id",
+          "category",
+          "files",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Stable ID such as ECG-001."
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "verifier_self_repair",
+              "probe_flow_repair",
+              "test_harness_fix",
+              "evidence_only",
+              "product_code"
+            ],
+            "description": "product_code is reserved as an explicit illegal-self-report value. The completion gate uses it to detect Evaluator boundary violations and route to retry_generator."
+          },
+          "files": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string"
+            }
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "diff": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "temporaryVerificationChanges": {
+      "deprecated": true,
+      "description": "Deprecated alias for `verificationUnblockChanges`. Will be removed in a future release; emit a deprecation warning when normalized.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "nextAction": {
+      "type": "string",
+      "enum": [
+        "finish",
+        "retry_generator",
+        "replan",
+        "ask_user",
+        "stop",
+        "stop_blocked",
+        "pause_for_external"
+      ],
+      "description": "Control signal consumed by orchestrator. result=pass requires nextAction=finish. `stop` is treated as a synonym of `stop_blocked` (non-recoverable hard stop). `stop_blocked` marks a non-recoverable failure that should not be retried (signing/policy/destructive guard, etc.). `pause_for_external` pauses the task for an external dependency (device, signing, third-party service) and parks the task as `human_input_pending` so it can be resumed later."
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": [
+          "string",
+          "object"
+        ],
+        "additionalProperties": true
+      }
+    },
+    "askUserQuestion": {
+      "type": "object",
+      "description": "Structured question for human decision when the evaluator cannot safely choose a path automatically. AutoMind treats `nextAction=ask_user` as a hard interruption of the autonomous full_auto loop, so it must only be used for one of the whitelisted categories below. For screenshot-based visual fallback, include screenshot/evidence paths, expected claim, and explicit confirmation options.",
+      "additionalProperties": true,
+      "required": [
+        "question",
+        "options",
+        "recommended",
+        "category"
+      ],
+      "properties": {
+        "question": {
+          "type": "string",
+          "minLength": 1
+        },
+        "category": {
+          "type": "string",
+          "description": "Hard-interrupt category. Only these values may trigger nextAction=ask_user: unauthorized_destructive_or_sensitive (privilege escalation, account/privacy/legal, large-scale data deletion, force-push, signing key rotation), system_or_external_dependency (system SDK/runtime install, Docker/database services, browser drivers, private registry credentials, OS-level changes), real_device_or_signing (device unlock/Developer Mode/USB debugging/UDID, code-signing/provisioning/team selection, manual install on physical device), manual_visual_confirmation (final visual claim that pure measurement plus AI Visual Review still cannot prove), repeated_same_failure (same error/category fails N times in a row and AutoMind cannot break the loop without a human decision).",
+          "enum": [
+            "unauthorized_destructive_or_sensitive",
+            "system_or_external_dependency",
+            "real_device_or_signing",
+            "manual_visual_confirmation",
+            "repeated_same_failure"
+          ]
+        },
+        "riskTier": {
+          "type": "string",
+          "description": "Model self-assessment that is the PRIMARY judge of whether this ask_user is a self-serviceable soft pause or a genuine hard gate. AutoMind biases toward automation and trusts this label over keyword heuristics. `safe_self_service`: AutoMind can resolve it itself (long build/compile, minimal reversible verification-unblock patch on code/script/wrapper/build-config, re-signing with the user's own certificates / automatic signing, in-app device driving, retryable env tweak) -- the completion gate rewrites the ask_user back to retry_generator so the loop keeps running. `sensitive_hard_gate`: a genuine human decision is required (irreversible/destructive action such as delete/wipe/reset/force-push, account/credential/keychain login, payment, or a real device/permission gate) -- the loop is allowed to pause. Signing/certificate selection alone is NOT a hard gate. Omit only when you cannot self-classify; then AutoMind falls back to conservative keyword heuristics.",
+          "enum": [
+            "safe_self_service",
+            "sensitive_hard_gate"
+          ]
+        },
+        "reversible": {
+          "type": "boolean",
+          "description": "Optional reinforcement of riskTier: true when the action AutoMind would take is fully reversible (checkpoint/restore/promote), false when it is irreversible or account/security-affecting."
+        },
+        "selfServiceRationale": {
+          "type": "string",
+          "description": "Short justification for the chosen riskTier, e.g. why a patch is reversible (recorded in verificationUnblockChanges and restored before finish) or why a gate is a genuine hard interrupt."
+        },
+        "userAuthorized": {
+          "type": "boolean",
+          "description": "Set true ONLY when the action you would otherwise pause for is already authorized by the user via the pre-implementation `runtime-state.json.planner.preImplementationReview.decisionBundle.destructiveActionsAllowList`. When true (and the allow list is non-empty), the completion gate trusts that the user already consented and rewrites the ask_user back to retry_generator so the loop proceeds without re-asking. You own the semantic match between the pending action and what the user authorized; never fabricate consent. Whether to pause is ultimately the user's call (拦不拦截以用户诉求为准)."
+        },
+        "reason": {
+          "type": "string"
+        },
+        "options": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "id",
+              "label"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "impact": {
+                "type": "string"
+              },
+              "risk": {
+                "type": "string"
+              },
+              "requiresConfirmation": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "recommended": {
+          "type": "string",
+          "minLength": 1
+        },
+        "defaultAction": {
+          "type": "string",
+          "description": "What AutoMind should do if the human does not answer. Usually stop/replan."
+        }
+      }
+    },
+    "qualityChecks": {
+      "type": "array",
+      "description": "Functional-adjacent quality checks merged after the main evaluator: performance, UX/smoothness, stability, architecture, maintainability.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "id",
+          "category",
+          "result",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "performance",
+              "ux",
+              "stability",
+              "architecture",
+              "maintainability",
+              "other"
+            ]
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "warn",
+              "fail",
+              "blocked"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          },
+          "testCaseId": {
+            "type": "string",
+            "description": "Source TestCases.md ID when this quality check maps to a declared testcase."
+          },
+          "qualityCategory": {
+            "type": "string",
+            "enum": [
+              "performance",
+              "ux",
+              "stability",
+              "architecture",
+              "maintainability",
+              "other"
+            ],
+            "description": "Batching category for quality testcase execution."
+          },
+          "skipReason": {
+            "type": "string",
+            "description": "Reason if a functional regression or quality rerun was safely skipped."
+          }
+        }
+      }
+    },
+    "testResults": {
+      "type": "array",
+      "description": "Per-TestCases.md result matrix for this evaluation round. Required TC-* cases must pass before nextAction=finish is accepted by completion-check.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "testCaseId",
+          "result"
+        ],
+        "properties": {
+          "testCaseId": {
+            "type": "string",
+            "pattern": "^TC([-_][A-Za-z]{1,4})?[-_]?\\d{2,3}$"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "pass",
+              "fail",
+              "blocked",
+              "skipped",
+              "not_run",
+              "warn"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "quality": {
+            "type": "boolean"
+          },
+          "acceptanceCriteria": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidence": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "object"
+              ],
+              "additionalProperties": true
+            }
+          },
+          "reason": {
+            "type": "string"
+          },
+          "evidenceAssessment": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Evaluator/model judgement that the attached hard evidence proves this testcase. Required passed TC-* rows should use verdict=proved; blocker/insufficient evidence must not be marked proved. To prevent self-proving model bias, a verdict=proved row MUST be backed by either a non-empty hardMetrics array (machine-checkable: exit code, build status, test counts, log/keyword match, screenshot hash, etc.) or a secondaryAssessment block (independent assessor verdict). manual_confirmed rows do not require those extra anchors.",
+            "properties": {
+              "verdict": {
+                "type": "string",
+                "enum": [
+                  "proved",
+                  "not_proved",
+                  "blocked",
+                  "manual_confirmed"
+                ]
+              },
+              "assessor": {
+                "type": "string",
+                "description": "Identifier of the primary assessor (model/agent/rule pack)."
+              },
+              "reason": {
+                "type": "string"
+              },
+              "blockerCategory": {
+                "type": "string"
+              },
+              "hardMetrics": {
+                "type": "array",
+                "description": "Machine-checkable metrics that anchor verdict=proved. Each metric MUST be objectively verifiable from evidence files (exit codes, test counts, build status, log keyword presence, screenshot hash, geometry, OCR strings, etc.).",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "required": [
+                    "name",
+                    "value"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Stable metric name, e.g. exit_code, build_succeeded, tests_passed, log_keyword_matched, screenshot_hash_matched, ocr_text_present, geometry_match."
+                    },
+                    "value": {
+                      "description": "Observed value (number, string, or boolean)."
+                    },
+                    "expected": {
+                      "description": "Expected value or threshold (optional)."
+                    },
+                    "evidence": {
+                      "type": "string",
+                      "description": "Path to the evidence file/log this metric was extracted from."
+                    },
+                    "passed": {
+                      "type": "boolean",
+                      "description": "Whether the metric satisfied its expectation. A proved verdict requires at least one metric with passed=true."
+                    }
+                  }
+                }
+              },
+              "secondaryAssessment": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "Independent second-judge assessment that backs verdict=proved. The independent assessor MUST be distinct from the primary `assessor` (different model/agent/rule-pack identifier) so the verdict is not self-proved.",
+                "required": [
+                  "assessor",
+                  "verdict"
+                ],
+                "properties": {
+                  "assessor": {
+                    "type": "string",
+                    "description": "Identifier of the independent assessor; MUST differ from the primary assessor to count as independent."
+                  },
+                  "independent": {
+                    "type": "boolean",
+                    "description": "Optional explicit independence flag; when true, AutoMind trusts the assessor as independent of the primary one."
+                  },
+                  "verdict": {
+                    "type": "string",
+                    "enum": [
+                      "proved",
+                      "not_proved",
+                      "blocked",
+                      "manual_confirmed"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "evidence": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "evidenceReview": {
+            "deprecated": true,
+            "description": "Deprecated alias for `evidenceAssessment`. Will be removed in a future release; emit a deprecation warning when normalized.",
+            "type": [
+              "object",
+              "string"
+            ],
+            "additionalProperties": true
+          },
+          "proof": {
+            "deprecated": true,
+            "description": "Deprecated alias for `evidenceAssessment`. Will be removed in a future release; emit a deprecation warning when normalized.",
+            "type": [
+              "object",
+              "string"
+            ],
+            "additionalProperties": true
+          },
+          "uiExploration": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Structured app-use / UI exploration trace for App/UI runtime testcases. Records goal-directed or user-path attempts so Evaluator can avoid repeating failed paths and completion can audit meaningful progress.",
+            "properties": {
+              "goal": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "goal_directed",
+                  "user_path",
+                  "hybrid",
+                  "unknown"
+                ]
+              },
+              "platform": {
+                "type": "string",
+                "enum": [
+                  "android",
+                  "ios",
+                  "web",
+                  "unknown"
+                ]
+              },
+              "sourceUiMap": {
+                "type": [
+                  "string",
+                  "object"
+                ],
+                "description": "Path or object summarizing source-derived UI routes/selectors/data sources."
+              },
+              "runtimeState": {
+                "type": [
+                  "string",
+                  "object"
+                ],
+                "description": "Path or object summarizing observed runtime hierarchy/screenshot/page state."
+              },
+              "attempts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "required": [
+                    "attemptId",
+                    "progressKind",
+                    "hypothesis",
+                    "actionTried",
+                    "expectedSignal",
+                    "outcome"
+                  ],
+                  "properties": {
+                    "attemptId": {
+                      "type": "string"
+                    },
+                    "progressKind": {
+                      "type": "string",
+                      "enum": [
+                        "navigation",
+                        "control_discovery",
+                        "proof",
+                        "evidence",
+                        "repair",
+                        "blocked",
+                        "unknown"
+                      ]
+                    },
+                    "hypothesis": {
+                      "type": "string"
+                    },
+                    "actionTried": {
+                      "type": "string"
+                    },
+                    "expectedSignal": {
+                      "type": "string"
+                    },
+                    "outcome": {
+                      "type": "string"
+                    },
+                    "evidence": {
+                      "type": "array",
+                      "items": {
+                        "type": [
+                          "string",
+                          "object"
+                        ],
+                        "additionalProperties": true
+                      }
+                    },
+                    "ruledOut": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "remainingHypotheses": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "extracted": {
+                      "type": "object",
+                      "additionalProperties": true
+                    }
+                  }
+                }
+              },
+              "stopReason": {
+                "type": "string",
+                "enum": [
+                  "proved",
+                  "blocked",
+                  "exhausted",
+                  "needs_user",
+                  "product_bug",
+                  "needs_repair",
+                  "in_progress",
+                  "unknown"
+                ]
+              },
+              "extracted": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "description": "Completion-gate coverage summary derived from TestCases.md, Require.md, and testResults.",
+      "additionalProperties": true,
+      "properties": {
+        "requiredTestCases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requiredTestCasesPassed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requiredTestCasesFailed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requiredTestCasesSkipped": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "requiredTestCasesNotRun": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "acceptanceCriteriaRequired": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "acceptanceCriteriaCovered": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "acceptanceCriteriaOpen": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "completionCheck": {
+          "type": "string",
+          "enum": [
+            "pass",
+            "fail"
+          ]
+        },
+        "ledgerPath": {
+          "type": "string"
+        }
+      }
+    },
+    "skippedChecks": {
+      "type": "array",
+      "description": "Testcases intentionally not run in this iteration, usually because a dependency testcase failed (fail-fast) or a safe skip policy applied.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": [
+          "name",
+          "reason",
+          "category"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "testCaseId": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "skipped_dependency",
+              "safe_non_runtime_skip",
+              "not_selected",
+              "not_applicable",
+              "other"
+            ]
+          },
+          "dependsOn": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "humanConfirmation": {
+      "type": "object",
+      "description": "Human confirmation evidence used as the final fallback for visual/UI claims that measurable evidence and AI review cannot prove.",
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "requested",
+            "confirmed",
+            "rejected"
+          ]
+        },
+        "question": {
+          "type": "string"
+        },
+        "confirmedBy": {
+          "type": "string"
+        },
+        "confirmedAt": {
+          "type": "string"
+        },
+        "screenshotEvidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "supportingEvidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "expectedClaim": {
+          "type": "string"
+        },
+        "userResponse": {
+          "type": "string"
+        }
+      }
+    },
+    "updatedAt": {
+      "type": "string",
+      "description": "Last write time for the latest evaluation.json payload."
+    },
+    "previousNextAction": {
+      "type": "string",
+      "description": "Previous loop-control nextAction when AutoMind explicitly consumed or normalized a route signal."
+    },
+    "replanResolution": {
+      "type": "object",
+      "description": "Audit metadata written only when the current loop explicitly consumes a replan signal after running Planner and a fresh workflow-check passes.",
+      "additionalProperties": true,
+      "properties": {
+        "resolvedAt": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "previousNextAction": {
+          "type": "string"
+        },
+        "nextAction": {
+          "type": "string"
+        },
+        "requiresFreshPlannerWorkflowPass": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

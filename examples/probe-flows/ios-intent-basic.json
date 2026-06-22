@@ -1,0 +1,119 @@
+{
+  "platform": "ios",
+  "adapter": "xcuitest",
+  "name": "<task-name> iOS probe-flow",
+  "app": {
+    "projectPath": "<path-to-xcodeproj-or-external-runner.xcodeproj>",
+    "scheme": "<scheme>",
+    "xcodebuildDeviceId": "<traditional-udid>",
+    "coreDeviceId": "<coredevice-id>",
+    "team": "<team-id>",
+    "bundleId": "<runner-bundle-id>",
+    "configuration": "Debug"
+  },
+  "testIntent": {
+    "goal": "<task verification goal>",
+    "sources": [
+      "Require.md",
+      "TestCases.md",
+      "optional private project summary path"
+    ],
+    "preconditions": [
+      "target app is installed and launchable",
+      "device is unlocked with Developer Mode and UI Automation enabled"
+    ],
+    "authorization": {
+      "scopes": ["non_destructive_common_dialog"],
+      "note": "Do not extend this to destructive/account/payment actions."
+    },
+    "acceptanceCriteria": [
+      "target task state is visible after actions",
+      "app remains running"
+    ],
+    "steps": [
+      {
+        "type": "wait",
+        "name": "wait for launch stabilization",
+        "intentMode": "setup",
+        "seconds": 4
+      },
+      {
+        "type": "tap_if_present",
+        "name": "optional non-destructive dialog close",
+        "intentMode": "setup",
+        "authorizationScope": "non_destructive_common_dialog",
+        "selector": {
+          "predicate": "label CONTAINS 'Close' OR label CONTAINS 'Got it' OR label == '×' OR label == 'X'"
+        },
+        "confidence": {
+          "required": 0.75,
+          "source": "accessibility"
+        },
+        "risk": {
+          "level": "low",
+          "reversibility": "reversible",
+          "requiresApproval": false
+        },
+        "guards": {
+          "fallback": {
+            "onMissingElement": "skip_optional"
+          }
+        },
+        "timeout": 2
+      },
+      {
+        "type": "tap",
+        "name": "tap target element",
+        "intentMode": "verify",
+        "selector": {
+          "predicate": "label CONTAINS '<target label>'"
+        },
+        "confidence": {
+          "required": 0.8,
+          "source": "accessibility"
+        },
+        "risk": {
+          "level": "medium",
+          "reversibility": "recoverable",
+          "requiresApproval": false
+        },
+        "guards": {
+          "preconditions": ["target_page_ready", "no_modal_blocker"],
+          "fallback": {
+            "onLowConfidence": "capture_more_evidence",
+            "onAmbiguousMatch": "ask_user",
+            "onMissingElement": "scroll_and_retry"
+          }
+        },
+        "timeout": 8
+      },
+      {
+        "type": "assert_exists",
+        "name": "assert target task state",
+        "intentMode": "verify",
+        "selector": {
+          "predicate": "label CONTAINS '<expected result label>'"
+        },
+        "timeout": 8,
+        "postChecks": [
+          {
+            "type": "accessibility_contains",
+            "values": ["<expected result label>"],
+            "strength": "strong"
+          }
+        ]
+      }
+    ],
+    "postChecks": [
+      {
+        "type": "app_smoke",
+        "strength": "medium"
+      },
+      {
+        "type": "ocr_readiness",
+        "expectedSignals": ["<expected result label>"],
+        "strength": "strong"
+      }
+    ]
+  }
+}

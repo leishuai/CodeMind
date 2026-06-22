@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automind.local/schemas/runtime-state.schema.json",
+  "title": "AutoMind Runtime State",
+  "description": "Mutable runtime/resume projection for one AutoMind task. Macro phase routing lives in stateSummary.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "status",
+    "nextAction"
+  ],
+  "properties": {
+    "taskId": {
+      "type": "string",
+      "description": "Stable task code for .automind/tasks/<task>."
+    },
+    "status": {
+      "type": "string",
+      "description": "Current runtime status such as created, planning, generating, evaluating, human_input_pending, failed, or finished."
+    },
+    "currentOwner": {
+      "type": "string",
+      "description": "Current owner responsible for the next runtime step, e.g. planner, generator, evaluator, automind, or user."
+    },
+    "nextAction": {
+      "type": "string",
+      "description": "Runtime/resume next action such as run_generator, run_evaluator, retry, replan, ask_user, stop_blocked, or finish."
+    },
+    "iteration": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Latest loop iteration number."
+    },
+    "planner": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Planner-local state, including preImplementationReview when present."
+    },
+    "evaluatorContext": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Evaluator context-pack pointers and isolation metadata when model evaluation is used."
+    },
+    "agentExecutionPolicy": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Task-level Planner/Generator execution policy."
+    },
+    "resumeRecovery": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Stage-level recovery decision derived from runtime/evaluation/log artifacts."
+    },
+    "latestUserAnswer": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Most recent structured user answer captured by ask_user/message flows."
+    },
+    "latestUserMessage": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Most recent free-form user message captured by message flows."
+    },
+    "workflowCheck": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Latest workflow-check result summary, if recorded."
+    },
+    "completionCheck": {
+      "type": "string",
+      "description": "Latest completion-check result cached for resume/reporting."
+    },
+    "completionVerdict": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Latest completion verdict cached for terminal-state guarding."
+    },
+    "decisionLog": {
+      "type": "array",
+      "description": "Bounded recent decision log entries for compressed-session continuity.",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "updatedAt": {
+      "type": "string",
+      "description": "Last update timestamp in local ISO format."
+    },
+    "stateSummary": {
+      "type": "object",
+      "description": "Primary and only live-state summary. Prefer this over raw workflow/evaluation/runtime fields when explaining current/next macro state.",
+      "additionalProperties": true,
+      "properties": {
+        "currentPhase": {
+          "type": "string"
+        },
+        "currentStatus": {
+          "type": "string"
+        },
+        "currentOwner": {
+          "type": "string"
+        },
+        "nextPhase": {
+          "type": "string"
+        },
+        "nextAction": {
+          "type": "string"
+        },
+        "nextOwner": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "basis": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "path": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
