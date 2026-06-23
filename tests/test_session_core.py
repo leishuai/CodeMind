@@ -1061,6 +1061,24 @@ def test_tui_input_enables_readline_before_delegating(monkeypatch) -> None:
     assert calls == ["readline", "prompt> "]
 
 
+def test_tui_input_wraps_ansi_prompt_for_readline_width(monkeypatch) -> None:
+    import builtins
+    import orchestrator.tui.input as tui_input_mod
+    from orchestrator.tui.style import BLUE, style
+
+    prompts = []
+    long_text = "ask long input that should keep readline prompt width stable"
+    ansi_prompt = f"\033[1m{BLUE}automind> \033[0m"
+    monkeypatch.setattr(builtins, "input", lambda prompt="": prompts.append(prompt) or long_text)
+    monkeypatch.setattr(tui_input_mod, "enable_line_editing", lambda: True)
+
+    assert tui_input_mod.tui_input(ansi_prompt) == long_text
+    assert prompts
+    assert "\001\033[" in prompts[0]
+    assert "\002" in prompts[0]
+    assert prompts[0].replace("\001", "").replace("\002", "") == ansi_prompt
+
+
 def test_command_shell_uses_tui_input(monkeypatch) -> None:
     from orchestrator.tui import shell as shell_mod
 
