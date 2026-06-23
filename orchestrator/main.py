@@ -6959,6 +6959,17 @@ def cmd_synthesize_evidence(task_code: str):
     )
 
 
+def _is_git_free_runtime_install(runtime_root: Path) -> bool:
+    """Return True when runtime_root is an installer-managed git-free copy."""
+    git_marker = runtime_root / ".git"
+    if not git_marker.is_file():
+        return False
+    try:
+        return "AutoMind runtime install is intentionally not a Git checkout" in git_marker.read_text(encoding="utf-8", errors="ignore")
+    except OSError:
+        return False
+
+
 def cmd_update(argv_tail: list[str] | None = None) -> None:
     """Update the installed AutoMind runtime and agent integrations."""
     argv_tail = argv_tail or []
@@ -6991,6 +7002,15 @@ Useful environment overrides:
     installer = AUTOMIND_ROOT / "install.sh"
     env = os.environ.copy()
     env.setdefault("AUTOMIND_UPDATE", "1")
+    if _is_git_free_runtime_install(AUTOMIND_ROOT):
+        # Public/user installs are git-free runtime copies. When users run
+        # `$AUTOMIND_HOME/automind.sh update` directly instead of the wrapper,
+        # AUTOMIND_HOME may not be present in the shell environment. Bind the
+        # bootstrap to the current runtime so install-curl.sh updates this
+        # install, not the default path. Do not do this in a source checkout:
+        # there `.git` is a directory, and update should refresh the installed
+        # runtime rather than overwrite the development checkout.
+        env.setdefault("AUTOMIND_HOME", str(AUTOMIND_ROOT))
 
     if bootstrap.exists():
         log(f"Updating AutoMind with bootstrap: {bootstrap}")

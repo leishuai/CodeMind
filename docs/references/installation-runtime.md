@@ -31,7 +31,7 @@ Preferred update command after AutoMind is installed:
 automind update
 ```
 
-`automind update` reruns the bundled installer bootstrap. It updates the installer git cache (`git fetch` + reset to the target ref, default `origin/main`), re-syncs the git-free runtime into `AUTOMIND_HOME` with `rsync --delete`, refreshes the CLI wrapper, and reinstalls the AutoMind skill plus `/automind` command for detected supported coding agents. The `--delete` sync drops stale runtime files from the previous version but preserves local data: it excludes `.automind/tasks/`, `.automind/summary/`, `dist/`, and `.venv-*/`.
+`automind update` reruns the bundled `install-curl.sh` bootstrap. It updates the installer git cache (`git fetch` + reset to the target ref, default `origin/main`), re-syncs the git-free runtime into `AUTOMIND_HOME` with `rsync --delete`, refreshes the CLI wrapper, and reinstalls the AutoMind skill plus `/automind` command for detected supported coding agents. In an installer-managed git-free runtime, direct `$AUTOMIND_HOME/automind.sh update` binds `AUTOMIND_HOME` to the current runtime path before invoking `install-curl.sh`, so custom install paths update themselves correctly. In a source Git checkout, `./automind.sh update` does not overwrite the checkout; it updates the normal installed runtime unless `AUTOMIND_HOME` is explicitly provided. The `--delete` sync drops stale runtime files from the previous version but preserves local data: it excludes `.automind/tasks/`, `.automind/summary/`, `dist/`, and `.venv-*/`.
 
 If the installed runtime is too old to support `automind update`, rerun the one-line installer:
 

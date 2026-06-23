@@ -399,6 +399,49 @@ def test_cmd_update_falls_back_to_local_install_without_bootstrap(tmp_path: Path
     assert "AutoMind local refresh complete" in captured.out
 
 
+def test_cmd_update_git_free_runtime_sets_current_automind_home(tmp_path: Path, monkeypatch) -> None:
+    from orchestrator import main as main_mod
+
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    bootstrap = runtime / "install-curl.sh"
+    bootstrap.write_text("#!/usr/bin/env bash\n")
+    (runtime / ".git").write_text(
+        "AutoMind runtime install is intentionally not a Git checkout.\n",
+        encoding="utf-8",
+    )
+    calls = []
+    monkeypatch.delenv("AUTOMIND_HOME", raising=False)
+    monkeypatch.setattr(main_mod, "AUTOMIND_ROOT", runtime)
+    monkeypatch.setattr(main_mod.subprocess, "run", lambda args, **kwargs: calls.append((args, kwargs)))
+
+    main_mod.cmd_update([])
+
+    assert calls
+    assert calls[0][0] == ["bash", str(bootstrap)]
+    assert calls[0][1]["env"]["AUTOMIND_HOME"] == str(runtime)
+
+
+def test_cmd_update_source_checkout_does_not_bind_automind_home_to_source(tmp_path: Path, monkeypatch) -> None:
+    from orchestrator import main as main_mod
+
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / ".git").mkdir()
+    bootstrap = source / "install-curl.sh"
+    bootstrap.write_text("#!/usr/bin/env bash\n")
+    calls = []
+    monkeypatch.delenv("AUTOMIND_HOME", raising=False)
+    monkeypatch.setattr(main_mod, "AUTOMIND_ROOT", source)
+    monkeypatch.setattr(main_mod.subprocess, "run", lambda args, **kwargs: calls.append((args, kwargs)))
+
+    main_mod.cmd_update([])
+
+    assert calls
+    assert calls[0][0] == ["bash", str(bootstrap)]
+    assert "AUTOMIND_HOME" not in calls[0][1]["env"]
+
+
 def test_cmd_message_hidden_tui_chat_reuses_cached_agent(tmp_path: Path, monkeypatch, capsys) -> None:
     import orchestrator.commands.session as session_cmd
 
