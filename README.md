@@ -122,7 +122,7 @@ not removed.
 Pin a version or branch:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl.sh | AUTOMIND_BRANCH=v0.1.0 bash
+curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl.sh | AUTOMIND_BRANCH=0.2.0 bash
 ```
 
 ## Use AutoMind

@@ -152,12 +152,12 @@ review before applying.
 The runtime display version is centralized in `orchestrator/version.py`:
 
 ```python
-AUTOMIND_VERSION = "0.1.0"
+AUTOMIND_VERSION = "0.2.0"
 ```
 
 TUI and shell render it through `automind_version_label()`. Use
 `automind version` to print the current runtime version. Installer examples may
-still mention git tags such as `v0.1.0`; those are repository refs, not separate
+still mention git tags such as `0.2.0`; those are repository refs, not separate
 TUI version constants.
 
 ## User interrupt / pause

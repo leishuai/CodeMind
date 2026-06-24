@@ -1,6 +1,6 @@
 """AutoMind runtime version."""
 
-AUTOMIND_VERSION = "0.1.0"
+AUTOMIND_VERSION = "0.2.0"
 
 
 def automind_version_label() -> str:

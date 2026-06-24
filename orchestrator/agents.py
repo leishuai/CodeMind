@@ -416,7 +416,7 @@ def build_agent_cli_command(agent: str, prompt: str, task_dir: Path, phase: str 
                 session_id = ""
             if session_id:
                 meta.update({"sessionAction": "resume", "sessionId": session_id, "agentExecutionBypass": True, "executionMode": "dangerous_bypass"})
-                return ["codex", "--dangerously-bypass-approvals-and-sandbox", "exec", "resume", "--skip-git-repo-check", session_id, prompt], meta
+                return ["codex", "--dangerously-bypass-approvals-and-sandbox", "exec", "resume", "--skip-git-repo-check", "--", session_id, prompt], meta
             meta.update({"sessionAction": "new", "agentExecutionBypass": True, "executionMode": "dangerous_bypass"})
             return adapter["command"](prompt, task_dir), meta
         if primary and primary.get("agentExecutionBypass") is True:
@@ -427,7 +427,7 @@ def build_agent_cli_command(agent: str, prompt: str, task_dir: Path, phase: str 
         session_id = str(primary.get("sessionId") or "")
         if session_id:
             meta.update({"sessionAction": "resume", "sessionId": session_id})
-            return ["codex", "exec", "resume", "--skip-git-repo-check", session_id, prompt], meta
+            return ["codex", "exec", "resume", "--skip-git-repo-check", "--", session_id, prompt], meta
         meta.update({"sessionAction": "new", "agentExecutionBypass": False, "executionMode": "normal"})
         return adapter["command"](prompt, task_dir), meta
 

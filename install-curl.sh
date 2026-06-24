@@ -79,7 +79,7 @@ Environment variables:
 
 Examples:
   curl -fsSL $BOOTSTRAP_URL | bash
-  curl -fsSL $BOOTSTRAP_URL | AUTOMIND_BRANCH=v0.1.0 bash
+  curl -fsSL $BOOTSTRAP_URL | AUTOMIND_BRANCH=0.2.0 bash
   curl -fsSL $BOOTSTRAP_URL | AUTOMIND_INSTALL_AGENT=auto bash
 USAGE_EOF
 }

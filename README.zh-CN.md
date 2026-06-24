@@ -122,7 +122,7 @@ skill/command。你的本地数据会被保留——`.automind/tasks/` 和
 `AUTOMIND_BRANCH` 固定到指定版本：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl.sh | AUTOMIND_BRANCH=v0.1.0 bash
+curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl.sh | AUTOMIND_BRANCH=0.2.0 bash
 ```
 
 ---

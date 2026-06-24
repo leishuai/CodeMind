@@ -1271,6 +1271,136 @@ def test_command_shell_uses_tui_input(monkeypatch) -> None:
     assert prompts and "automind" in prompts[0]
 
 
+def test_tui_terminal_input_preserves_bracketed_multiline_paste() -> None:
+    import json
+    import os
+    import pty
+    import select
+    import subprocess
+    import sys
+    import textwrap
+    from pathlib import Path
+
+    result_path = Path('/tmp/automind_tui_input_result_pytest.json')
+    result_path.unlink(missing_ok=True)
+    master, slave = pty.openpty()
+    code = textwrap.dedent(f"""
+        import json
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, {str(Path.cwd())!r})
+        from orchestrator.tui.input import _terminal_input
+        value = _terminal_input('automind> ')
+        Path({str(result_path)!r}).write_text(json.dumps({{'value': value}}))
+    """)
+    proc = subprocess.Popen([sys.executable, '-c', code], stdin=slave, stdout=slave, stderr=slave, close_fds=True)
+    os.close(slave)
+    try:
+        initial = b''
+        for _ in range(30):
+            if select.select([master], [], [], 0.05)[0]:
+                initial += os.read(master, 4096)
+                if b'automind> ' in initial:
+                    break
+            if proc.poll() is not None:
+                break
+        assert b'automind> ' in initial, initial
+        os.write(master, b'\x1b[200~first line\nsecond line\x1b[201~')
+        rendered = b''
+        for _ in range(20):
+            if select.select([master], [], [], 0.05)[0]:
+                rendered += os.read(master, 4096)
+                if b'first line\\nsecond line' in rendered:
+                    break
+        assert b'first line\\nsecond line' in rendered
+        os.write(master, b'\r')
+        for _ in range(60):
+            if proc.poll() is not None:
+                break
+            if select.select([master], [], [], 0.05)[0]:
+                os.read(master, 4096)
+        else:
+            raise AssertionError('terminal input child did not exit')
+    finally:
+        try:
+            os.close(master)
+        except OSError:
+            pass
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait(timeout=3)
+
+    assert proc.returncode == 0
+    assert json.loads(result_path.read_text()) == {'value': 'first line\nsecond line'}
+
+
+def test_tui_terminal_input_long_paste_stays_single_line_preview() -> None:
+    import json
+    import os
+    import pty
+    import select
+    import subprocess
+    import sys
+    import textwrap
+    from pathlib import Path
+
+    result_path = Path('/tmp/automind_tui_input_long_result_pytest.json')
+    result_path.unlink(missing_ok=True)
+    master, slave = pty.openpty()
+    code = textwrap.dedent(f"""
+        import json
+        import shutil
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, {str(Path.cwd())!r})
+        import orchestrator.tui.input as input_mod
+        input_mod.shutil.get_terminal_size = lambda fallback=(80, 20): shutil.os.terminal_size((40, 20))
+        value = input_mod._terminal_input('automind> ')
+        Path({str(result_path)!r}).write_text(json.dumps({{'value': value}}))
+    """)
+    proc = subprocess.Popen([sys.executable, '-c', code], stdin=slave, stdout=slave, stderr=slave, close_fds=True)
+    os.close(slave)
+    pasted = '\n'.join(f'line {i} with enough text to wrap badly' for i in range(12))
+    try:
+        initial = b''
+        for _ in range(30):
+            if select.select([master], [], [], 0.05)[0]:
+                initial += os.read(master, 4096)
+                if b'automind> ' in initial:
+                    break
+            if proc.poll() is not None:
+                break
+        assert b'automind> ' in initial, initial
+        os.write(master, b'\x1b[200~' + pasted.encode() + b'\x1b[201~')
+        rendered = b''
+        for _ in range(20):
+            if select.select([master], [], [], 0.05)[0]:
+                rendered += os.read(master, 4096)
+                if b'\xe2\x80\xa6' in rendered or b'line 11' in rendered:
+                    break
+        # The preview must not redraw by printing many physical wrapped prompt rows.
+        assert rendered.count(b'automind> ') <= 1, rendered
+        os.write(master, b'\r')
+        for _ in range(60):
+            if proc.poll() is not None:
+                break
+            if select.select([master], [], [], 0.05)[0]:
+                os.read(master, 4096)
+        else:
+            raise AssertionError('terminal input child did not exit')
+    finally:
+        try:
+            os.close(master)
+        except OSError:
+            pass
+        if proc.poll() is None:
+            proc.kill()
+            proc.wait(timeout=3)
+
+    assert proc.returncode == 0
+    assert json.loads(result_path.read_text()) == {'value': pasted}
+
+
 def test_generator_ask_user_gate_pauses_before_evaluator(tmp_path: Path) -> None:
     import orchestrator.main as main_mod
     from orchestrator.state import read_runtime_state, write_evaluation_json
@@ -1782,7 +1912,26 @@ def test_codex_dangerous_bypass_primary_session_is_reused(tmp_path: Path) -> Non
     assert meta2["sessionAction"] == "resume"
     assert meta2["agentExecutionBypass"] is True
     assert cmd2[:4] == ["codex", "--dangerously-bypass-approvals-and-sandbox", "exec", "resume"]
-    assert cmd2[4:6] == ["--skip-git-repo-check", "019e0000-0000-7000-8000-000000000abc"]
+    assert cmd2[4:7] == ["--skip-git-repo-check", "--", "019e0000-0000-7000-8000-000000000abc"]
+
+
+def test_codex_resume_prompt_starting_with_dash_is_positional(tmp_path: Path) -> None:
+    from orchestrator.agents import build_agent_cli_command, record_agent_session_after_run
+
+    task_dir = tmp_path / "task01"
+    task_dir.mkdir(parents=True)
+
+    write_runtime_state(task_dir, {"agentExecutionPolicy": {"bypassApprovals": True, "consent": "user_approved"}})
+    cmd1, meta1 = build_agent_cli_command("codex", "planner", task_dir, phase="planner")
+    record_agent_session_after_run(task_dir, meta1, "session id: 019e0000-0000-7000-8000-000000000def\n", 0)
+    prompt = "- maxHeight = bottom - top - 40;\n+ coverLength = preferredCoverLength;"
+    cmd2, meta2 = build_agent_cli_command("codex", prompt, task_dir, phase="generator")
+
+    assert meta2["sessionAction"] == "resume"
+    assert "--" in cmd2
+    separator_index = cmd2.index("--")
+    assert cmd2[separator_index + 1] == "019e0000-0000-7000-8000-000000000def"
+    assert cmd2[separator_index + 2] == prompt
 
 
 def test_codex_dangerous_bypass_respects_tui_decline(tmp_path: Path, monkeypatch) -> None:
