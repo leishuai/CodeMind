@@ -13,14 +13,14 @@ def _make_preloaded(runtime: Path) -> None:
     (preloaded / "ios-custom-build-bazel-build.md").write_text(
         "---\n"
         "name: ios-custom-build-bazel-build\n"
-        "description: \"iOS custom build-wrapper / Bazel / Xcode build diagnostics.\"\n"
+        "description: \"iOS custom build wrapper/Bazel/Xcode build diagnostics.\"\n"
         "use_when:\n"
         "  - \"iOS custom_build_wrapper bazel libtool build\"\n"
         "  - \"custom_build_wrapper.sh --build is killed\"\n"
         "solves:\n"
         "  - \"keeps build-wrapper failures classified with stable evidence\"\n"
         "---\n"
-        "# iOS Custom Build Wrapper Diagnostics\n\nbody\n"
+        "# iOS custom build wrapper Bazel Build\n\nbody\n"
     )
     (preloaded / "android-readiness.md").write_text(
         "---\n"

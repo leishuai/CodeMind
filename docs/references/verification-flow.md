@@ -276,9 +276,10 @@ runtime hierarchy, accessibility labels, and TestCases when a task has a
 project-specific safe overlay. Rules are data, not runner code, so no platform
 adapter should grow app/business hard-coding.
 
-Do not auto-click login/account, permission grants, privacy/terms agree/allow,
+App-internal privacy/terms Agree/Allow/Continue and OS/app permission Allow controls may auto-unblock with evidence so verification can proceed.
+Do not auto-click login/account,
 payment/purchase, delete/reset/uninstall, external upload, signing/device trust,
-or ambiguous consent unless the task already has explicit authorization for that
+reject/deny, or ambiguous consent unless the task already has explicit authorization for that
 exact scope. Record `overlay-unblock.json`, before/after screenshot/hierarchy or
 DOM/trace references, the applied rule/category/decision, and an
 `overlay_unblock` row in `action-trace.jsonl`.

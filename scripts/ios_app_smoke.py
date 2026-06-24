@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from automind_paths import IOS_TOOLS_PY, RUNTIME_ROOT, TASKS_DIR, WORKSPACE_ROOT
+from automind_paths import IOS_TOOLS_PY, RUNTIME_ROOT, TASKS_DIR, WORKSPACE_ROOT, venv_requirements_current
 from state_files import write_runtime_state
 
 ROOT = RUNTIME_ROOT
@@ -52,7 +52,7 @@ def write(path: Path, text: str) -> None:
 def ios_python_ready() -> tuple[bool, str]:
     if not IOS_PY.exists():
         return False, ".venv-ios-tools python missing"
-    res = run([str(IOS_PY), "-c", "import importlib.util; raise SystemExit(0 if importlib.util.find_spec('pymobiledevice3') else 1)"], timeout=20)
+    res = run([str(IOS_PY), "-c", "import pymobiledevice3"], timeout=20)
     if res["exitCode"] != 0:
         return False, "pymobiledevice3 missing from .venv-ios-tools"
     return True, "ready"
@@ -109,6 +109,8 @@ def maybe_screenshot(args: argparse.Namespace, log_dir: Path) -> dict[str, Any]:
         return {"enabled": False, "ok": False, "skipped": True, "reason": "disabled"}
     output = log_dir / "ios-app-smoke-screenshot.png"
     ready, reason = ios_python_ready()
+    if ready and not venv_requirements_current("ios"):
+        ready, reason = False, "requirements changed since .venv-ios-tools was built (stale stamp)"
     auto_setup_attempted = False
     if not ready:
         if not getattr(args, "auto_setup_tools", False):

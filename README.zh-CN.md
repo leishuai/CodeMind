@@ -103,13 +103,23 @@ automind export-skill "$HOME/Downloads/automind-skill" --clean
 
 ### 更新
 
-更新到最新版本，只需重新跑同一条安装命令：
+更新到最新版本，推荐方式是：
+
+```bash
+automind update
+```
+
+或者，也可以重新跑同一条安装命令：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl.sh | bash
 ```
 
-安装和更新是同一条命令。重跑时安装器缓存已存在，bootstrap 会先 fetch 最新 ref（`git fetch` + reset 到 `origin/main`），再用 `rsync --delete` 把不带 `.git` 的 runtime 同步到 `~/.automind/automind`，并重装各 agent 的 skill/command。`--delete` 同步会清掉旧版本残留文件，但会保留你的本地数据——它排除了 `.automind/tasks/`、`.automind/summary/`、`dist/`、`.venv-*/`，所以任务产物和本地 reuse memory 不会丢失。可用 `AUTOMIND_BRANCH` 固定到指定版本：
+安装和更新使用同一套底层流程：AutoMind 会拉取最新版本，刷新
+`~/.automind/automind` 下的 git-free runtime，并重装各 agent 的
+skill/command。你的本地数据会被保留——`.automind/tasks/` 和
+`.automind/summary/` 下的任务产物和 reuse memory 不会被删除。可用
+`AUTOMIND_BRANCH` 固定到指定版本：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl.sh | AUTOMIND_BRANCH=v0.1.0 bash
@@ -172,6 +182,33 @@ automind ask "Fix the login crash and verify it"
 | 你需要继续之前的任务 | `automind resume <task-code>` 或 `automind continue [task-code]` |
 
 `scaffold`、`workflow-contract`、`phase-gate`、`context-pack`、`completion-check`、`record-check` 这类高级 helper/gate 命令主要给 AutoMind skill、slash-command current-session flow、CI/回归 fixture 和调试使用。新用户通常不需要手动执行它们。
+
+---
+
+## 全自动模式（一站到底，不打断）
+
+默认情况下，非琐碎的实现任务会在 pre-implementation review 处停一次，
+确认范围、方案、风险和授权。如果你希望 AutoMind 自主跑完整个流程、
+不被这一步打断，可以在初始请求里声明全自动：
+
+```text
+/automind 修复登录崩溃并验证，全自动
+```
+
+或：
+
+```bash
+automind ask "修复登录崩溃并验证，一站到底"
+```
+
+也可以在 pre-implementation `ask_user` 环节选择 `Full auto mode`，或直接回复
+`全自动` / `full auto`。开启后，AutoMind 会把该决策记录到
+`runtime-state.json`（`preImplementationReview.fullAuto=true`），并在后续安全的
+completion gate 自动放行。
+
+全自动不会跳过未事先授权的真正敏感/不可逆操作：账号/凭证登录、支付、
+破坏性 delete/reset/force-push、签名/keychain 变更、设备信任、生产影响等仍可能
+需要用户批准；宿主 coding agent 自身的命令审批弹窗也可能照常出现。
 
 ---
 

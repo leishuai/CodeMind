@@ -37,11 +37,27 @@ def test_safe_dismiss_labels_are_auto_unblockable() -> None:
         assert result["category"] == "safe_dismiss"
 
 
-def test_sensitive_labels_are_not_auto_clicked_by_default() -> None:
-    for label in ["允许访问通讯录", "同意隐私协议", "登录", "支付", "删除", "Allow Photos", "Continue", "Cancel order", "关闭账号"]:
+def test_high_risk_labels_are_not_auto_clicked_by_default() -> None:
+    for label in ["登录", "支付", "删除", "Cancel order", "关闭账号"]:
         result = classify_overlay_candidate(_element(label))
         assert result["allowed"] is False
         assert result["category"] == "sensitive"
+
+
+def test_os_app_permission_grants_are_auto_unblockable_by_default() -> None:
+    for label in ["允许访问通讯录", "Allow Photos", "允许", "OK"]:
+        result = classify_overlay_candidate(_element(label), {"contextTexts": ["是否允许访问相册", "Would Like to Access Photos"]})
+        assert result["allowed"] is True
+        assert result["category"] in {"positive_privacy_or_terms_consent", "safe_confirm", "permission_grant"}
+        if result["category"] == "permission_grant":
+            assert result.get("contextCategory") == "permission_grant"
+
+
+def test_app_internal_privacy_consent_is_auto_unblockable_by_default() -> None:
+    for label in ["同意隐私协议", "同意", "Agree", "Accept", "Continue"]:
+        result = classify_overlay_candidate(_element(label), {"contextTexts": ["个人信息保护指引", "用户协议"]})
+        assert result["allowed"] is True
+        assert result["category"] == "positive_privacy_or_terms_consent"
 
 
 def test_generic_confirm_words_are_safe_without_sensitive_context() -> None:
@@ -69,9 +85,10 @@ def test_image_close_button_still_closes_sensitive_overlay() -> None:
     assert result["category"] == "image_close_button"
 
 
-def test_positive_consent_requires_explicit_policy_authorization() -> None:
+def test_positive_consent_is_allowed_without_extra_authorization() -> None:
     default_result = classify_overlay_candidate(_element("Agree"))
-    assert default_result["allowed"] is False
+    assert default_result["allowed"] is True
+    assert default_result["category"] == "positive_privacy_or_terms_consent"
 
     authorized_result = classify_overlay_candidate(_element("Agree"), {"allowPositiveConsent": True})
     assert authorized_result["allowed"] is True

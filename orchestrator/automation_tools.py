@@ -138,11 +138,15 @@ def get_android_tools_python() -> str:
 
 
 def android_tools_python_ready(python_exec: str) -> bool:
-    """Check whether adbutils/uiautomator2 are available in the selected Python."""
+    """Check whether adbutils/uiautomator2 actually import in the selected Python.
+
+    Uses a real import (not find_spec) so a half-installed/broken venv is
+    rejected rather than picked (P2).
+    """
     code, stdout, stderr = run_cmd([
         python_exec,
         "-c",
-        "import importlib.util; raise SystemExit(0 if importlib.util.find_spec('adbutils') and importlib.util.find_spec('uiautomator2') else 1)",
+        "import adbutils, uiautomator2",
     ], cwd=workspace_cwd())
     return code == 0
 
@@ -371,6 +375,182 @@ def check_python_modules(python_exec: Path, modules: list[str]) -> dict:
     except Exception:
         return {name: False for name in modules}
     return {name: bool(data.get(name)) for name in modules}
+
+
+def import_python_modules(python_exec: Path, modules: list[str]) -> dict:
+    """Like check_python_modules but actually imports each module (P2).
+
+    ``find_spec`` only proves the package is discoverable; it does not catch a
+    half-installed or ABI-broken binary package (numpy/Pillow), which still has
+    a spec but raises on import. A real import is the honest readiness signal.
+    """
+    if not python_exec.exists():
+        return {name: False for name in modules}
+    code, stdout, stderr = run_cmd([
+        str(python_exec),
+        "-c",
+        (
+            "import json; mods=" + repr(modules) + "; out={}\n"
+            "for _m in mods:\n"
+            "    try:\n"
+            "        __import__(_m); out[_m]=True\n"
+            "    except Exception:\n"
+            "        out[_m]=False\n"
+            "print(json.dumps(out))"
+        ),
+    ], cwd=workspace_cwd())
+    if code != 0:
+        return {name: False for name in modules}
+    try:
+        data = json.loads(stdout.strip().splitlines()[-1] if stdout.strip() else "{}")
+    except Exception:
+        return {name: False for name in modules}
+    return {name: bool(data.get(name)) for name in modules}
+
+
+# --- requirements satisfaction check (P1: detect when a venv needs reinstall) -
+#
+# A venv is only "stale" when an installed package no longer satisfies the
+# requirements version constraints (or is missing). Merely editing the
+# requirements file (relaxing a bound, comments, or a locally installed higher
+# version that still satisfies the range) must NOT trigger a pip reinstall.
+#
+# The check runs a self-contained probe inside the target venv python (no third
+# party deps) so the orchestrator and the standalone helper scripts compute the
+# same answer without sharing code.
+
+REQS_SATISFY_PROBE = r"""
+import sys, json, re
+try:
+    from importlib import metadata as _md
+except Exception:
+    _md = None
+
+def parse_version(v):
+    # Drop the local segment, then truncate at the first pre/dev/post letter so
+    # e.g. "2.0.dev0" -> "2.0" and "1.0rc1" -> "1.0" (numeric release only).
+    head = re.split(r"[^0-9.]", v.split("+")[0], 1)[0]
+    parts = re.findall(r"\d+", head)
+    return tuple(int(p) for p in parts) if parts else (0,)
+
+def cmp_ver(a, b):
+    a, b = parse_version(a), parse_version(b)
+    n = max(len(a), len(b))
+    a = a + (0,) * (n - len(a))
+    b = b + (0,) * (n - len(b))
+    return (a > b) - (a < b)
+
+def satisfies(installed, spec):
+    spec = (spec or "").strip()
+    if not spec:
+        return True
+    for clause in spec.split(","):
+        clause = clause.strip()
+        m = re.match(r"(==|!=|>=|<=|~=|>|<)\s*(.+)", clause)
+        if not m:
+            continue
+        op, ver = m.group(1), m.group(2).strip()
+        c = cmp_ver(installed, ver)
+        if op == ">=" and not c >= 0: return False
+        if op == ">" and not c > 0: return False
+        if op == "<=" and not c <= 0: return False
+        if op == "<" and not c < 0: return False
+        if op == "==" and not c == 0: return False
+        if op == "!=" and not c != 0: return False
+        if op == "~=" and not c >= 0: return False
+    return True
+
+req_path = sys.argv[1]
+unsatisfied = []
+try:
+    lines = open(req_path, "r", encoding="utf-8").read().splitlines()
+except Exception as exc:
+    print(json.dumps({"satisfied": True, "unsatisfied": [], "note": "requirements unreadable: %r" % exc}))
+    raise SystemExit(0)
+for raw in lines:
+    line = raw.split("#", 1)[0].strip()
+    if not line:
+        continue
+    m = re.match(r"^([A-Za-z0-9_.\-]+)\s*(.*)$", line)
+    if not m:
+        continue
+    name, spec = m.group(1), m.group(2)
+    if _md is None:
+        continue
+    try:
+        installed = _md.version(name)
+    except Exception:
+        unsatisfied.append({"name": name, "spec": spec, "reason": "not_installed"})
+        continue
+    if not satisfies(installed, spec):
+        unsatisfied.append({"name": name, "installed": installed, "spec": spec, "reason": "version_mismatch"})
+print(json.dumps({"satisfied": not unsatisfied, "unsatisfied": unsatisfied}))
+"""
+
+
+def requirements_satisfied(target: str) -> tuple[bool, list]:
+    """Return (satisfied, unsatisfied[]) for the target venv vs its requirements.
+
+    Satisfied means every requirement line resolves to an installed
+    distribution whose version meets the version constraints. A locally
+    installed higher version that is still within range counts as satisfied.
+    """
+    profile = AUTOMATION_TOOL_PROFILES.get(target) or {}
+    venv_dir = profile.get("venv")
+    req_path = profile.get("requirements")
+    if not venv_dir or not Path(venv_dir).exists():
+        return True, []
+    if not req_path or not Path(req_path).exists():
+        return True, []
+    py = automation_venv_python(Path(venv_dir))
+    if not py.exists():
+        return True, []
+    code, stdout, stderr = run_cmd([str(py), "-c", REQS_SATISFY_PROBE, str(req_path)], cwd=workspace_cwd())
+    if code != 0 or not stdout.strip():
+        # Probe failed for a non-version reason; do not force a rebuild on this
+        # ambiguous signal (module-import readiness still guards real breakage).
+        return True, []
+    try:
+        data = json.loads(stdout.strip().splitlines()[-1])
+    except Exception:
+        return True, []
+    return bool(data.get("satisfied", True)), list(data.get("unsatisfied", []))
+
+
+def venv_requirements_current(target: str) -> bool:
+    """True when installed packages still satisfy the requirements constraints.
+
+    A missing venv is handled by the module-import readiness check; a relaxed
+    bound or a locally installed higher version that still satisfies the range
+    is NOT treated as stale.
+    """
+    satisfied, _ = requirements_satisfied(target)
+    return satisfied
+
+
+def automation_tools_ready(target: str) -> tuple[bool, str]:
+    """Single readiness gate: python exists + modules import + reqs satisfied.
+
+    Used to decide whether an auto-setup is needed. Returns (ready, reason).
+    """
+    profile = AUTOMATION_TOOL_PROFILES.get(target) or {}
+    venv_dir = profile.get("venv")
+    modules = list(profile.get("modules", []))
+    if not venv_dir:
+        return False, f"unknown automation target: {target}"
+    py = automation_venv_python(Path(venv_dir))
+    if not py.exists():
+        return False, f"venv python missing: {py}"
+    imported = import_python_modules(py, modules)
+    missing = [name for name, ok in imported.items() if not ok]
+    if missing:
+        return False, "modules fail to import: " + ", ".join(missing)
+    satisfied, unsatisfied = requirements_satisfied(target)
+    if not satisfied:
+        return False, "installed versions no longer satisfy requirements: " + ", ".join(
+            item.get("name", "?") for item in unsatisfied
+        )
+    return True, "ready"
 
 
 def system_tool_snapshot(target: str) -> dict:
@@ -882,7 +1062,7 @@ def cmd_setup_automation_tools(target: str = "all", dry_run: bool = False):
             if target_report["steps"][-1].get("exitCode") == 0:
                 target_report["steps"].append(run_setup_step_with_bounded_network_retry(plan["commands"][2], target_log_dir, "install-packages"))
 
-            target_report["modules"] = check_python_modules(py, list(AUTOMATION_TOOL_PROFILES[item]["modules"]))
+            target_report["modules"] = import_python_modules(py, list(AUTOMATION_TOOL_PROFILES[item]["modules"]))
             failed_steps = [step for step in target_report["steps"] if step.get("exitCode") != 0]
             missing_modules = [name for name, ok in target_report["modules"].items() if not ok]
             if failed_steps or missing_modules:
@@ -898,6 +1078,12 @@ def cmd_setup_automation_tools(target: str = "all", dry_run: bool = False):
                 report["result"] = "fail"
             else:
                 target_report["status"] = "ready"
+                # Record the version satisfaction snapshot so a later check can
+                # tell whether the installed packages still meet requirements
+                # (P1: relaxed bounds / higher local versions are NOT stale).
+                satisfied, unsatisfied = requirements_satisfied(item)
+                target_report["requirementsSatisfied"] = satisfied
+                target_report["requirementsUnsatisfied"] = unsatisfied
 
         ensure_dir(target_log_dir)
         (target_log_dir / "setup-report.json").write_text(json.dumps(target_report, ensure_ascii=False, indent=2) + "\n")

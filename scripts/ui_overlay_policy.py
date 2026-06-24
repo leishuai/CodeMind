@@ -1,11 +1,16 @@
 #!/usr/bin/env python3
 """Shared safe auto-unblock overlay policy for AutoMind UI runners.
 
-The policy is deliberately conservative. It identifies low-risk dismiss/close
-controls that can be clicked as verification preconditions, and separates them
-from sensitive actions such as login, permission grants, payment, deletion, or
-irreversible consent. Platform runners keep the actual execution local; this
-module only classifies normalized UI elements and parses the probe-flow policy.
+The policy is high-automation by default. It identifies low-risk dismiss/close
+controls, app-internal first-run privacy/terms consent controls, and OS/app
+permission grants (camera, microphone, photos, location, contacts, notifications,
+etc.) that can be clicked as verification preconditions, while separating them
+from sensitive actions such as login/account authorization,
+payment/purchase/subscription, deletion/reset, and external upload. Platform
+runners keep the actual execution local; this module only classifies normalized
+UI elements and parses the probe-flow policy. Unknown or ambiguous overlays
+should be escalated to model review with screenshot/OCR/hierarchy, button labels,
+page context, and task intent instead of being decided by keywords alone.
 """
 
 from __future__ import annotations
@@ -77,14 +82,7 @@ SENSITIVE_KEYWORDS: tuple[str, ...] = (
     "登陆",
     "注册",
     "授权",
-    "权限",
-    "隐私",
-    "协议",
-    "条款",
-    "允许",
-    "同意",
     "开启",
-    "打开通知",
     "支付",
     "购买",
     "订阅",
@@ -105,15 +103,8 @@ SENSITIVE_KEYWORDS: tuple[str, ...] = (
     "sign in",
     "sign up",
     "authorize",
-    "permission",
-    "privacy",
-    "terms",
     "account",
     "order",
-    "allow",
-    "agree",
-    "accept",
-    "continue",
     "pay",
     "purchase",
     "subscribe",
@@ -130,10 +121,6 @@ HIGH_RISK_KEYWORDS: tuple[str, ...] = (
     "登陆",
     "注册",
     "授权",
-    "权限",
-    "隐私",
-    "协议",
-    "条款",
     "支付",
     "购买",
     "订阅",
@@ -153,9 +140,6 @@ HIGH_RISK_KEYWORDS: tuple[str, ...] = (
     "sign in",
     "sign up",
     "authorize",
-    "permission",
-    "privacy",
-    "terms",
     "account",
     "order",
     "pay",
@@ -179,6 +163,30 @@ POSITIVE_CONSENT_KEYWORDS: tuple[str, ...] = (
     "continue",
 )
 
+PERMISSION_CONTEXT_KEYWORDS: tuple[str, ...] = (
+    "相机",
+    "照片",
+    "相册",
+    "通讯录",
+    "联系人",
+    "位置",
+    "定位",
+    "麦克风",
+    "通知",
+    "蓝牙",
+    "追踪",
+    "访问",
+    "camera",
+    "photos",
+    "contacts",
+    "location",
+    "microphone",
+    "notifications",
+    "bluetooth",
+    "tracking",
+    "permission",
+)
+
 DEFAULT_OVERLAY_RULES: tuple[OverlayRule, ...] = (
     OverlayRule(
         category="high_risk",
@@ -189,9 +197,9 @@ DEFAULT_OVERLAY_RULES: tuple[OverlayRule, ...] = (
     ),
     OverlayRule(
         category="positive_privacy_or_terms_consent",
-        decision="requires_authorization",
+        decision="allow",
         terms=POSITIVE_CONSENT_KEYWORDS,
-        reason="matches consent/permission keyword that requires explicit authorization",
+        reason="matches app-internal consent/continue keyword that can be auto-unblocked during verification",
         priority=20,
     ),
     OverlayRule(
@@ -344,6 +352,28 @@ def _has_sensitive_context(values: list[str], policy: dict[str, Any] | None) -> 
     }
 
 
+def _has_permission_context(values: list[str], policy: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Detect whether the surrounding dialog/overlay is an OS/app permission request.
+
+    Used to disambiguate positive-consent buttons: 'Allow' on a camera-permission
+    alert is a permission_grant, not a privacy/terms consent. This distinction
+    feeds into the model-review signal so the Evaluator can quickly classify
+    what was auto-clicked.
+    """
+    context_values = values + _policy_context_values(policy)
+    matches = _keyword_matches(
+        context_values,
+        _policy_keywords(policy, "permissionKeywords", PERMISSION_CONTEXT_KEYWORDS),
+    )
+    if not matches:
+        return None
+    return {
+        "contextCategory": "permission_grant",
+        "reason": "surrounding overlay text indicates an OS/app permission request",
+        "matchedKeywords": matches,
+    }
+
+
 def _looks_like_image_close_button(element: dict[str, Any], values: list[str]) -> bool:
     class_name = _normalize(element.get("className") or element.get("class") or element.get("type"))
     has_image_shape = "image" in class_name or "button" in class_name
@@ -438,11 +468,20 @@ def classify_overlay_candidate(element: dict[str, Any], policy: dict[str, Any] |
       element because its text looked like a sensitive action but the call
       site has an allow list that overrides it.
     * `requires_model_review` — the classifier could not make a confident
-      decision; callers should surface the element's text / hierarchy to a
-      model or a human before acting on it.
+      decision; callers should surface screenshot/OCR/hierarchy, button labels,
+      page context, and task intent to a model before acting on it.
 
     The returned boolean `needsModelReview` is a convenience — True whenever
     `triageSource == "requires_model_review"`.
+
+    Decision order (context-first, not button-first):
+      1. Button itself is sensitive keyword → block
+      2. Surrounding dialog context is sensitive → only safe_dismiss allowed, rest block
+      3. Surrounding dialog is a permission request → allow positive-consent as permission_grant
+      4. Button matches an allow rule → allow
+      5. Generic confirm on non-sensitive dialog → allow
+      6. Image close button → allow
+      7. Unknown → model review
     """
     values = text_values(element)
 
@@ -461,100 +500,126 @@ def classify_overlay_candidate(element: dict[str, Any], policy: dict[str, Any] |
             "needsModelReview": False,
         }
 
-    allow_positive_consent = bool(policy and policy.get("allowPositiveConsent"))
     rule_result = evaluate_overlay_rules(values, policy)
-    if rule_result:
-        decision = rule_result.get("decision")
-        category = str(rule_result.get("category") or "")
-        if decision == "allow":
-            image_close_matches = _keyword_matches(values, IMAGE_CLOSE_KEYWORDS)
-            if image_close_matches and _looks_like_image_close_button(element, values):
-                return {
-                    "allowed": True,
-                    "category": "image_close_button",
-                    "reason": "image/button close control matched by identifier/description and no sensitive surrounding context matched",
-                    "texts": values,
-                    "matchedKeywords": image_close_matches,
-                    "ruleDecision": "contextual_allow",
-                    "triageSource": "code_deterministic",
-                    "needsModelReview": False,
-                }
-            return {
-                "allowed": True,
-                "category": category,
-                "reason": rule_result.get("reason"),
-                "texts": values,
-                "matchedKeywords": rule_result.get("matchedKeywords") or [],
-                "ruleDecision": decision,
-                "triageSource": "code_deterministic",
-                "needsModelReview": False,
-            }
-        if decision == "requires_authorization" and category == "positive_privacy_or_terms_consent" and allow_positive_consent:
-            return {
-                "allowed": True,
-                "category": category,
-                "reason": "consent action explicitly allowed by uiUnblock policy/authorization",
-                "texts": values,
-                "matchedKeywords": rule_result.get("matchedKeywords") or [],
-                "ruleDecision": decision,
-                "triageSource": "code_deterministic",
-                "needsModelReview": False,
-            }
-        return {
-            "allowed": False,
-            "category": "sensitive" if decision in {"deny", "requires_authorization"} else category,
-            "sensitiveCategory": category,
-            "reason": rule_result.get("reason"),
-            "texts": values,
-            "matchedKeywords": rule_result.get("matchedKeywords") or [],
-            "ruleDecision": decision,
-            "triageSource": "code_heuristic_blocked" if decision in {"deny", "requires_authorization"} else "requires_model_review",
-            "needsModelReview": decision not in {"deny", "requires_authorization"},
-        }
     sensitive_context = _has_sensitive_context(values, policy)
-    if sensitive_context:
-        return {
+    permission_context = _has_permission_context(values, policy)
+
+    def _base(triage_source: str, needs_review: bool) -> dict[str, Any]:
+        out: dict[str, Any] = {
+            "texts": values,
+            "matchedKeywords": [],
+            "triageSource": triage_source,
+            "needsModelReview": needs_review,
+        }
+        if permission_context:
+            out["contextCategory"] = permission_context["contextCategory"]
+            out["contextMatchedKeywords"] = permission_context["matchedKeywords"]
+        if sensitive_context:
+            out["sensitiveContextKeywords"] = sensitive_context["matchedKeywords"]
+        return out
+
+    # 1. Button itself is a deny rule (sensitive or high-risk keyword) → block.
+    if rule_result and rule_result.get("decision") in {"deny", "requires_authorization"}:
+        category = str(rule_result.get("category") or "")
+        out = _base("code_heuristic_blocked", False)
+        out.update({
             "allowed": False,
             "category": "sensitive",
-            **sensitive_context,
-            "texts": values,
+            "sensitiveCategory": category,
+            "reason": rule_result.get("reason", ""),
+            "matchedKeywords": rule_result.get("matchedKeywords") or [],
+            "ruleDecision": rule_result.get("decision"),
+        })
+        return out
+
+    # 2. Surrounding dialog context is sensitive.
+    #    Only safe_dismiss buttons are allowed on sensitive-context dialogs;
+    #    positive-consent buttons (e.g. "继续" on a login prompt) must NOT
+    #    be auto-clicked.
+    if sensitive_context:
+        if rule_result and rule_result.get("category") == "safe_dismiss" and rule_result.get("decision") == "allow":
+            out = _base("code_deterministic", False)
+            out.update({
+                "allowed": True,
+                "category": "safe_dismiss",
+                "reason": "safe dismiss/close button on a sensitive-context dialog; dismissing is non-destructive",
+                "matchedKeywords": rule_result.get("matchedKeywords") or [],
+                "ruleDecision": "contextual_allow",
+            })
+            return out
+        out = _base("code_heuristic_blocked", False)
+        out.update({
+            "allowed": False,
+            "category": "sensitive",
+            "sensitiveCategory": "sensitive_context",
+            "reason": "surrounding overlay text is sensitive; only safe dismiss/close is auto-clickable",
+            "matchedKeywords": sensitive_context.get("matchedKeywords") or [],
             "ruleDecision": "deny",
-            "triageSource": "code_heuristic_blocked",
-            "needsModelReview": False,
-        }
+        })
+        return out
+
+    # 3. Button matches an allow rule → allow (context is not sensitive).
+    if rule_result and rule_result.get("decision") == "allow":
+        category = str(rule_result.get("category") or "")
+        image_close_matches = _keyword_matches(values, IMAGE_CLOSE_KEYWORDS)
+        if image_close_matches and _looks_like_image_close_button(element, values):
+            out = _base("code_deterministic", False)
+            out.update({
+                "allowed": True,
+                "category": "image_close_button",
+                "reason": "image/button close control matched by identifier/description and no sensitive surrounding context matched",
+                "matchedKeywords": image_close_matches,
+                "ruleDecision": "contextual_allow",
+            })
+            return out
+        # Refine category: positive-consent on a permission dialog = permission_grant.
+        if permission_context and category == "positive_privacy_or_terms_consent":
+            category = "permission_grant"
+        out = _base("code_deterministic", False)
+        out.update({
+            "allowed": True,
+            "category": category,
+            "reason": rule_result.get("reason", ""),
+            "matchedKeywords": rule_result.get("matchedKeywords") or [],
+            "ruleDecision": rule_result.get("decision"),
+        })
+        return out
+
+    # 4. Generic confirm on a non-sensitive, non-permission dialog → allow.
     generic_confirm_matches = _keyword_matches(values, GENERIC_CONFIRM_KEYWORDS)
     if generic_confirm_matches:
-        return {
+        out = _base("code_deterministic", False)
+        out.update({
             "allowed": True,
             "category": "safe_confirm",
             "reason": "generic confirm/dismiss keyword is allowed because no sensitive surrounding context matched",
-            "texts": values,
             "matchedKeywords": generic_confirm_matches,
             "ruleDecision": "contextual_allow",
-            "triageSource": "code_deterministic",
-            "needsModelReview": False,
-        }
+        })
+        return out
+
+    # 5. Image close button → allow.
     image_close_matches = _keyword_matches(values, IMAGE_CLOSE_KEYWORDS)
     if image_close_matches and _looks_like_image_close_button(element, values):
-        return {
+        out = _base("code_deterministic", False)
+        out.update({
             "allowed": True,
             "category": "image_close_button",
             "reason": "image/button close control matched by identifier/description and no sensitive surrounding context matched",
-            "texts": values,
             "matchedKeywords": image_close_matches,
             "ruleDecision": "contextual_allow",
-            "triageSource": "code_deterministic",
-            "needsModelReview": False,
-        }
-    return {
+        })
+        return out
+
+    # 6. Unknown → model review.
+    out = _base("requires_model_review", True)
+    out.update({
         "allowed": False,
         "category": "requires_model_review",
         "reason": "no safe dismiss keyword matched — surface this element's text / hierarchy to a model or a human before clicking",
-        "texts": values,
         "matchedKeywords": [],
-        "triageSource": "requires_model_review",
-        "needsModelReview": True,
-    }
+    })
+    return out
 
 
 def rank_overlay_candidates(elements: list[dict[str, Any]], policy: dict[str, Any] | None = None) -> list[dict[str, Any]]:
@@ -565,6 +630,7 @@ def rank_overlay_candidates(elements: list[dict[str, Any]], policy: dict[str, An
         "image_close_button": 1,
         "safe_confirm": 2,
         "positive_privacy_or_terms_consent": 3,
+        "permission_grant": 4,
     }
     for element in elements:
         classification = classify_overlay_candidate(element, policy)

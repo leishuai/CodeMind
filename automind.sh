@@ -552,15 +552,73 @@ case "$command" in
         fi
         VISUAL_PY="$AUTOMIND_WORKSPACE_ROOT/.venv-visual-tools/bin/python"
         VISUAL_RUNNER="$PYTHON_EXEC"
-        if [[ -x "$VISUAL_PY" ]]; then
-            VISUAL_RUNNER="$VISUAL_PY"
-        elif ! "$PYTHON_EXEC" - <<'PY' >/dev/null 2>&1
-import importlib.util
-required = ["PIL", "numpy", "imagehash"]
-raise SystemExit(0 if all(importlib.util.find_spec(name) for name in required) else 1)
+        VISUAL_READY=0
+        if [[ -x "$VISUAL_PY" ]] && AUTOMIND_REQ_FILE="$AUTOMIND_RUNTIME_ROOT/requirements/visual-tools.txt" "$VISUAL_PY" - <<'PY' >/dev/null 2>&1
+import importlib, json, os, re
+# Importable AND installed versions still satisfy requirements constraints.
+for name in ("PIL", "numpy", "imagehash"):
+    importlib.import_module(name)
+try:
+    from importlib import metadata as md
+except Exception:
+    raise SystemExit(0)
+
+def parse(v):
+    head = re.split(r"[^0-9.]", v.split("+")[0], 1)[0]
+    p = re.findall(r"\d+", head)
+    return tuple(int(x) for x in p) if p else (0,)
+
+def cmp(a, b):
+    a, b = parse(a), parse(b)
+    n = max(len(a), len(b))
+    a += (0,) * (n - len(a)); b += (0,) * (n - len(b))
+    return (a > b) - (a < b)
+
+def ok(installed, spec):
+    for cl in (spec or "").split(","):
+        cl = cl.strip()
+        m = re.match(r"(==|!=|>=|<=|~=|>|<)\s*(.+)", cl)
+        if not m:
+            continue
+        op, ver = m.group(1), m.group(2).strip()
+        c = cmp(installed, ver)
+        if op == ">=" and not c >= 0: return False
+        if op == ">" and not c > 0: return False
+        if op == "<=" and not c <= 0: return False
+        if op == "<" and not c < 0: return False
+        if op == "==" and not c == 0: return False
+        if op == "!=" and not c != 0: return False
+        if op == "~=" and not c >= 0: return False
+    return True
+
+req = os.environ.get("AUTOMIND_REQ_FILE", "")
+try:
+    lines = open(req, encoding="utf-8").read().splitlines() if req else []
+except Exception:
+    raise SystemExit(0)
+for raw in lines:
+    line = raw.split("#", 1)[0].strip()
+    if not line:
+        continue
+    m = re.match(r"^([A-Za-z0-9_.\-]+)\s*(.*)$", line)
+    if not m:
+        continue
+    name, spec = m.group(1), m.group(2)
+    try:
+        installed = md.version(name)
+    except Exception:
+        raise SystemExit(1)
+    if not ok(installed, spec):
+        raise SystemExit(1)
+raise SystemExit(0)
 PY
         then
-            warn "Visual helper packages are missing; creating project-local .venv-visual-tools..."
+            VISUAL_READY=1
+        fi
+        if [[ "$VISUAL_READY" == "1" ]]; then
+            VISUAL_RUNNER="$VISUAL_PY"
+        else
+            warn "Visual helper packages are missing or no longer satisfy requirements; creating/updating project-local .venv-visual-tools..."
             if ! "$PYTHON_EXEC" "$ORCHESTRATOR" setup-automation-tools visual; then
                 warn "Visual helper setup failed; running inspector anyway so it can write a blocked evidence artifact."
             fi

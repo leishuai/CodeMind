@@ -35,6 +35,11 @@ STRUCTURED_KEY_LINE_RE = re.compile(
 def _collect_model_review_signals(evaluation: dict | None) -> list[dict]:
     """Scan evaluation.json for entries carrying needsModelReview=True.
 
+    Also auto-elevates repeated failures (same sameProblemKey appearing >=2
+    times in failedChecks/qualityChecks within one round) into model-review
+    signals, because code-only classifiers keep retrying the same fix and a
+    human/model re-triage is needed.
+
     Returns a flat list of attention-signal dicts ready to render in a
     context pack. The Evaluator/Generator prompt templates tell the model
     that these entries require its analysis rather than code-only
@@ -49,38 +54,77 @@ def _collect_model_review_signals(evaluation: dict | None) -> list[dict]:
         val = entry.get("needsModelReview")
         return val is True
 
-    # qualityChecks[] entries carry triageSource/needsModelReview (see
-    # scripts/quality_evaluator.py).
+    def _entry_signal(source: str, entry: dict, idx: int) -> dict:
+        sig = {
+            "source": f"{source}[{idx}]",
+            "triageSource": entry.get("triageSource", "requires_model_review"),
+            "reason": str(entry.get("reason", ""))[:240],
+            "evidence": entry.get("evidence"),
+        }
+        for k in ("id", "name", "result", "category", "failureClass", "recoveryAction", "confidence"):
+            v = entry.get(k)
+            if v is not None:
+                sig[k] = v
+        spk = entry.get("sameProblemKey")
+        if spk:
+            sig["sameProblemKey"] = spk
+        return sig
+
     quality = evaluation.get("qualityChecks")
     if isinstance(quality, list):
         for idx, entry in enumerate(quality):
             if isinstance(entry, dict) and _needs_review(entry):
-                signals.append({
-                    "source": f"qualityChecks[{idx}]",
-                    "triageSource": entry.get("triageSource", "requires_model_review"),
-                    "id": entry.get("id"),
-                    "result": entry.get("result"),
-                    "failureClass": entry.get("failureClass") or entry.get("category"),
-                    "evidence": entry.get("evidence"),
-                    "reason": str(entry.get("reason", ""))[:240],
-                })
+                signals.append(_entry_signal("qualityChecks", entry, idx))
 
-    # failedChecks[] may carry needsModelReview from orchestrator helpers
-    # (classify_agent_execution_failure, classify_android_probe_failure,
-    # or Evaluator-written entries with triageSource=requires_model_review).
     failed = evaluation.get("failedChecks")
     if isinstance(failed, list):
         for idx, entry in enumerate(failed):
             if isinstance(entry, dict) and _needs_review(entry):
-                signals.append({
-                    "source": f"failedChecks[{idx}]",
-                    "triageSource": entry.get("triageSource", "requires_model_review"),
-                    "name": entry.get("name"),
-                    "category": entry.get("category"),
-                    "recoveryAction": (str(entry.get("recoveryAction", ""))[:200] if entry.get("recoveryAction") else None),
-                    "reason": str(entry.get("reason", ""))[:240],
-                    "evidence": entry.get("evidence"),
-                })
+                signals.append(_entry_signal("failedChecks", entry, idx))
+
+    # Auto-elevate: same sameProblemKey appears >= 2 times across
+    # failedChecks + qualityChecks in this round → model re-triage needed.
+    # Code-only classifiers cannot break out of a loop when they keep
+    # misclassifying the same root cause with the same recovery action.
+    spk_entries: dict[str, list[dict]] = {}
+    all_check_entries: list[tuple[str, dict]] = []
+    if isinstance(quality, list):
+        for idx, entry in enumerate(quality):
+            if isinstance(entry, dict):
+                all_check_entries.append((f"qualityChecks[{idx}]", entry))
+    if isinstance(failed, list):
+        for idx, entry in enumerate(failed):
+            if isinstance(entry, dict):
+                all_check_entries.append((f"failedChecks[{idx}]", entry))
+    for source, entry in all_check_entries:
+        spk = str(entry.get("sameProblemKey") or "").strip()
+        if not spk:
+            continue
+        spk_entries.setdefault(spk, []).append({"source": source, "entry": entry})
+    existing_spk_signals = {str(s.get("sameProblemKey") or "") for s in signals if s.get("sameProblemKey")}
+    for spk, entries in spk_entries.items():
+        if len(entries) < 2:
+            continue
+        if spk in existing_spk_signals:
+            continue
+        first = entries[0]["entry"]
+        signals.append({
+            "source": f"repeated_failure:{spk}",
+            "triageSource": "requires_model_review",
+            "sameProblemKey": spk,
+            "occurrenceCount": len(entries),
+            "name": first.get("name") or first.get("id"),
+            "category": first.get("category") or first.get("failureClass"),
+            "recoveryAction": str(first.get("recoveryAction", ""))[:200] if first.get("recoveryAction") else None,
+            "reason": (
+                f"Same failure (sameProblemKey={spk}) appeared {len(entries)} times in this round's checks. "
+                "The deterministic classifier's recommended recovery action has been tried / is not making progress. "
+                "Re-triage the root cause before retrying the same fix again."
+            ),
+            "confidence": "medium",
+            "evidence": [e["source"] for e in entries],
+            "autoElevated": True,
+        })
 
     # Top-level modelReviewSignals (if the orchestrator wrote them)
     signals_block = evaluation.get("modelReviewSignals")
@@ -95,6 +139,149 @@ def _collect_model_review_signals(evaluation: dict | None) -> list[dict]:
                     })
 
     return signals
+
+
+def _collect_gate_failure_signals(task_dir: Path, iteration: int) -> list[dict]:
+    """Collect model-review signals from gate failures (completion/workflow).
+
+    When a gate check has failed for >=2 iterations, the deterministic flow
+    is stuck — the model needs to step back and re-analyze why the gate
+    keeps failing instead of retrying the same kind of fix.
+
+    Returns a list of attention-signal dicts (same shape as
+    _collect_model_review_signals output).
+    """
+    if iteration < 2:
+        return []
+
+    signals: list[dict] = []
+    state = read_runtime_state(task_dir) or {}
+
+    completion_check = str(state.get("completionCheck") or "").strip().lower()
+    if completion_check == "fail":
+        signals.append({
+            "source": "gate_failure:completion_check",
+            "triageSource": "requires_model_review",
+            "name": "completion_check",
+            "category": "gate_blocked",
+            "gateType": "completion_check",
+            "iteration": iteration,
+            "confidence": "medium",
+            "autoElevated": True,
+            "reason": (
+                f"Completion check has been failing for {iteration - 1}+ iterations. "
+                "The loop keeps retrying but cannot pass the completion gate. "
+                "Re-examine the root cause: are we fixing the wrong thing? "
+                "Is the test strategy wrong? Do we need to replan the approach?"
+            ),
+            "recoveryAction": (
+                "Step back and re-read completion-check issues and test evidence. "
+                "If the same fix has been tried multiple times, try a different approach. "
+                "If the TC design or acceptance criteria are wrong, use replan to fix them."
+            ),
+            "evidence": ["runtime-state.json:completionCheck", "completion-check report"],
+        })
+
+    workflow_check = str(state.get("workflowCheck") or "").strip().lower()
+    if workflow_check == "fail":
+        signals.append({
+            "source": "gate_failure:workflow_check",
+            "triageSource": "requires_model_review",
+            "name": "workflow_check",
+            "category": "gate_blocked",
+            "gateType": "workflow_check",
+            "iteration": iteration,
+            "confidence": "medium",
+            "autoElevated": True,
+            "reason": (
+                f"Workflow check has been failing for {iteration - 1}+ iterations. "
+                "The artifact pipeline (Rxx -> AC-xxx -> TC-* -> Plan) is out of sync "
+                "or missing required structure. Re-examine the artifacts rather than "
+                "retrying the same code changes."
+            ),
+            "recoveryAction": (
+                "Re-read workflow-check issues and fix artifact drift: "
+                "ensure Requirements Rxx IDs map to TestCases, Plan checklist covers all TCs, "
+                "and artifact IDs are consistent across files."
+            ),
+            "evidence": ["runtime-state.json:workflowCheck", "workflow-check report"],
+        })
+
+    return signals
+
+
+def _collect_all_failure_overview(evaluation: dict | None) -> list[dict]:
+    """Collect ALL failures (not just needsModelReview) as a compact overview.
+
+    The model should review every failure, not just the ones code couldn't
+    classify. Code classification is a starting point — the model may
+    confirm or correct it.
+
+    Returns a flat list of compact failure summaries.
+    """
+    if not evaluation:
+        return []
+
+    failures: list[dict] = []
+
+    failed = evaluation.get("failedChecks")
+    if isinstance(failed, list):
+        for idx, entry in enumerate(failed):
+            if not isinstance(entry, dict):
+                continue
+            failures.append({
+                "source": f"failedChecks[{idx}]",
+                "name": entry.get("name") or entry.get("id") or f"failure-{idx}",
+                "category": entry.get("category") or entry.get("failureClass"),
+                "triageSource": entry.get("triageSource", "code_deterministic"),
+                "needsModelReview": bool(entry.get("needsModelReview", False)),
+                "recoveryAction": (str(entry.get("recoveryAction", ""))[:200] if entry.get("recoveryAction") else None),
+                "sameProblemKey": entry.get("sameProblemKey"),
+                "result": entry.get("result"),
+                "reason": str(entry.get("reason", ""))[:200],
+            })
+
+    quality = evaluation.get("qualityChecks")
+    if isinstance(quality, list):
+        for idx, entry in enumerate(quality):
+            if not isinstance(entry, dict):
+                continue
+            result = str(entry.get("result") or "").lower()
+            if result not in {"fail", "warn", "blocked"}:
+                continue
+            failures.append({
+                "source": f"qualityChecks[{idx}]",
+                "name": entry.get("name") or entry.get("id") or f"quality-{idx}",
+                "category": entry.get("category") or entry.get("failureClass"),
+                "triageSource": entry.get("triageSource", "code_deterministic"),
+                "needsModelReview": bool(entry.get("needsModelReview", False)),
+                "recoveryAction": (str(entry.get("recoveryAction", ""))[:200] if entry.get("recoveryAction") else None),
+                "sameProblemKey": entry.get("sameProblemKey"),
+                "result": result,
+                "reason": str(entry.get("reason", ""))[:200],
+            })
+
+    tests = evaluation.get("testResults")
+    if isinstance(tests, list):
+        for idx, entry in enumerate(tests):
+            if not isinstance(entry, dict):
+                continue
+            result = str(entry.get("result") or "").lower()
+            if result not in {"fail", "blocked", "not_run", "skipped_dependency"}:
+                continue
+            failures.append({
+                "source": f"testResults[{idx}]",
+                "name": entry.get("name") or entry.get("id") or f"test-{idx}",
+                "category": entry.get("category") or entry.get("failureClass"),
+                "triageSource": entry.get("triageSource", "code_deterministic"),
+                "needsModelReview": bool(entry.get("needsModelReview", False)),
+                "recoveryAction": (str(entry.get("recoveryAction", ""))[:200] if entry.get("recoveryAction") else None),
+                "sameProblemKey": entry.get("sameProblemKey"),
+                "result": result,
+                "reason": str(entry.get("reason", "") or entry.get("verdictReason", ""))[:200],
+            })
+
+    return failures
 
 
 def _bytes_len(text: str) -> int:
@@ -382,8 +569,111 @@ def build_generator_context_pack(task_dir: Path, iteration: int, iter_log_dir: P
     if issues:
         md_parts.append("- Issues:")
         md_parts.extend(f"  - {issue}" for issue in issues)
+
+    # ── Model-Review Attention Signals (TOP PRIORITY) ─────────────────────
+    # Rendered FIRST so the model sees failed/suspicious entries BEFORE
+    # requirements and plan. Deterministic code does NOT make final decisions
+    # on these entries — the model must triage them, produce structured root
+    # cause analysis, and then decide the fix.
+    review_signals = _collect_model_review_signals(read_evaluation_json(task_dir))
+    review_signals.extend(_collect_gate_failure_signals(task_dir, iteration))
+
     md_parts.extend([
         "",
+        "## ⚠️ Model-Review Attention Signals (READ FIRST)",
+        f"- Signals requiring your analysis: `{len(review_signals)}`",
+    ])
+    if review_signals:
+        md_parts.extend([
+            "",
+            "**YOU MUST START HERE.** These entries were NOT resolved by deterministic code. "
+            "Do NOT jump straight to editing code or re-running the same command.",
+            "",
+            "For each signal below:",
+            "1. Re-read the raw evidence at the referenced path(s)",
+            "2. Determine the actual root cause (not just the surface failure)",
+            "3. Classify your confidence in the root cause: `high` (direct evidence), `medium` (strong inference), `low` (speculation)",
+            "4. Decide the correct recovery action — which may be different from what the deterministic classifier suggested",
+            "5. Record your analysis as a structured `rootCause` block in the next round's artifacts (Delivery.md and evaluation.json)",
+            "",
+            "### Signals",
+        ])
+        for idx, signal in enumerate(review_signals[:20], 1):
+            source = signal.get("source", "unknown")
+            triage = signal.get("triageSource", "requires_model_review")
+            evidence = signal.get("evidence") or "see evaluation.json"
+            reason = signal.get("reason") or ""
+            confidence = signal.get("confidence")
+            extras = []
+            for k in ("id", "name", "result", "category", "failureClass", "recoveryAction", "sameProblemKey", "occurrenceCount", "gateType", "iteration", "autoElevated"):
+                v = signal.get(k)
+                if v is not None and v != "":
+                    extras.append(f"`{k}`: {v}")
+            md_parts.append(
+                f"\n**{idx}. [{source}]**  \n"
+                f"  - triageSource: `{triage}`"
+                + (f"  \n  - code-confidence: `{confidence}`" if confidence else "")
+                + f"  \n  - evidence: `{evidence}`"
+                + (f"  \n  - " + "; ".join(extras) if extras else "")
+                + (f"  \n  - reason: {reason}" if reason else "")
+            )
+        md_parts.extend([
+            "",
+            "After analyzing all signals, proceed to the plan and requirements. "
+            "If you find the deterministic classifier was wrong, correct the category and recovery action in your output.",
+        ])
+
+    # ── All Failures Overview ─────────────────────────────────────────────
+    # List EVERY failure so the model can review and potentially correct
+    # code-classified entries. Code classification is a starting point,
+    # not the final answer. The model may confirm or override any entry.
+    all_failures = _collect_all_failure_overview(read_evaluation_json(task_dir))
+    code_classified = [f for f in all_failures if not f["needsModelReview"]]
+
+    md_parts.extend([
+        "",
+        "### All Failures Overview (Review & Correct As Needed)",
+        f"- Total failures: `{len(all_failures)}` (code-classified: `{len(code_classified)}`, model-review pending: `{len(all_failures) - len(code_classified)}`)",
+    ])
+    if code_classified:
+        md_parts.extend([
+            "",
+            "The entries below were classified by deterministic code. "
+            "**You may override any of them** if the evidence points to a different root cause or recovery action. "
+            "Do not blindly trust the code classifier — verify with evidence.",
+            "",
+            "| # | Source | Category | Recovery Action | triageSource | Reason |",
+            "|---|--------|----------|-----------------|--------------|--------|",
+        ])
+        for idx, fail in enumerate(code_classified[:30], 1):
+            src = fail.get("source", "?")
+            cat = fail.get("category") or "—"
+            ra = fail.get("recoveryAction") or "—"
+            ts = fail.get("triageSource") or "—"
+            reason = (fail.get("reason") or "")[:80]
+            spk = fail.get("sameProblemKey")
+            if spk:
+                reason = f"[{spk}] {reason}"
+            md_parts.append(f"| {idx} | `{src}` | {cat} | {ra} | `{ts}` | {reason} |")
+        if len(code_classified) > 30:
+            md_parts.append(f"| ... | ({len(code_classified) - 30} more) | | | | |")
+    else:
+        md_parts.append("- No code-classified failures to review.")
+    md_parts.extend([
+        "",
+        "If you correct any code-classified failure, update the entry in your output with:",
+        "- `triageSource: model_reviewed`",
+        "- `needsModelReview: false`",
+        "- Corrected `category` and `recoveryAction`",
+        "- A `rootCause` object with your confidence and evidence",
+    ])
+    md_parts.extend([
+        "",
+        "---",
+        "",
+    ])
+
+    md_parts.extend([
         "## Contract",
         "- Generator receives compact excerpts here; raw task files/logs remain authoritative on disk.",
         "- Read this markdown file as the agent-facing context; `generator-context.json` is machine/audit metadata and intentionally omits source file content.",
@@ -398,44 +688,6 @@ def build_generator_context_pack(task_dir: Path, iteration: int, iter_log_dir: P
         "- Do not read oversized raw logs or build intermediates wholesale by default.",
         "",
     ])
-    # Render model-review attention signals so the next model iteration
-    # sees explicit "these need YOUR analysis" cues before it starts
-    # coding/retrying. The code-only classifiers above do NOT make
-    # final decisions on these entries.
-    review_signals = _collect_model_review_signals(read_evaluation_json(task_dir))
-
-    md_parts.extend([
-        "",
-        "## Model-Review Attention Signals",
-        f"- Signals found: `{len(review_signals)}`",
-    ])
-    if review_signals:
-        md_parts.append(
-            "- ATTENTION: These entries were NOT classified by deterministic code patterns. "
-            "You MUST re-read the raw evidence at the referenced path and re-triage each signal "
-            "before editing code or retrying the failed command. Do not skip re-analysis."
-        )
-        for signal in review_signals[:20]:
-            source = signal.get("source", "unknown")
-            triage = signal.get("triageSource", "requires_model_review")
-            evidence = signal.get("evidence") or "see evaluation.json excerpt"
-            reason = signal.get("reason") or ""
-            extras = []
-            for k in ("id", "name", "result", "category", "failureClass", "recoveryAction"):
-                v = signal.get(k)
-                if v:
-                    extras.append(f"{k}={v}")
-            md_parts.append(
-                f"  - [{source}] triageSource=`{triage}` evidence=`{evidence}` :: "
-                + "; ".join(extras)
-                + (f" :: {reason}" if reason else "")
-            )
-    else:
-        md_parts.append(
-            "- No deferred signals: every structured entry in the previous round's evaluation.json "
-            "was classified by a deterministic pattern or a prior model review. You may act directly "
-            "on the classified categories and recovery actions."
-        )
     md_parts.extend([
         "",
         "## Required Files",
@@ -677,8 +929,109 @@ def build_evaluator_context_pack(task_dir: Path, iteration: int, iter_log_dir: P
     if issues:
         md_parts.append("- Issues:")
         md_parts.extend(f"  - {issue}" for issue in issues)
+
+    # ── Model-Review Attention Signals (TOP PRIORITY) ─────────────────────
+    # Evaluator sees these FIRST so it triages ambiguous failures before
+    # diving into verification. Code-only classifiers do NOT make final
+    # decisions — the Evaluator model must produce a root cause analysis
+    # with confidence, then update the entry to triageSource=model_reviewed.
+    eval_review_signals = _collect_model_review_signals(read_evaluation_json(task_dir))
+    eval_review_signals.extend(_collect_gate_failure_signals(task_dir, iteration))
+
     md_parts.extend([
         "",
+        "## ⚠️ Model-Review Attention Signals (READ FIRST)",
+        f"- Signals requiring your analysis: `{len(eval_review_signals)}`",
+    ])
+    if eval_review_signals:
+        md_parts.extend([
+            "",
+            "**YOU MUST START HERE.** These entries were NOT resolved by deterministic code. "
+            "You MUST analyze each one and produce a structured root-cause assessment.",
+            "",
+            "For each signal below:",
+            "1. Re-read the raw evidence at the referenced path(s)",
+            "2. Determine the actual root cause (not just the surface failure)",
+            "3. Classify your confidence: `high` (direct evidence), `medium` (strong inference), `low` (speculation)",
+            "4. Set `triageSource: model_reviewed`, `needsModelReview: false`, a concrete `category`, and a concrete `recoveryAction` in your evaluation.json output",
+            "5. Include a `rootCause` object with: `summary`, `confidence` (high/medium/low), `evidence`, `correctedCategory` (if different from code classification), `recommendedAction`",
+            "Do NOT leave any entry with `needsModelReview: true` in your output.",
+            "",
+            "### Signals",
+        ])
+        for idx, signal in enumerate(eval_review_signals[:20], 1):
+            source = signal.get("source", "unknown")
+            triage = signal.get("triageSource", "requires_model_review")
+            evidence = signal.get("evidence") or "see evaluation.json"
+            reason = signal.get("reason") or ""
+            confidence = signal.get("confidence")
+            extras = []
+            for k in ("id", "name", "result", "category", "failureClass", "recoveryAction", "sameProblemKey", "occurrenceCount", "gateType", "iteration", "autoElevated"):
+                v = signal.get(k)
+                if v is not None and v != "":
+                    extras.append(f"`{k}`: {v}")
+            md_parts.append(
+                f"\n**{idx}. [{source}]**  \n"
+                f"  - triageSource: `{triage}`"
+                + (f"  \n  - code-confidence: `{confidence}`" if confidence else "")
+                + f"  \n  - evidence: `{evidence}`"
+                + (f"  \n  - " + "; ".join(extras) if extras else "")
+                + (f"  \n  - reason: {reason}" if reason else "")
+            )
+        md_parts.extend([
+            "",
+            "After triaging all signals, proceed to verify the current test cases. "
+            "If you find the deterministic classifier was wrong, correct the category and recovery action in your output.",
+        ])
+
+    # ── All Failures Overview ─────────────────────────────────────────────
+    eval_all_failures = _collect_all_failure_overview(read_evaluation_json(task_dir))
+    eval_code_classified = [f for f in eval_all_failures if not f["needsModelReview"]]
+
+    md_parts.extend([
+        "",
+        "### All Failures Overview (Review & Correct As Needed)",
+        f"- Total failures: `{len(eval_all_failures)}` (code-classified: `{len(eval_code_classified)}`, model-review pending: `{len(eval_all_failures) - len(eval_code_classified)}`)",
+    ])
+    if eval_code_classified:
+        md_parts.extend([
+            "",
+            "The entries below were classified by deterministic code. "
+            "**You may override any of them** if the evidence points to a different root cause or recovery action. "
+            "Do not blindly trust the code classifier — verify with evidence.",
+            "",
+            "| # | Source | Category | Recovery Action | triageSource | Reason |",
+            "|---|--------|----------|-----------------|--------------|--------|",
+        ])
+        for idx, fail in enumerate(eval_code_classified[:30], 1):
+            src = fail.get("source", "?")
+            cat = fail.get("category") or "—"
+            ra = fail.get("recoveryAction") or "—"
+            ts = fail.get("triageSource") or "—"
+            reason = (fail.get("reason") or "")[:80]
+            spk = fail.get("sameProblemKey")
+            if spk:
+                reason = f"[{spk}] {reason}"
+            md_parts.append(f"| {idx} | `{src}` | {cat} | {ra} | `{ts}` | {reason} |")
+        if len(eval_code_classified) > 30:
+            md_parts.append(f"| ... | ({len(eval_code_classified) - 30} more) | | | | |")
+    else:
+        md_parts.append("- No code-classified failures to review.")
+    md_parts.extend([
+        "",
+        "If you correct any code-classified failure, update the entry in your output with:",
+        "- `triageSource: model_reviewed`",
+        "- `needsModelReview: false`",
+        "- Corrected `category` and `recoveryAction`",
+        "- A `rootCause` object with your confidence and evidence",
+    ])
+    md_parts.extend([
+        "",
+        "---",
+        "",
+    ])
+
+    md_parts.extend([
         "## Isolation Contract",
         "- Evaluator is invoked in a fresh process/session.",
         "- Evaluator must not inherit Generator conversation, stdout/stderr logs, hidden reasoning, or supervisor transcript.",
@@ -694,45 +1047,6 @@ def build_evaluator_context_pack(task_dir: Path, iteration: int, iter_log_dir: P
         f"- Read `{rel_to_root(iter_log_dir / 'log-digest.md')}` before any raw log; use targeted grep/tail for large logs.",
         "",
     ])
-    # Render model-review attention signals for the Evaluator. The code
-    # did not claim these — the Evaluator MUST analyze them to decide
-    # severity/recovery. The prompt template reinforces this rule.
-    eval_review_signals = _collect_model_review_signals(read_evaluation_json(task_dir))
-
-    md_parts.extend([
-        "",
-        "## Model-Review Attention Signals",
-        f"- Signals found: `{len(eval_review_signals)}`",
-    ])
-    if eval_review_signals:
-        md_parts.append(
-            "- ATTENTION: These entries were left unclassified by deterministic code patterns. "
-            "You MUST read the raw evidence and re-triage each one — setting "
-            "`triageSource: model_reviewed`, `needsModelReview: false`, a concrete `category`, "
-            "and a concrete `recoveryAction` (or, if appropriate, marking it as dismissed). "
-            "Do not leave any entry with `needsModelReview: true` in your output."
-        )
-        for signal in eval_review_signals[:20]:
-            source = signal.get("source", "unknown")
-            triage = signal.get("triageSource", "requires_model_review")
-            evidence = signal.get("evidence") or "see evaluation.json excerpt"
-            reason = signal.get("reason") or ""
-            extras = []
-            for k in ("id", "name", "result", "category", "failureClass", "recoveryAction"):
-                v = signal.get(k)
-                if v:
-                    extras.append(f"{k}={v}")
-            md_parts.append(
-                f"  - [{source}] triageSource=`{triage}` evidence=`{evidence}` :: "
-                + "; ".join(extras)
-                + (f" :: {reason}" if reason else "")
-            )
-    else:
-        md_parts.append(
-            "- No deferred signals: all structured entries in the previous round's evaluation.json "
-            "were classified by deterministic patterns or a prior model review. You may focus on "
-            "verifying current test cases and production-quality evidence."
-        )
     md_parts.extend([
         "",
         "## Capability Surface",

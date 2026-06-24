@@ -18,7 +18,7 @@ import subprocess
 import sys
 from typing import Any
 
-from automind_paths import IOS_TOOLS_PY, RUNTIME_ROOT, TASKS_DIR, WORKSPACE_ROOT
+from automind_paths import IOS_TOOLS_PY, RUNTIME_ROOT, TASKS_DIR, WORKSPACE_ROOT, venv_requirements_current
 
 ROOT = RUNTIME_ROOT
 IOS_PY = IOS_TOOLS_PY
@@ -72,7 +72,7 @@ def resolve_device_id(task_dir: pathlib.Path, cli_device_id: str | None) -> str:
 def ios_python_ready() -> tuple[bool, str]:
     if not IOS_PY.exists():
         return False, f"Missing iOS tools venv Python: {IOS_PY}"
-    code, out = run([str(IOS_PY), "-c", "import importlib.util; raise SystemExit(0 if importlib.util.find_spec('pymobiledevice3') else 1)"], timeout=20)
+    code, out = run([str(IOS_PY), "-c", "import pymobiledevice3"], timeout=20)
     if code != 0:
         return False, "pymobiledevice3 is not available in .venv-ios-tools"
     return True, "ready"
@@ -132,6 +132,8 @@ def main() -> int:
     (iter_dir / "commands.md").write_text("# Commands\n\n```bash\n" + " ".join(cmd) + "\n```\n")
 
     tools_ok, tools_reason = ios_python_ready() if device_id else (False, "")
+    if device_id and tools_ok and not venv_requirements_current("ios"):
+        tools_ok, tools_reason = False, "requirements changed since .venv-ios-tools was built (stale stamp)"
     auto_setup_attempted = False
     auto_setup_report: dict[str, Any] | None = None
     if not device_id:

@@ -14,116 +14,65 @@ solves:
 
 ## Decision rules (read first)
 
-For iOS physical UI actions, AutoMind should prefer **XCUITest/accessibility**
-over raw coordinate tapping.
+For iOS physical UI actions, prefer **XCUITest/accessibility** over raw
+coordinate tapping.
 
-- Overall posture: automation above all. If the pre-implementation one-shot
-  Decision Bundle already approved simulator coverage, start directly with
-  simulator automation. If real-device verification is approved, exhaust
-  real-device UI automation, then reversible project edits to preserve
-  real-device automation, then real-device direct-route/URL-scheme entry, then
-  approved simulator automation, then human-assisted capture, and only then
+- **Automation above all, in this fallback order:** if the pre-implementation
+  Decision Bundle approved simulator coverage, start there directly; if
+  real-device is approved, exhaust real-device UI automation -> reversible
+  project edits that preserve automation -> direct-route/URL-scheme entry ->
+  approved simulator automation -> human-assisted capture -> only then
   dry-run/static/build-only downgrade.
-- Use reviewable `probe-flow.ios.json` / `action-plan.ios.json` steps for
-  `tap`, `tap_if_present`, `input`, `scroll`, `assert_exists`, `assert_text`, and
-  `wait`.
-- Prefer accessibility selectors over visual/coordinate guesses. Selector order:
-  `accessibilityId` / accessibility identifier -> semantic text or button label
-  -> NSPredicate over accessibility attributes -> coordinates.
-- Keep coordinates as a reviewed fallback only. A coordinate tap must explain why
-  accessibility/text/predicate failed and what screenshot/accessibility evidence
-  bounds the target.
-- Real physical tap/scroll execution should go through XCUITest/project test
-  target/external runner integration until a stable direct physical-device tap
-  backend is validated.
-- Direct `pymobiledevice3.services.accessibilityaudit.AccessibilityAudit`
-  probing is a useful **exploration fallback**, not the primary proof backend:
-  use it to inspect the live accessibility tree, discover candidate labels, and
-  try low-risk `perform_press` actions when XCUITest/probe-flow selectors are
-  missing, a project has no usable UI test target yet, or the task needs quick
-  path discovery on a real device. Convert any stable discovery into
-  `probe-flow.ios.json` / `action-plan.ios.json` / XCUITest selectors before
-  claiming required runtime proof.
-- AccessibilityAudit probing depends on the app's exposed accessibility data.
-  UIKit controls may expose usable labels by default, but custom controls often
-  need stable `accessibilityIdentifier` / label / `isAccessibilityElement` to be
-  reliable. If the tree shows only generic `Button`/ambiguous text, classify the
-  path as selector/action-target risk and do not keep retrying unchanged.
-- Keep AccessibilityAudit actions bounded and reversible. It may tap visible UI
-  but must not perform consent/login/payment/delete/external-upload/account
-  actions without the same explicit authorization required for XCUITest or
-  probe-flow.
-- When AccessibilityAudit is used to drive an iOS UI path, collect a screenshot
-  before/after key page transitions when a screenshot backend is available, or
-  record an explicit no-screenshot reason and attach accessibility tree/log
-  evidence. The Report is more trustworthy when each UI/runtime TC has a visual
-  artifact in addition to logs or payload proof.
-- For project-native UI test targets, do not treat repeated Xcode/CoreDevice
-  connection drops or automation-session startup failures as product bugs when
-  the iPhone is otherwise connected and **Enable UI Automation** is already on.
-  Classify as device/host link recovery and ask the user for one physical
-  recovery step: keep the phone unlocked/lit, replug USB, accept any trust
-  prompt, and toggle **Settings -> Developer -> Enable UI Automation** off then
-  on before retrying the same UI test command.
+- **Action steps** (`probe-flow.ios.json` / `action-plan.ios.json`): `tap`,
+  `tap_if_present`, `input`, `scroll`, `assert_exists`, `assert_text`, `wait`.
+- **Selector order:** `accessibilityId` -> semantic text / button label ->
+  NSPredicate over accessibility attributes -> coordinates. A coordinate tap must
+  explain why accessibility/text/predicate failed and what screenshot/tree
+  evidence bounds the target.
+- Real tap/scroll execution should go through XCUITest / project test target /
+  external runner until a stable direct physical-tap backend is validated.
+- **AccessibilityAudit** (`pymobiledevice3.services.accessibilityaudit`) is an
+  exploration fallback, not the primary proof backend: use it to inspect the live
+  tree, discover candidate labels, and try low-risk `perform_press` when
+  XCUITest/probe-flow selectors are missing or the project has no UI test target
+  yet. Convert any stable discovery into probe-flow/XCUITest selectors before
+  claiming runtime proof. It depends on the app's exposed accessibility data —
+  if the tree shows only generic `Button`/ambiguous text, classify as
+  selector/action-target risk and stop retrying unchanged. Keep its actions
+  bounded/reversible; consent/login/payment/delete/upload/account actions need
+  the same explicit authorization as XCUITest.
+- **Visual evidence:** capture a screenshot before/after key page transitions
+  when a backend is available, or record an explicit no-screenshot reason plus
+  accessibility-tree/log evidence.
+- **Device/host link drops** (Xcode/CoreDevice connection drops, automation
+  session startup failures) on an otherwise-connected iPhone with **Enable UI
+  Automation** on are NOT product bugs. Classify as device/host link recovery and
+  ask for one physical recovery step: keep the phone unlocked/lit, replug USB,
+  accept trust prompts, toggle Settings -> Developer -> Enable UI Automation off
+  then on, retry the same command.
 - Dry-run validates action intent and materializes Swift XCUITest drafts; it does
-  not prove runtime behavior and must not satisfy runtime proof by itself.
-
-## Supported action layer
-
-Reliable iOS action-plan/probe-flow step types:
-
-- `tap`
-- `tap_if_present`
-- `input`
-- `scroll`
-- `assert_exists`
-- `assert_text`
-- `wait`
-
-Selectors should be chosen in this order:
-
-1. `accessibilityId` / accessibility identifier
-2. semantic text / button label
-3. NSPredicate over accessibility attributes
-4. coordinates only as a reviewed fallback
+  NOT prove runtime behavior by itself.
 
 ## Entry points and evidence
-
-AutoMind has two complementary iOS action-intent entry points:
 
 ```bash
 ./automind.sh ios-action-plan <task-code> <action-plan.ios.json> [--iteration N]
 ./automind.sh ios-probe-flow <task-code> [iteration] [--flow probe-flow.ios.json] [--dry-run]
 ```
 
-`ios-action-plan` validates a standalone declarative plan and generates a Swift XCUITest draft:
+- `ios-action-plan` validates a standalone declarative plan and generates a Swift
+  XCUITest draft (`logs/iter-N/GeneratedActionPlanTests.swift`).
+- `ios-probe-flow` validates richer task action intent inside
+  `probe-flow.ios.json`: `testIntent.goal` / `.sources` / `.acceptanceCriteria` /
+  `.authorization.scopes` / `.steps[]` / `.postChecks[]`. Dry-run writes
+  `ios-action-intent-summary.json`, `action-plan.materialized.ios.json`,
+  `ios-probe-flow-summary.json` under `logs/iter-N/`.
 
-```text
-logs/iter-N/GeneratedActionPlanTests.swift
-```
+Generated Swift drafts attach screenshots after key UI actions
+(`XCTAttachment(screenshot:)` + `.keepAlways`), so `.xcresult` carries visual
+evidence. Coordinate fallback is still not the default.
 
-`ios-probe-flow` now validates richer task action intent inside `probe-flow.ios.json`:
-
-- `testIntent.goal`
-- `testIntent.sources`
-- `testIntent.acceptanceCriteria`
-- `testIntent.authorization.scopes`
-- `testIntent.steps[]`
-- `testIntent.postChecks[]`
-
-Dry-run writes:
-
-```text
-logs/iter-N/ios-action-intent-summary.json
-logs/iter-N/action-plan.materialized.ios.json
-logs/iter-N/ios-probe-flow-summary.json
-```
-
-Generated Swift drafts attach screenshots after key UI actions with
-`XCTAttachment(screenshot:)` and `.keepAlways`, so `.xcresult` can carry visual
-evidence for action steps. Coordinate fallback is still not the default.
-
-## Example
+### Example action plan
 
 ```json
 {
@@ -143,42 +92,26 @@ evidence for action steps. Coordinate fallback is still not the default.
 }
 ```
 
-## Example result shape
+## Backend status (this machine)
 
-A dry-run should validate the declared action intent, materialize a Swift XCUITest draft, and keep coordinate actions as reviewed fallbacks only.
-
-## Backend status and coordinate fallback
-
-For physical iOS devices on this machine:
-
-- XcodeBuildMCP `ui-automation tap/snapshot-ui` currently requires
-  `--simulator-id`, so it is simulator-oriented.
+- XcodeBuildMCP `ui-automation tap/snapshot-ui` requires `--simulator-id` →
+  simulator-oriented.
 - `pymobiledevice3 developer dvt xcuitest` requires an XCTest runner bundle id;
-  it is not a direct tap API.
-- `pymobiledevice3 developer dvt` exposes screenshot / xcuitest / logs-style
-  developer services, but not a clearly stable direct tap/swipe API.
-- `pymobiledevice3.services.accessibilityaudit.AccessibilityAudit` can inspect
-  the live accessibility tree and perform presses on exposed elements on some
-  real-device setups. Treat this as an exploratory direct backend for selector
-  discovery and low-risk fallback taps; do not treat raw probing as equivalent
-  to XCUITest `.xcresult` evidence.
-- `idb` is not available on this machine.
-- Therefore, real physical tap/scroll execution should go through
-  XCUITest/project test target/external runner integration for required proof,
-  using AccessibilityAudit only as bounded discovery/fallback unless and until a
-  task-specific direct backend is selected, validated, and documented.
+  not a direct tap API. `dvt` exposes screenshot/xcuitest/logs services but no
+  stable direct tap/swipe API.
+- `AccessibilityAudit` can inspect the tree and press exposed elements on some
+  setups — exploratory backend only, not equivalent to XCUITest `.xcresult`.
+- `idb` not available.
+- So required real physical tap/scroll proof should go through XCUITest / project
+  test target / external runner, using AccessibilityAudit only as bounded
+  discovery/fallback until a task-specific direct backend is validated.
 
 ## Client-common repair rule
 
-iOS-specific mapping: represent safe repairs as XCUITest/action-plan steps such as `tap_if_present`, `waitForExistence`, accessibility-id/label/predicate selectors, and screenshot/XCUITest failure evidence.
+This follows the cross-client rule in `summaries/preloaded/client-ui-repair.md`:
+generic repair heuristics are reusable, but concrete flow steps must come from
+test intent. iOS mapping: represent safe repairs as XCUITest/action-plan steps
+(`tap_if_present`, `waitForExistence`, accessibility-id/label/predicate
+selectors, screenshot/XCUITest failure evidence).
 
-This iOS-specific document follows the cross-client rule in:
-
-```text
-summaries/preloaded/client-ui-repair.md
-```
-
-The common rule applies to Android and iOS: generic repair heuristics are
-reusable, but concrete flow steps must come from test intent.
-
-Last updated: 2026-06-14
+Last updated: 2026-06-23

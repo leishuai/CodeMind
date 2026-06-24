@@ -222,10 +222,12 @@ Selector strategy, the reliable action set (`tap`/`tap_if_present`/`input`/
 prefer accessibility identifiers/labels/predicates over coordinates. iOS uses
 the same `uiUnblock` intent policy as Android/Web, but runner execution should
 stay inside project-native XCUITest/materialized action plans: safe dismiss
-controls may be closed with evidence; privacy/terms agree/allow, reject/deny,
+controls and app-internal privacy/terms agree/allow and OS/app permission allow may be closed with evidence; reject/deny,
 payment, account/login grants, delete/reset, external upload, signing/device
 trust changes, or ambiguous/irreversible consent actions require explicit
 authorization.
+
+For iOS layout/frame proof, a stable selector is part of the evidence path. If the target view/container has no reliable selector, Generator may add a minimal `accessibilityIdentifier` / label as a testability anchor, as long as it does not change layout or behavior. Prefer this over coordinate-only or nth-element proof, and record the anchor plus screenshot/hierarchy/frame evidence.
 
 ### iOS UI-runner priority ladder and external-runner downgrade
 

@@ -18,7 +18,7 @@ def test_android_preflight_pass_is_partial_not_finish(monkeypatch, tmp_path: Pat
         text = " ".join(str(x) for x in cmd)
         if "devices" in text:
             return 0, "List of devices attached\nSERIAL123 device product:test\n"
-        if "find_spec" in text:
+        if "__import__" in text:
             return 0, '{"adbutils": true, "uiautomator2": true}\n'
         if "get-state" in text:
             return 0, "device\n"
@@ -75,7 +75,7 @@ def test_android_preflight_statusbar_listed_but_not_focused_does_not_ask_user(mo
         text = " ".join(str(x) for x in cmd)
         if "devices" in text:
             return 0, "List of devices attached\nSERIAL123 device product:test\n"
-        if "find_spec" in text:
+        if "__import__" in text:
             return 0, '{"adbutils": true, "uiautomator2": true}\n'
         if "get-state" in text:
             return 0, "device\n"
@@ -127,7 +127,7 @@ def test_android_preflight_keyguard_focus_reports_deterministic_ask_user(monkeyp
         text = " ".join(str(x) for x in cmd)
         if "devices" in text:
             return 0, "List of devices attached\nSERIAL123 device product:test\n"
-        if "find_spec" in text:
+        if "__import__" in text:
             return 0, '{"adbutils": true, "uiautomator2": true}\n'
         if "get-state" in text:
             return 0, "device\n"

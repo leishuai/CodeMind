@@ -45,6 +45,12 @@ Prefer a previously successful path when the current task scope and precondition
    - stale reuse entry.
 5. Record the result in `Validation.md`, `evaluation.json.evidence[]`, and the final `summary.md` so future tasks can reuse or avoid it.
 
+## Understand the build/setup entrypoint before executing
+
+When the build/setup flow is unfamiliar, or the same class of error keeps recurring, read the project's own build/environment entrypoint first — its build script, Makefile, setup/install script, or CI config — and understand its stage breakdown (which command does prepare / dependency pull / generate / compile / package) before choosing commands. For custom build wrapper-based iOS projects this entrypoint is `custom_build_wrapper.sh`, so read it.
+
+Do not stack `skip` / `focus` / bypass flags to make a single error disappear before you understand the tool's stages — that often hides a "prepare stage not done" root cause rather than fixing it. Treat missing-dependency or missing-header errors as a likely "preparation incomplete" signal first, before suspecting a product-code bug.
+
 ## Build failure policy
 
 A build failure is not automatically a product-code failure.
@@ -119,4 +125,4 @@ A reusable avoid path should include the failed command/method, failure category
 Keep this playbook generic. Do not store secrets, tokens, certificates, private device IDs, private bundle IDs, company/customer names, or local user-specific absolute paths in public preloaded summaries.
 Local `.automind/summary/*` may contain user-machine facts, but exported public skills must not include private/business packs by default.
 
-Last updated: 2026-06-12
+Last updated: 2026-06-23

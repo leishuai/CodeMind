@@ -69,6 +69,20 @@ def test_ios_probe_flow_materialize_screenshot_attachments(tmp_path: Path) -> No
     assert "func attachScreenshot(_ name: String)" in swift
     assert 'attachScreenshot("after-01-input-Enter-query")' in swift
     assert 'attachScreenshot("after-02-scroll-Scroll-results")' in swift
+    # System-alert interruption monitor: context-aware — reads alert text to
+    # classify (sensitive block / permission allow / benign dismiss).
+    # Permission and positive-consent buttons are auto-tapped; sensitive
+    # alerts (login/payment/delete) are blocked with screenshot evidence;
+    # unknown alerts are left for model review.
+    assert "addUIInterruptionMonitor" in swift
+    assert "installSafeAlertMonitor()" in swift
+    assert "permissionAlertKeywords" in swift
+    assert "sensitiveAlertKeywords" in swift
+    assert "positiveConsentButtons" in swift
+    assert '"Allow"' in swift and '"允许"' in swift
+    assert '"Camera"' in swift and '"相机"' in swift
+    assert '"Sign In"' in swift and '"登录"' in swift
+    assert "alertContains" in swift
     summary = json.loads((task / "logs" / "iter-1" / "ios-probe-flow-materialize-summary.json").read_text())
     assert summary["screenshotAttachments"] is True
 

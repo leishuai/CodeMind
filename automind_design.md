@@ -533,6 +533,18 @@ It also enforces the pre-implementation hard gate: unresolved `ask_user`, pendin
 
 It writes `VerificationLedger.json` so a reviewer can see exactly why the task is or is not complete.
 
+In practice, Android screenshots/logcat, iOS XCUITest/xcresult/logs, Web E2E traces/logs, and server/CLI test logs all normalize into the same `evaluation.json.testResults[]` contract with `observedSignals`, evidence paths, and machine anchors — so the same completion bar applies regardless of platform.
+
+### phase-gate
+
+In skill/slash-command current-session mode, the host coding agent runs `phase-gate` before a phase handoff. It:
+
+- refreshes/seeds `automind-workflow-state.json` and the compatibility resolver projection;
+- returns `checklist[]` plus `checkboxMarkdown[]`, so the host agent can copy the active phase checklist into its native TODO/checkbox plan before continuing;
+- when the handoff is about to enter `delivery` or `evaluation`, deterministically refreshes missing/stale `phase-reuse/generator.md` or `phase-reuse/evaluator.md` without resetting fresh, already-acknowledged reuse.
+
+The checklist is intentionally lightweight and ordered. It covers the key flow inside each phase: read routing/reuse inputs, read required JSON/Markdown artifacts, perform the phase work, write/update the phase artifact and compact sidecar when applicable, capture evidence/logs when applicable, then rerun the relevant gate. `command` is optional and appears only when an item needs an AutoMind helper such as `workflow-check`, `phase-gate`, `context-pack`, `completion-check`, `summary`, or `report`; ordinary read/edit/test/write work stays with the host coding agent.
+
 ### record-check
 
 `record-check` verifies that task records are useful enough for future reuse. It helps ensure that completed work produces more than a chat transcript.
@@ -571,6 +583,16 @@ Typical classifications:
 - unknown/no-progress.
 
 This lets the agent repair the affected area instead of rewriting the entire task or drifting away from the original request.
+
+### Automatic recovery from safe runtime interruptions
+
+Not every loop interruption is a real failure. CLI/TUI-owned loops automatically retry safe coding-agent/runtime interruptions so the run is not abandoned over a transient hiccup:
+
+- single agent CLI calls already retry transient timeout/network/process failures with short backoff;
+- if a Generator/Evaluator turn still fails with `agent_unavailable`, `agent_timeout`, `agent_stalled_no_output`, or `agent_context_overflow`, AutoMind writes `evaluation.autoRecovery` and re-enters the same task up to `AUTOMIND_SAFE_AUTO_RESUME_MAX` times (default 3);
+- a context-window overflow clears the saturated primary session and resumes from the durable task artifacts in a fresh session.
+
+This recovery is intentionally scoped to no-loss runtime conditions; it never auto-retries a real product/test failure or a sensitive `ask_user` gate.
 
 ---
 

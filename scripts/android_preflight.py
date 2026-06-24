@@ -17,7 +17,7 @@ SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 from failure_classifier import classify
-from automind_paths import ANDROID_TOOLS_PY, RUNTIME_ANDROID_TOOLS_PY, RUNTIME_ROOT, TASKS_DIR, WORKSPACE_ROOT
+from automind_paths import ANDROID_TOOLS_PY, RUNTIME_ANDROID_TOOLS_PY, RUNTIME_ROOT, TASKS_DIR, WORKSPACE_ROOT, venv_requirements_current
 from state_files import read_runtime_state, write_runtime_state
 
 ROOT = RUNTIME_ROOT
@@ -27,7 +27,7 @@ REQUIRED_ANDROID_MODULES = ["adbutils", "uiautomator2"]
 def python_has_android_modules(python_exec: pathlib.Path) -> bool:
     if not python_exec.exists():
         return False
-    code, out = run([str(python_exec), "-c", "import importlib.util; raise SystemExit(0 if importlib.util.find_spec('adbutils') and importlib.util.find_spec('uiautomator2') else 1)"])
+    code, out = run([str(python_exec), "-c", "import adbutils, uiautomator2"])
     return code == 0
 
 
@@ -225,7 +225,7 @@ def main() -> int:
 
     commands: dict[str, list[str]] = {
         "adb-devices": [adb, "devices", "-l"],
-        "python-packages": [py, "-c", "import importlib.util, json; print(json.dumps({n: bool(importlib.util.find_spec(n)) for n in ['adbutils','uiautomator2']}))"],
+        "python-packages": [py, "-c", "import json; out={}\nfor n in ['adbutils','uiautomator2']:\n    try:\n        __import__(n); out[n]=True\n    except Exception:\n        out[n]=False\nprint(json.dumps(out))"],
     }
     serial = args.serial
     outputs: dict[str, tuple[int, str]] = {}
@@ -298,14 +298,15 @@ def main() -> int:
     pkg = parse_package_status(packages)
     auto_setup_report: dict[str, Any] | None = None
     auto_setup_attempted = False
-    if missing_required_modules(pkg):
+    reqs_stale = not venv_requirements_current("android")
+    if missing_required_modules(pkg) or reqs_stale:
         auto_setup_attempted = True
         setup_cmd = [sys.executable, str(ROOT / "orchestrator" / "main.py"), "setup-automation-tools", "android"]
         commands["android-tools-auto-setup"] = setup_cmd
         setup_code, setup_out, auto_setup_report = run_android_tools_auto_setup(iter_dir)
         outputs["android-tools-auto-setup"] = (setup_code, setup_out)
         py = android_python()
-        package_cmd = [py, "-c", "import importlib.util, json; print(json.dumps({n: bool(importlib.util.find_spec(n)) for n in ['adbutils','uiautomator2']}))"]
+        package_cmd = [py, "-c", "import json; out={}\nfor n in ['adbutils','uiautomator2']:\n    try:\n        __import__(n); out[n]=True\n    except Exception:\n        out[n]=False\nprint(json.dumps(out))"]
         commands["python-packages-after-setup"] = package_cmd
         code, out = run(package_cmd)
         outputs["python-packages-after-setup"] = (code, out)

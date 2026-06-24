@@ -18,15 +18,16 @@ def test_android_overlay_candidate_nodes_classify_safe_and_sensitive() -> None:
     xml = '''<hierarchy>
       <node package="com.example" class="android.widget.Button" text="稍后" content-desc="" clickable="true" enabled="true" bounds="[10,20][110,70]" />
       <node package="com.example" class="android.widget.Button" text="允许访问通讯录" content-desc="" clickable="true" enabled="true" bounds="[10,80][210,130]" />
-      <node package="com.other" class="android.widget.Button" text="关闭" content-desc="" clickable="true" enabled="true" bounds="[10,140][110,190]" />
+      <node package="com.example" class="android.widget.Button" text="登录账号" content-desc="" clickable="true" enabled="true" bounds="[10,140][210,190]" />
+      <node package="com.other" class="android.widget.Button" text="关闭" content-desc="" clickable="true" enabled="true" bounds="[10,200][110,250]" />
     </hierarchy>'''
     nodes = runner.overlay_candidate_nodes_from_xml(xml, "com.example")
-    assert [node["text"] for node in nodes] == ["稍后", "允许访问通讯录"]
+    assert [node["text"] for node in nodes] == ["稍后", "允许访问通讯录", "登录账号"]
 
     safe = runner.rank_overlay_candidates(nodes, {})
     sensitive = runner.sensitive_overlay_candidates(nodes, {})
-    assert [node["text"] for node in safe] == ["稍后"]
-    assert [node["text"] for node in sensitive] == ["允许访问通讯录"]
+    assert [node["text"] for node in safe] == ["稍后", "允许访问通讯录"]
+    assert [node["text"] for node in sensitive] == ["登录账号"]
 
 
 def test_android_probe_flow_dry_run_accepts_ui_unblock(tmp_path: Path) -> None:
@@ -85,10 +86,10 @@ def test_sensitive_overlay_routes_to_whitelisted_ask_user(tmp_path: Path) -> Non
         "uiUnblock": {
             "result": "blocked_sensitive",
             "sensitiveCandidates": [{
-                "text": "允许访问通讯录",
+                "text": "登录账号",
                 "classification": {
                     "category": "sensitive",
-                    "sensitiveCategory": "positive_privacy_or_terms_consent",
+                    "sensitiveCategory": "sensitive_context",
                 },
             }],
         },
@@ -101,4 +102,4 @@ def test_sensitive_overlay_routes_to_whitelisted_ask_user(tmp_path: Path) -> Non
     assert evaluation["nextAction"] == "ask_user"
     assert evaluation["failedChecks"][0]["category"] == "permission_blocked"
     assert evaluation["askUserQuestion"]["category"] == "unauthorized_destructive_or_sensitive"
-    assert evaluation["askUserQuestion"]["sensitiveCandidates"][0]["text"] == "允许访问通讯录"
+    assert evaluation["askUserQuestion"]["sensitiveCandidates"][0]["text"] == "登录账号"

@@ -1,6 +1,7 @@
 """Build shared next-step instructions for skill mode and TUI resume prompts."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -54,16 +55,85 @@ def _build_effective_next(
     }
 
 
+def _fresh_workflow_check_pass(task_dir: Path) -> dict[str, Any] | None:
+    """Return latest workflow-check-current pass report when it is fresh enough.
+
+    TUI rendering can race long-running Planner/Generator turns: a stale in-memory
+    workflow report may say "blocked at brainstorm" while a later workflow-check
+    has already passed and the runtime/workflow state has advanced. In that case
+    the snapshot should not keep showing the old blocker instruction.
+    """
+    report_path = task_dir / "logs" / "workflow-check-current.log"
+    if not report_path.exists():
+        return None
+    try:
+        report = json.loads(report_path.read_text(errors="replace"))
+    except Exception:
+        return None
+    if str(report.get("result") or "").lower() != "pass" or report.get("issues"):
+        return None
+    report_mtime = report_path.stat().st_mtime
+    relevant = [
+        task_dir / "Brainstorm.md",
+        task_dir / "Requirements.md",
+        task_dir / "TestCases.md",
+        task_dir / "Plan.md",
+        task_dir / "brainstorm.json",
+        task_dir / "requirements.json",
+        task_dir / "testcases.json",
+        task_dir / "plan.json",
+        task_dir / "pre-implementation-review.json",
+        task_dir / "workflow.json",
+    ]
+    newest_artifact = max((p.stat().st_mtime for p in relevant if p.exists()), default=0.0)
+    if report_mtime + 0.001 < newest_artifact:
+        return None
+    return report
+
+
 def build_next_instruction(task_code: str, task_dir: Path) -> dict[str, Any]:
     state_authority = reconcile_task_state(task_dir, reason="continue_instruction")
     workflow_control_state = ensure_workflow_state(task_dir)
     phase_transition = refresh_phase_transition_summary(task_dir)
     state = read_runtime_state(task_dir) or {}
     workflow_ok, workflow_report = check_workflow_consistency(task_code)
+    missing_task_false_negative = (
+        not workflow_ok
+        and task_dir.exists()
+        and isinstance(workflow_report, dict)
+        and any(str(issue).startswith("Task does not exist:") for issue in workflow_report.get("issues") or [])
+    )
+    fresh_workflow_pass = None if workflow_ok else _fresh_workflow_check_pass(task_dir)
+    if fresh_workflow_pass is not None or missing_task_false_negative:
+        workflow_ok = True
+        workflow_report = fresh_workflow_pass or {
+            "result": "pass",
+            "issues": [],
+            "warnings": ["workflow-check skipped stale global TASKS_DIR task lookup; explicit task_dir exists"],
+            "workflowState": {"result": "pass", "issueCount": 0, "warningCount": 1, "expectedNext": [], "staleTaskLookupFallback": True},
+        }
     workflow_state = workflow_report.get("workflowState", {}) if isinstance(workflow_report, dict) else {}
     pending_question = normalize_pending_question(task_dir)
     answers = read_answers(task_dir)
     next_action = state.get("nextAction") or "run_generator"
+    phase_transition_stale_task_lookup = any(
+        str(item).startswith("Task does not exist:") for item in (phase_transition.get("basis") or [])
+    )
+    if phase_transition_stale_task_lookup and task_dir.exists():
+        phase_transition = {
+            "currentPhase": workflow_control_state.get("currentPhase") or state.get("currentPhase"),
+            "currentStatus": state.get("status"),
+            "currentOwner": state.get("currentOwner"),
+            # Use the immediate workflow-control route first. plannedNextPhase
+            # is the phase after the current handoff (for example delivery ->
+            # evaluation), and treating it as nextPhase creates false route drift
+            # in phase-gate.
+            "nextPhase": workflow_control_state.get("nextPhase") or state.get("nextPhase") or workflow_control_state.get("plannedNextPhase") or str(next_action),
+            "nextAction": state.get("nextAction") or workflow_control_state.get("nextAction") or str(next_action),
+            "nextOwner": state.get("currentOwner") or workflow_control_state.get("currentOwner"),
+            "reason": "explicit task_dir exists; ignore stale cross-workspace task lookup",
+            "basis": ["explicit task_dir exists", "workflow helper task lookup was stale"],
+        }
     effective_next = {
         "action": phase_transition.get("nextAction") or str(next_action),
         "phase": phase_transition.get("nextPhase") or _expected_phase(workflow_state) or str(next_action),
@@ -128,7 +198,8 @@ def build_next_instruction(task_code: str, task_dir: Path) -> dict[str, Any]:
             )
 
     latest_answer = answers[-1] if answers else None
-    if latest_answer and latest_answer.get("delivery", {}).get("status") != "delivered":
+    latest_delivery_status = str(((latest_answer or {}).get("delivery") or {}).get("status") or "") if latest_answer else ""
+    if latest_answer and latest_delivery_status not in {"delivered", "applied"}:
         instruction += " Include the latest user answer in the next agent invocation prompt and update artifacts accordingly."
 
     return {

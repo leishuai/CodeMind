@@ -158,7 +158,7 @@ when safe overlay handling is needed. Android `android-probe-flow` now scans UI
 hierarchy after launch and before configured actions, taps only safe dismiss
 controls, and records `probe-flow/overlay-unblock.json` plus before/after
 screenshot/hierarchy evidence and an `overlay_unblock` trace row. It must not
-auto-click login, permission allow, privacy/terms agree, payment, delete/reset,
+auto-click login, payment, delete/reset,
 upload, signing/device trust, or ambiguous consent.
 
 When the device is connected and authorized (`adb state=device`), driving these

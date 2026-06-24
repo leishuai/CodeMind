@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 
-def test_ios_readiness_privacy_consent_requires_authorization(monkeypatch, tmp_path: Path) -> None:
+def test_ios_readiness_privacy_consent_auto_unblocks(monkeypatch, tmp_path: Path) -> None:
     sys.path.insert(0, str(Path.cwd() / "scripts"))
     from scripts import ios_readiness_analyzer as analyzer
 
@@ -28,14 +28,14 @@ def test_ios_readiness_privacy_consent_requires_authorization(monkeypatch, tmp_p
 
     assert rc == 2
     evaluation = json.loads((task_dir / "evaluation.json").read_text())
-    assert evaluation["nextAction"] == "ask_user"
-    assert evaluation["askUserQuestion"]["category"] == "unauthorized_destructive_or_sensitive"
-    assert evaluation["autoUnblock"]["allowed"] is False
+    assert evaluation["nextAction"] == "retry_generator"
+    assert "askUserQuestion" not in evaluation
+    assert evaluation["autoUnblock"]["allowed"] is True
     assert evaluation["autoUnblock"]["category"] == "positive_privacy_or_terms_consent"
 
 
-def test_evaluator_prompt_documents_privacy_consent_authorization() -> None:
+def test_evaluator_prompt_documents_privacy_consent_auto_unblock() -> None:
     prompt = Path("templates/evaluator_prompt.md").read_text()
-    assert "privacy/terms Agree/Allow/Continue" in prompt
-    assert "already authorized" in prompt
+    assert "app-internal privacy/terms Agree/Allow/Continue and OS/app permission Allow" in prompt
+    assert "auto-unblock" in prompt
     assert "reject/deny" in prompt

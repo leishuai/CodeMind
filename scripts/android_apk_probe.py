@@ -18,7 +18,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from automind_paths import ANDROID_TOOLS_PY, RUNTIME_ROOT, TASKS_DIR, WORKSPACE_ROOT
+from automind_paths import ANDROID_TOOLS_PY, RUNTIME_ROOT, TASKS_DIR, WORKSPACE_ROOT, venv_requirements_current
 
 ROOT = RUNTIME_ROOT
 TASKS = TASKS_DIR
@@ -46,12 +46,11 @@ def android_capture_modules_ready(py: Path) -> tuple[bool, str]:
     code = run([
         str(py),
         "-c",
-        "import importlib.util; mods=['adbutils','uiautomator2']; missing=[m for m in mods if not importlib.util.find_spec(m)]; print(','.join(missing)); raise SystemExit(1 if missing else 0)",
+        "import adbutils, uiautomator2",
     ], timeout=30)
-    missing = ((code.get("stdout") or "") + (code.get("stderr") or "")).strip()
     if code.get("returncode") == 0:
         return True, "ready"
-    return False, f"missing Android helper modules: {missing or 'adbutils,uiautomator2'}"
+    return False, "missing Android helper modules: adbutils,uiautomator2"
 
 
 def runtime_timeout(env_var: str = "AUTOMIND_CMD_TIMEOUT", default: int = 300) -> int:
@@ -101,6 +100,8 @@ def parse_badging(apk: Path) -> dict:
 def capture_with_python(out: Path, expected_pkg: str, expected_act: str) -> dict:
     py = ANDROID_TOOLS_PY if ANDROID_TOOLS_PY.exists() else Path(sys.executable)
     ready, reason = android_capture_modules_ready(py)
+    if ready and not venv_requirements_current("android"):
+        ready, reason = False, "requirements changed since .venv-android-tools was built (stale stamp)"
     auto_setup: dict | None = None
     if not ready:
         auto_setup = run_android_tools_auto_setup(out)

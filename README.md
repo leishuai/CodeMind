@@ -101,16 +101,23 @@ verification tools.
 
 ### Update
 
-Install and update use the same command:
+Recommended update command after AutoMind is installed:
+
+```bash
+automind update
+```
+
+Alternatively, rerun the same one-line installer:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl.sh | bash
 ```
 
-The bootstrap updates an installer cache, re-syncs the git-free runtime into
-`~/.automind/automind`, and reinstalls agent skill/command files. Local task data
-and reuse memory are preserved because `.automind/tasks/`, `.automind/summary/`,
-`dist/`, and `.venv-*/` are excluded from destructive runtime sync.
+Install and update use the same underlying flow: AutoMind fetches the latest
+version, refreshes the git-free runtime under `~/.automind/automind`, and
+reinstalls agent skill/command files. Local task data is preserved — task
+artifacts and reuse memory under `.automind/tasks/` and `.automind/summary/` are
+not removed.
 
 Pin a version or branch:
 
@@ -170,6 +177,34 @@ project root, set:
 ```bash
 AUTOMIND_WORKSPACE_ROOT=/path/to/project automind <command>
 ```
+
+## Full-auto mode
+
+By default, non-trivial implementation tasks pause once at the
+pre-implementation review to confirm scope, approach, risks, and authorization.
+If you want AutoMind to run end-to-end autonomously without that interruption,
+opt into full-auto mode in the original request:
+
+```text
+/automind Fix the login crash and verify it, full auto
+```
+
+or:
+
+```bash
+automind ask "Fix the login crash and verify it, full auto"
+```
+
+You can also choose full-auto when the pre-implementation `ask_user` gate asks
+for a decision. AutoMind records the decision in `runtime-state.json`
+(`preImplementationReview.fullAuto=true`) and auto-proceeds through later safe
+completion gates.
+
+Full-auto does not bypass sensitive or irreversible actions that were not
+pre-authorized: account or credential login, payment, destructive delete/reset
+or force-push, signing/keychain changes, device trust, production impact, or
+similar external decisions may still require user approval. Host coding-agent
+command-approval prompts may also still appear.
 
 ## What AutoMind produces
 

@@ -421,7 +421,12 @@ def cmd_phase_gate(task_code: str, args: list[str]) -> None:
     elif expected_phase == "delivery":
         workflow = instruction.get("workflowSignal") if isinstance(instruction.get("workflowSignal"), dict) else {}
         issue_count = int(workflow.get("issueCount") or 0)
-        if issue_count:
+        if workflow.get("staleTaskLookupFallback"):
+            result = "fail"
+            can_proceed = False
+            reason = "Build handoff blocked: run workflow-check from the active workspace before Generator"
+            required_command = f"automind workflow-check {task_code}"
+        elif issue_count:
             result = "fail"
             can_proceed = False
             reason = "Build handoff blocked: workflow-check still has issues"

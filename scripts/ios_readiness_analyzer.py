@@ -161,20 +161,12 @@ def main() -> int:
             pass
 
     if category == "privacy_consent_blocked":
-        summary = "Readiness blocked by privacy/terms consent screen; explicit authorization is required before tapping Agree/Allow/Continue."
-        ask = {
-            "category": "unauthorized_destructive_or_sensitive",
-            "question": "A privacy/terms consent screen is blocking iOS verification. May AutoMind tap the positive Agree/Allow/Continue control for this app and this verification run only?",
-            "options": [
-                {"id": "authorize_positive_consent", "label": "Authorize consent tap", "recommended": True},
-                {"id": "manual_handle", "label": "I will handle it manually"},
-                {"id": "stop", "label": "Stop verification"},
-            ],
-        }
+        summary = "Readiness blocked by app-internal privacy/terms consent screen; AutoMind may tap the positive Agree/Allow/Continue control as a verification unblock step."
+        ask = None
         auto_unblock = {
-            "allowed": False,
+            "allowed": True,
             "category": "positive_privacy_or_terms_consent",
-            "scope": "Do not tap Agree/Allow/Continue, reject/deny, login, payment, delete/reset, external upload, or permission/account-grant controls unless the pre-implementation review explicitly authorized that exact action; otherwise use ask_user.",
+            "scope": "App-internal privacy/terms consent can be auto-accepted to continue automated verification. Do not tap reject/deny, login/account authorization, payment/purchase/subscription, delete/reset, external upload, or OS/app permission-grant controls unless separately authorized.",
         }
     elif result == "pass":
         summary = "No common OCR blocker detected; screenshot appears ready for the next task-specific assertions."
@@ -216,7 +208,7 @@ def main() -> int:
         evaluation["askUserQuestion"] = ask
     (task_dir / "evaluation.json").write_text(json.dumps(evaluation, ensure_ascii=False, indent=2) + "\n")
     write_runtime_state(task_dir, {"taskId": args.task_code, "taskType": "ios", "status": "finished" if result == "pass" else ("human_input_pending" if evaluation["nextAction"] == "ask_user" else "blocked"), "iteration": args.iteration, "nextAction": evaluation["nextAction"], "updatedAt": datetime.now().isoformat(timespec="seconds")})
-    (task_dir / "Validation.md").open("a").write(f"\n## Iteration {args.iteration} - iOS readiness analyzer\n\n- Environment: image={image}; bundleId={args.bundle_id}\n- Commands: see `logs/iter-{args.iteration}/commands.md`\n- Result: {result.upper()}\n- Category: `{category}`\n- Triage source: `{detail_triage.get('triageSource', 'code_deterministic')}` (needsModelReview={detail_triage.get('needsModelReview', False)})\n- Summary: {summary}\n- Evidence: `logs/iter-{args.iteration}/ocr.txt`, `ios-readiness-summary.json`\n- Reusable findings: Screenshot/OCR can identify privacy, permission, login-state, and other readiness blockers; safe close/skip/later/dismiss overlays may auto-unblock, while privacy/terms agree/allow, reject/deny/login/payment/delete/external-upload/account-grant actions require explicit authorization or ask_user.\n- Avoid repeating: Do not treat privacy consent blockers as target-screen failure; route consent to explicit authorization/ask_user and use auto-unblock only for safe dismiss overlays. When the OCR classifier returns `needsModelReview=True`, the Evaluator must re-read the OCR excerpt and the screenshot before deciding the screen is ready — the code classifier did not recognize the page content.\n")
+    (task_dir / "Validation.md").open("a").write(f"\n## Iteration {args.iteration} - iOS readiness analyzer\n\n- Environment: image={image}; bundleId={args.bundle_id}\n- Commands: see `logs/iter-{args.iteration}/commands.md`\n- Result: {result.upper()}\n- Category: `{category}`\n- Triage source: `{detail_triage.get('triageSource', 'code_deterministic')}` (needsModelReview={detail_triage.get('needsModelReview', False)})\n- Summary: {summary}\n- Evidence: `logs/iter-{args.iteration}/ocr.txt`, `ios-readiness-summary.json`\n- Reusable findings: Screenshot/OCR can identify privacy, permission, login-state, and other readiness blockers; safe close/skip/later/dismiss overlays and app-internal privacy/terms positive consent may auto-unblock, while reject/deny/login/payment/delete/external-upload/account-grant or OS/app permission-grant controls require separate authorization or ask_user.\n- Avoid repeating: Do not treat privacy consent blockers as target-screen failure; auto-accept app-internal positive consent as a verification unblock step, then retry target-specific process/screenshot/UI assertions. When the OCR classifier returns `needsModelReview=True`, the Evaluator must re-read the OCR excerpt and the screenshot before deciding the screen is ready — the code classifier did not recognize the page content.\n")
     print(json.dumps(payload, ensure_ascii=False, indent=2))
     return 0 if result == "pass" else 2
 

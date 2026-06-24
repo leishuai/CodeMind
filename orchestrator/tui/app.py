@@ -117,6 +117,17 @@ def _now_prefix() -> str:
     return datetime.now().strftime("[%H:%M:%S]")
 
 
+def _heartbeat_from_events(raw_events: list[dict[str, Any]]) -> dict[str, Any]:
+    for event in reversed(raw_events):
+        if event.get("type") == "heartbeat_status" and event.get("ts"):
+            return {
+                "lastBeatAt": event.get("ts"),
+                "owner": event.get("data", {}).get("owner") if isinstance(event.get("data"), dict) else "",
+                "note": "event-fallback",
+            }
+    return {}
+
+
 def _agent_output_kind(message: str) -> str:
     stripped = message.strip()
     lower = stripped.lower()
@@ -291,6 +302,8 @@ def render_tui_snapshot(task_code: str, task_dir: Path, *, limit: int = 80, show
     )
     heartbeat = state.get("heartbeat") if isinstance(state.get("heartbeat"), dict) else {}
     raw_events = read_events(task_dir, limit=limit)
+    if not heartbeat.get("lastBeatAt"):
+        heartbeat = _heartbeat_from_events(raw_events)
     timeline_raw_events = _recent_events_for_input_focus(raw_events, state) if awaiting_human_answer else raw_events
     events = _compact_timeline_events(render_timeline_events(timeline_raw_events), max_agent_output=0 if awaiting_human_answer else None)
     lines: list[str] = []

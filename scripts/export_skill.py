@@ -480,6 +480,8 @@ Each task must use these artifacts unless the user explicitly requested a single
 - Use `Plan.md` checklists as the short-term progress tracker: Generator updates `Implementation Checklist` (`T*` rows), Evaluator updates `Verification Checklist` (`TC-*` rows), and `status` summarizes them. Do not rely on chat memory for progress.
 - At task start and before choosing build/test/verification commands, read `Reuse.md`. Prefer matching `Successful path:` entries and avoid same-condition `Avoid path:` entries; if a reusable path is ignored, state why in `Plan.md`, `TestCases.md`, or `Validation.md`.
 - Generator may run in the current/main coding-agent session with full task context.
+- Generator must review every failure, not just ones marked `needsModelReview`. The context pack's "All Failures Overview" lists all failures — treat each entry's `category` / `recoveryAction` as a starting point, not the final answer. Verify against raw evidence; if the prior assessment was wrong (e.g. it suggested "skip" but the real fix is `pod install`), override it. Document corrected entries in `Delivery.md` under "Re-triage of failures" with a `rootCause` object: `summary`, `confidence` (high/medium/low), `evidence`, `correctedCategory`, `recommendedAction`, and `whyPreviousApproachFailed`. Then proceed with the corrected fix.
+- When a failure entry has `triageSource: "model_reviewed"` and a `rootCause` object, read the root cause analysis first — it contains a prior model's diagnosis and confidence. Use it to inform your repair approach, but still verify against current evidence.
 - If a full AutoMind CLI is available in skill/slash-command mode, prefer `automind scaffold "<request>"` to create the task artifacts without launching another agent process. Before running it, ensure the shell cwd is the target project root or set `AUTOMIND_WORKSPACE_ROOT=/path/to/project`; verify the printed `TASK_DIR` is under that target project.
 - Evaluator must be context-isolated from Generator. In skill mode, do not merely “switch roles” inside the same conversation and call it isolated.
 - When `evaluatorContext` is recorded in `runtime-state.json`, `workflow-check` validates `inheritsGeneratorContext=false`, context pack paths, and context-pack validation status.
@@ -495,6 +497,16 @@ Each task must use these artifacts unless the user explicitly requested a single
   `failureClass`, `observedSignals`, optional `shouldRetry`, and `retryAdvice`
   into `evaluation.json.testResults[]` or `failedChecks[]`; use `unknown` when
   evidence is ambiguous rather than inventing project-specific classes.
+- Every failure gets model review — not just ones the code couldn't classify.
+  The context pack's "Model-Review Attention Signals" and "All Failures Overview"
+  are your starting point. This covers code-classifier misclassification, repeated
+  failed retries (same `sameProblemKey`), and gate failures (completion/workflow
+  check stuck across iterations). For each failed/blocked entry:
+  1. Review the raw evidence (logs, screenshots, stack traces, exit codes).
+  2. Evaluate whether the current `category` and `recoveryAction` are correct.
+  3. If you agree: keep `triageSource: "code_deterministic"` as-is, or upgrade to `"model_reviewed"` if you added significant analysis.
+  4. If you disagree: replace with `triageSource: "model_reviewed"`, `needsModelReview: false`, corrected `category` and `recoveryAction`, and add a `rootCause` object with `summary`, `confidence` (high/medium/low), `evidence` (list of evidence paths), `correctedCategory` (if different), `recommendedAction`, and `whyPreviousApproachFailed` (why the prior classification/recovery didn't work — applies to code classifier misclassification, repeated failed retries, or stuck gates alike).
+  5. Confidence guide: `high` = direct proof (clear error message, reproducible stack); `medium` = strong inference from multiple indirect signals; `low` = speculation, other explanations also plausible.
 - If verification is blocked by unrelated build/test/workspace issues, AutoMind may create minimal reversible verification unblock changes only after checkpointing or recording a diff. Record them in `Delivery.md`/`Validation.md` and `evaluation.json.verificationUnblockChanges`, then restore or explicitly promote them before finish. Active temporary unblock changes block completion.
 - Do not treat environment/device/signing failures as code failures.
 - Do not invent a new validation target without updating requirements/test cases/probe-flow.

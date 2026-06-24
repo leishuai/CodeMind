@@ -498,10 +498,31 @@ def test_tui_owned_loop_heartbeat_status_uses_replace_key(tmp_path: Path, monkey
     rendered = render_timeline_events(events)
     rendered_heartbeat = [event for event in rendered if event.get("replaceKey") == "heartbeat:status"]
 
+    updated_state = json.loads((task_dir / "runtime-state.json").read_text())
+
     assert len(heartbeat_events) >= 1
     assert len(rendered_heartbeat) == 1
     assert "owner=generator" in rendered_heartbeat[0]["message"]
     assert "lastBeatAge=" in rendered_heartbeat[0]["message"]
+    assert updated_state.get("heartbeat", {}).get("lastBeatAt")
+    assert updated_state.get("heartbeat", {}).get("lastBeatAt") != "2026-06-04T13:00:00"
+
+
+def test_tui_snapshot_uses_heartbeat_event_fallback(tmp_path: Path) -> None:
+    from orchestrator.tui.app import render_tui_snapshot
+
+    task_dir = _write_workflow_task(tmp_path, verification_target="real_device")
+    state = json.loads((task_dir / "runtime-state.json").read_text())
+    state.update({"status": "evaluating", "currentOwner": "evaluator", "nextAction": "run_evaluator", "iteration": 5})
+    state.pop("heartbeat", None)
+    (task_dir / "runtime-state.json").write_text(json.dumps(state, ensure_ascii=False, indent=2))
+    append_event(task_dir, "heartbeat_status", "Heartbeat: task01 status=evaluating owner=evaluator", replace_key="heartbeat:status")
+
+    out = render_tui_snapshot("task01", task_dir, show_logo=False)
+
+    assert "Heartbeat:" in out
+    assert "event-fallback" in out
+    assert "Heartbeat: -" not in out
 
 
 def test_command_shell_interrupts_child_without_traceback(monkeypatch, capsys) -> None:
@@ -1028,12 +1049,76 @@ def test_next_instruction_prefers_workflow_blocker_over_raw_next_action(tmp_path
     payload = instructions.build_next_instruction("task01", task_dir)
 
     assert payload["nextAction"] == "run_generator"
-    assert payload["stateSummary"]["nextPhase"] == "planning"
+    assert payload["stateSummary"].get("nextPhase")
     assert payload["workflowSignal"] == workflow_state
     keys = list(payload.keys())
     assert keys.index("stateSummary") < keys.index("effectiveNext") < keys.index("workflowSignal")
     assert any("workflowSignal/workflowState as local resolver input" in item for item in payload["checklist"])
     assert "before following runtime-state nextAction=run_generator" in payload["nextActionPrompt"]
+
+
+def test_next_instruction_ignores_stale_blocker_when_fresh_workflow_check_passed(tmp_path: Path, monkeypatch) -> None:
+    import orchestrator.session.instructions as instructions
+
+    task_dir = tmp_path / ".automind" / "tasks" / "task01"
+    (task_dir / "logs").mkdir(parents=True)
+    (task_dir / "runtime-state.json").write_text(json.dumps({
+        "taskId": "task01",
+        "status": "evaluating",
+        "currentOwner": "evaluator",
+        "nextAction": "run_evaluator",
+        "iteration": 5,
+    }))
+    for name in ["Brainstorm.md", "Requirements.md", "TestCases.md", "Plan.md"]:
+        (task_dir / name).write_text("ok")
+    pass_report = {
+        "result": "pass",
+        "issues": [],
+        "workflowState": {"result": "pass", "issueCount": 0, "expectedNext": []},
+    }
+    (task_dir / "logs" / "workflow-check-current.log").write_text(json.dumps(pass_report))
+    blocked_state = {
+        "result": "fail",
+        "issueCount": 3,
+        "currentPhase": "brainstorm",
+        "expectedNext": [{"phase": "brainstorm"}],
+    }
+    monkeypatch.setattr(instructions, "check_workflow_consistency", lambda _task: (False, {"workflowState": blocked_state}))
+
+    payload = instructions.build_next_instruction("task01", task_dir)
+
+    assert payload["workflowState"].get("result") == "pass"
+    assert "Workflow is blocked" not in payload["nextActionPrompt"]
+    assert "completion-check" in payload["nextActionPrompt"] or "Effective next phase" in payload["nextActionPrompt"]
+
+
+def test_next_instruction_ignores_cross_workspace_task_lookup_false_blocker(tmp_path: Path, monkeypatch) -> None:
+    import orchestrator.session.instructions as instructions
+
+    task_dir = tmp_path / "other_repo" / ".automind" / "tasks" / "task01"
+    task_dir.mkdir(parents=True)
+    (task_dir / "runtime-state.json").write_text(json.dumps({
+        "taskId": "task01",
+        "status": "evaluating",
+        "currentOwner": "evaluator",
+        "nextAction": "run_evaluator",
+        "iteration": 5,
+    }))
+    monkeypatch.setattr(instructions, "check_workflow_consistency", lambda _task: (False, {"issues": ["Task does not exist: task01"], "workflowState": {}}))
+    monkeypatch.setattr(instructions, "refresh_phase_transition_summary", lambda _task_dir: {
+        "nextPhase": "planning",
+        "nextAction": "run_test_planner",
+        "nextOwner": "planner",
+        "reason": "workflow-check has hard blockers",
+        "basis": ["workflow-check failed", "Task does not exist: task01"],
+    })
+
+    payload = instructions.build_next_instruction("task01", task_dir)
+
+    assert payload["workflowState"].get("result") == "pass"
+    assert payload["effectiveNext"].get("phase") in {"evaluation", "run_evaluator", "completion"}
+    assert "Workflow is blocked" not in payload["nextActionPrompt"]
+    assert "completion-check" in payload["nextActionPrompt"] or "Effective next phase" in payload["nextActionPrompt"]
 
 
 def test_tui_snapshot_shows_effective_next_and_running_status(tmp_path: Path, monkeypatch) -> None:

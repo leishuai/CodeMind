@@ -15,7 +15,7 @@ from typing import Callable
 from orchestrator.session.answers import latest_pending_answer_matches_question
 from orchestrator.session.ask_user import normalize_pending_question
 from orchestrator.session.events import append_event
-from orchestrator.state import clear_task_primary_session, read_runtime_state, update_runtime_state
+from orchestrator.state import clear_task_primary_session, read_runtime_state, update_runtime_state, update_heartbeat
 from orchestrator.state_summary_check import check_state_summary
 from orchestrator.tui.app import LOGO, prompt_for_pending_answer, render_tui_snapshot
 from orchestrator.tui.input import enable_line_editing, tui_input
@@ -150,6 +150,10 @@ def _start_heartbeat_status_thread(task_code: str, task_dir: Path, stop_event: t
 
     def worker() -> None:
         while not stop_event.wait(interval):
+            state = read_runtime_state(task_dir) or {}
+            owner = str(state.get("currentOwner") or "") or None
+            note = str(state.get("nextAction") or "") or None
+            update_heartbeat(task_dir, owner=owner, note=note)
             append_event(
                 task_dir,
                 "heartbeat_status",

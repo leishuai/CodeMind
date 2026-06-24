@@ -1035,24 +1035,31 @@ def print_report_manifest(task_code: str, heading: str = "Reports to inspect / s
     visible = [report for report in reports if report.get("exists") or report.get("required")]
     if not visible:
         return
+    from orchestrator.tui.style import CYAN, GREEN, YELLOW, style
+
+    def _marker(exists: bool) -> str:
+        return (
+            style("ready", GREEN, bold=True)
+            if exists
+            else style("missing", YELLOW, bold=True)
+        )
+
     print("")
-    print(f"{heading}:")
+    print(style(f"━━ {heading} ━━", CYAN, bold=True))
     for report in visible:
-        marker = "ready" if report.get("exists") else "missing"
-        print(f"- [{marker}] {report.get('title')}: {report.get('path')} — {report.get('purpose')}")
+        print(f"- [{_marker(bool(report.get('exists')))}] {style(report.get('title'), bold=True)}: {report.get('path')} — {report.get('purpose')}")
     task_dir = get_task_dir(task_code)
     critical = build_critical_artifacts(task_dir, max_items=6)
     if critical:
         print("")
-        print("Suggested key files to review:")
+        print(style("Suggested key files to review:", CYAN, bold=True))
         for item in critical:
-            marker = "ready" if item.get("exists") else "missing"
             tc_text = ", ".join(item.get("tcIds") or [])
             anchor = "; ".join(item.get("anchors") or [])
             suffix = f" — {tc_text}" if tc_text else ""
             if anchor:
                 suffix += f" — {anchor}"
-            print(f"- [{marker}] {item.get('title')}: {rel_to_root(task_dir / item.get('path'))}{suffix}")
+            print(f"- [{_marker(bool(item.get('exists')))}] {style(item.get('title'), bold=True)}: {rel_to_root(task_dir / item.get('path'))}{suffix}")
 
 
 def build_status_guidance(task_code: str) -> dict:

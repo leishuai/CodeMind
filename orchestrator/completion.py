@@ -2085,10 +2085,35 @@ def apply_completion_gate(
 
     if evaluation.get("nextAction") == "finish" and report.get("result") != "pass":
         failed_checks = enriched.get("failedChecks") if isinstance(enriched.get("failedChecks"), list) else []
+        issues = report.get("issues", []) if isinstance(report.get("issues"), list) else []
+        coverage = report.get("coverage") if isinstance(report.get("coverage"), dict) else {}
+        # The model claimed `finish`, but coverage/evidence disproves it. This is
+        # precisely a spot where the model's own self-assessment was wrong, so do
+        # not stop at a template reason: hand root-cause analysis back to the
+        # model. Tagging the entry with triageSource/needsModelReview makes the
+        # next round's context pack render it under "Model-Review Attention
+        # Signals", instructing the model to re-read the ledger and decide what
+        # to actually fix (missing required TC, uncovered AC, dry-run/blocker
+        # masquerading as pass, missing screenshot evidence, ...) rather than
+        # blindly retrying. This reuses the existing model-review channel; it
+        # adds no new LLM call here.
         failed_checks.append({
             "name": "completion_check",
             "category": "validation_failure",
-            "reason": "; ".join(report.get("issues", [])[:8]) or "Completion check failed",
+            "triageSource": "requires_model_review",
+            "needsModelReview": True,
+            "sameProblemKey": "completion.gate.false_finish_claim",
+            "reason": "; ".join(issues[:8]) or "Completion check failed",
+            "recoveryAction": (
+                "You declared nextAction=finish but the completion gate disproved it. Re-read the verification "
+                "ledger and the failing rows below, diagnose the ROOT CAUSE of each blocker (e.g. a required TC "
+                "never ran, an AC has no covering TC, a blocker/dry-run was reported as pass, or runtime evidence "
+                "is missing), then act on that cause instead of re-claiming finish. Failed required: "
+                + (", ".join(str(x) for x in (coverage.get("failedRequired") or [])[:5]) or "none")
+                + "; uncovered AC: "
+                + (", ".join(str(x) for x in (coverage.get("openAcceptanceCriteria") or [])[:5]) or "none")
+                + "."
+            ),
             "evidence": rel_to_root(ledger_path),
         })
         enriched["failedChecks"] = failed_checks

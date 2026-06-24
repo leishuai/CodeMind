@@ -134,6 +134,15 @@ def check_ios(task_dir: pathlib.Path, iteration: int, checks: list[dict[str, Any
     add(checks, "ios_test_summary_present", test_summary.exists(), WARN, "iOS test summary present", rel(task_dir, test_summary) if test_summary.exists() else None)
     text = xclog.read_text(errors="ignore") if xclog.exists() else ""
     add(checks, "ios_xctest_ran", "Running tests" in text or "Test Suite" in text, FAIL, "XCUITest appears to have run", rel(task_dir, xclog) if xclog.exists() else None)
+    # Hollow-pass backstop: the xcuitest runner writes ios-pass-substance.json
+    # only when a green xcodebuild executed just a launch-smoke placeholder while
+    # a product journey was expected. Surfacing it here keeps the evidence gate
+    # from rubber-stamping a substance-less pass even if the runner verdict was
+    # bypassed downstream.
+    substance = iter_dir / "ios-pass-substance.json"
+    add(checks, "ios_business_journey_executed", not substance.exists(), FAIL,
+        "iOS xcresult executed the task's business journey, not only a launch-smoke placeholder",
+        rel(task_dir, substance) if substance.exists() else None)
     generated = sorted(iter_dir.glob("Generated*Tests.swift"))
     if generated:
         body = "\n".join(p.read_text(errors="ignore") for p in generated)
