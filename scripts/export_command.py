@@ -22,7 +22,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 def command_body(command_name: str = "automind") -> str:
     slash = f"/{command_name}"
     return f"""---
-description: AutoMind evidence-driven harness loop command. Use for testable requirements, current-session Generator work, isolated Evaluator evidence, and structured loop decisions.
+description: AutoMind evidence-driven harness loop command. Defaults to high automation: keep looping implement -> verify -> repair without pausing, unless a real sensitive/destructive decision or a hard gate needs the user. Use for testable requirements, current-session Generator work, isolated Evaluator evidence, and structured loop decisions.
 argument-hint: [ask|resume|status|summary|verify|detached|cli-ask|update|help] [task or request]
 ---
 
@@ -56,6 +56,14 @@ Prepare -> Plan -> Build -> Verify -> Finish
 
 Hard gates: `workflow-check` before Build, `Delivery.md` before final Verify,
 and `completion-check` before Finish.
+
+**High automation is the default.** Once the pre-implementation review gate is
+resolved (or the user requested full-auto/no-confirmation mode), keep the loop
+running Generator -> Evaluator -> `completion-check` autonomously. Do not stop
+just because a step is long, expensive, or routine. Pause only for an allowed
+`ask_user` category: unauthorized destructive/sensitive action, system/external
+dependency, real device/signing, manual visual confirmation, or repeated same
+failure.
 
 ## Command input
 

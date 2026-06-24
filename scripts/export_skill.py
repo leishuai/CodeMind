@@ -145,7 +145,7 @@ def write_skill_md(out_dir: pathlib.Path) -> None:
     (out_dir / "SKILL.md").write_text(
         """---
 name: automind-skill
-description: AutoMind evidence-driven harness loop for coding agents. Use when a coding task needs explicit requirements, preflight, evaluator evidence, retry/replan decisions, mobile/script verification, or reusable summaries.
+description: AutoMind evidence-driven harness loop for coding agents. Defaults to high automation: keep looping implement -> verify -> repair without pausing, unless a real sensitive/destructive decision or a hard gate needs the user. Use when a coding task needs explicit requirements, preflight, evaluator evidence, retry/replan decisions, mobile/script verification, or reusable summaries.
 ---
 
 # AutoMind Skill
@@ -187,151 +187,26 @@ next task's `Reuse.md`. In skill/current-session mode, prefer `summary --ai <age
 or `summary-refine`; AutoMind falls back to deterministic summary when the agent
 is unavailable or returns invalid JSON. Do not replace these gates with chat confidence.
 
-## Updating AutoMind itself
+**High automation is the default.** Once the pre-implementation review gate is resolved (or the user requested full-auto/no-confirmation mode), keep the loop running Generator -> Evaluator -> `completion-check` autonomously. Do not stop just because a step is long, expensive, or routine. Pause only for an allowed `ask_user` category: unauthorized destructive/sensitive action, system/external dependency, real device/signing, manual visual confirmation, or repeated same failure.
 
-When the user asks to update, upgrade, refresh, reinstall, or sync AutoMind itself,
-prefer the formal maintenance command:
+## When to use
 
-```bash
-<AUTOMIND_CLI> update
-```
+Use AutoMind when work needs any of these:
 
-Examples of update intent:
-
-- "更新 AutoMind"
-- "升级一下 automind"
-- "refresh AutoMind runtime"
-- "同步最新 AutoMind skill/command"
-
-This updates the AutoMind runtime, CLI wrapper, skill package, and `/automind`
-slash-command integrations. Update-only intent is **not** an AutoMind task:
-do not run `scaffold`, do not create `.automind/tasks/<task>/`, and do not enter
-the harness loop. If `<AUTOMIND_CLI> update` is unavailable because the installed
-runtime is too old, suggest the documented one-line installer from
-`docs/references/installation-runtime.md`.
-
-## Continue-until-done protocol (Skill mode automation)
-
-Skill mode lacks the orchestrator while-loop, so the host agent itself must
-not stop early. Follow this protocol on every turn:
-
-1. After every `workflow-check` / `completion-check` / `script-command` /
-   Evaluator turn, read the JSON `nextActionPrompt` field and obey it as a
-   binding instruction. Do not paraphrase it into "I'll wait for further
-   input" or "let me know if you want me to continue".
-2. The only legal stop conditions are:
-   - `completion-check` returned `result=pass`; or
-   - `evaluation.json.nextAction=ask_user` AND
-     `askUserQuestion.category` is one of the 5-item whitelist
-     (`unauthorized_destructive_or_sensitive`, `system_or_external_dependency`,
-     `real_device_or_signing`, `manual_visual_confirmation`,
-     `repeated_same_failure`); or
-   - `automind tick-iteration` exited non-zero (budget exhausted) and
-     escalated to `ask_user`.
-3. Before each Generator/Evaluator turn, call
-   `<AUTOMIND_CLI> tick-iteration <task-code> <phase>` to enforce the
-   `AUTOMIND_MAX_ITERATIONS` / `AUTOMIND_MAX_REFLECTIONS_PER_TC` budget client-side. A non-zero exit means halt
-   and escalate, not silently continue.
-4. After scaffolding (`scaffold` / `ask`) AutoMind writes
-   `.automind/current-task` so Hooks and follow-up CLI calls can discover
-   the active task without re-asking the user. `completion-check` clears it
-   on pass. `<AUTOMIND_CLI> continue` reads it and returns the resume context
-   (status, iteration, nextAction, latestUserAnswer/latestUserMessage, nextActionPrompt) when a session is
-   reopened mid-task. Natural-language TUI/session messages are stored in `user-messages.json` and must be reconciled with Requirements/TestCases/Plan before coding.
-5. If the host agent's reply contains "task complete", "all done", or any
-   finish-style language, it must be backed by a green `completion-check`
-   in this turn. Otherwise treat the reply as drift and re-run the loop.
-
-## Skill-mode loop driver protocol
-
-Skill mode lacks an orchestrator-owned while loop. The host agent must act as a
-lightweight loop driver and keep moving without waiting for the user after every
-substep:
-
-1. Start or resume with `<AUTOMIND_CLI> continue [task-code]` when available, then run `<AUTOMIND_CLI> phase-gate <task-code> auto` before choosing the next phase. If the CLI is unavailable, read `automind-workflow-state.json` first, then `runtime-state.json.stateSummary` as migration fallback, `workflow.json`, `runtime-state.json`, and the latest structured result.
-2. Execute exactly one next phase action: refine Plan, run Generator, run
-   deterministic/model Evaluator, run `completion-check`, or ask the user only
-   for an allowed blocker.
-3. After every helper/check/evaluator result, parse structured control output:
-   `nextActionPrompt`, `evaluation.json.nextAction`, `completion-report.json`,
-   and runtime-state nextAction as resolver inputs. Immediately refresh/read `automind-workflow-state.json` and perform the next safe action; use `runtime-state.json.stateSummary` only as migration fallback/diagnostic.
-   If `workflow-check` or `completion-check` is red, do **not** trust
-   `runtime-state.json` finish-style markers such as `done` / `completed` /
-   `finished`; treat that as a false-finish drift, repair the blocking artifact
-   (often `evaluation.json` missing `nextAction`/`testResults`), and continue by
-   the effective next phase instead of stopping.
-4. Stop only on green `completion-check`, allowed `ask_user`, max-iteration
-   escalation, explicit user pause/abort, or non-recoverable unsafe condition.
-5. If artifacts are inconsistent, return to the phase that owns the broken
-   artifact and rerun `workflow-check`; do not ask the user to manually steer the
-   loop.
-
-## JSON handoff protocol for Skill mode
-
-Skill mode should not rely on Markdown and chat memory alone. Use the same
-JSON input/output contracts as the CLI loop whenever the CLI/runtime is
-available:
-
-1. At each phase boundary, read `workflow.json` first to identify the current
-   phase, upstream dependencies, expected sidecars, and gate status.
-2. For each phase, consume the upstream JSON sidecars as structured inputs
-   before editing the human-readable Markdown artifacts:
-   - Brainstorm -> `brainstorm.json`;
-   - Requirements -> `requirements.json`;
-   - Plan -> `plan.json`;
-   - TestCases -> `testcases.json`;
-   - Pre-implementation review -> `pre-implementation-review.json`;
-   - Build/Delivery -> `delivery.json`;
-   - Verify -> `evaluation.json`;
-   - Finish -> `completion-report.json`.
-3. After updating a phase's Markdown artifact, run `<AUTOMIND_CLI> workflow-check
-   <task-code>` when available. It refreshes/validates phase sidecars and the
-   derived `workflow.json`; treat hard issues as blocking handoff.
-4. Before Generator work, require green Plan-side JSON continuity: resolved
-   pre-implementation review, `Rxx/AC-xxx -> TC-* -> Plan -> workflow.json`, and
-   no hard `workflow-check` issues.
-5. Before Evaluator work, require `delivery.json`/`Delivery.md` plus a context
-   pack; Evaluator writes `evaluation.json` as the next structured control
-   signal.
-6. Before Finish, run `completion-check`; consume `completion-report.json`,
-   `VerificationLedger.json`, and updated `evaluation.json` instead of trusting
-   prose claims.
-7. If the full CLI is unavailable, manually maintain the same JSON sidecars as
-   well as possible, validate against `schemas/*.schema.json` when feasible, and
-   explicitly state any missing checker coverage as a limitation.
-
-## TestCase -> verifier operation protocol
-
-During Verify, convert each required `TC-*` / `testcases.json.testcases[]` entry
-into one concrete verifier operation:
-
-1. Prefer structured `testcases.json` fields (`runtimeLevel`, `executor`,
-   `runbook.command`, `runbook.steps`, `runbook.assertions`,
-   `runbook.expectedEvidence`) and use `TestCases.md` for readable detail.
-2. Choose the most concrete executor: project-native command first; then
-   `script-command`; then Android probe-flow; then iOS XCUITest/probe-flow; then
-   browser/project E2E; then external-sink proof; static/quality review only for
-   quality/static cases or explicitly blocked functional cases.
-3. For app/UI cases, map runbook actions to executable steps: build/start,
-   launch/open, tap/click/input/swipe, optional guarded `tap_if_present`,
-   assertions/postChecks, and evidence collection. Missing selectors trigger a
-   discovery/refine/rerun cycle, not a pass.
-4. Normalize every operation into `evaluation.json.testResults[]` with result,
-   evidence paths, coverage, `evidenceAssessment`, and nextAction.
-5. Let `completion-check` decide final finish; Evaluator `finish` is only a
-   proposal until required TC/AC/evidence coverage is green.
-
-
-## Recommended installation / runtime
-
-Best user experience is **full AutoMind installation** with the single public install command: `curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl.sh | bash`. It installs the AutoMind CLI/runtime, this skill, and the `/automind` command for supported coding agents. In that mode, the skill gives the agent the workflow and prompt protocol, while the full AutoMind checkout provides `automind` / `./automind.sh` plus orchestrator/scripts/adapters.
-
-When a full AutoMind runtime is available, agents may use:
-
-1. `automind` or `./automind.sh` helpers/gates first (`scaffold`, `status`, `workflow-check`, `context-pack`, `script-command`, `completion-check`, `trace`, `process-check`, `summary`, `summary-refine`);
-2. documented scripts/adapters from the full checkout only when the command catalog says direct script use is appropriate.
-
-Important workspace rule: AutoMind runtime and user workspace are separate. The public installer puts the runtime checkout at `$HOME/.automind/automind` by default (`AUTOMIND_HOME` may override it) and creates a wrapper at `$HOME/.local/bin/automind` by default (`AUTOMIND_BIN_DIR` may override it). Run AutoMind CLI commands from the target project/workspace root. Task artifacts are written to `$AUTOMIND_WORKSPACE_ROOT/.automind/tasks` when set, otherwise to the current working directory's `.automind/tasks`. If the agent is not currently in the target project root, set `AUTOMIND_WORKSPACE_ROOT=/path/to/project` before running `automind ...`; do not let an installed AutoMind checkout become the task workspace. Do not copy developer-machine absolute paths from old logs; resolve runtime resources relative to the current runtime root. See `docs/references/installation-runtime.md`.
+- testable requirements instead of drifting prompts;
+- real build/test/device verification;
+- Android or iOS app harness validation;
+- structured `evaluation.json` feedback;
+- `workflow-check` continuity checks across `Rxx -> AC-xxx -> TC-* -> Plan -> evaluation`;
+- `completion-check` final gate for required `TC-*`, required `AC-xxx`, and evidence coverage. Required `TC-*` cases must pass with executed evidence; environment/device/tool blocker classification is routing information, not a pass. Required App/UI/runtime cases need hard product-launch/action/assertion evidence plus `evidenceAssessment.verdict=proved`. Required clean-build/release/merge cases need attached project-native build evidence plus `evidenceAssessment.verdict=proved`;
+- self-explaining `status` output with next recommended action and suggested commands;
+- repeated Generator/Evaluator loops;
+- human approval for sensitive or destructive actions;
+- reusable task summaries and lessons.
+- local reuse memory: `summary.md` plus `.automind/summary/*` seed the next task's `Reuse.md` in full runtime mode.
+- AI summary refinement preferred at Finish: `summary` first builds a deterministic seed; `summary --ai <agent>` / `summary-refine` asks an agent to classify and condense it, then deterministic validation filters the result before reuse memory is updated. If AI fails, deterministic summary remains the fallback.
+- Prefer measurable visual evidence first. AI visual review may supplement UI verification when screenshot/image evidence exists, the host model supports images, and pure technical measurement cannot fully settle the visual claim. Use `templates/visual_review_prompt.md` after deterministic app/UI evidence is captured; it can catch wrong screen, overlays, clipping, overlap, unreadable text, and visual mismatch, but it does not replace required UI execution, measurable bounds/frame checks, screenshot diff, deterministic visual inspection, OCR, or project-native tests. If a required visual assertion needs semantic image understanding and no vision-capable model is available, first try deterministic proof such as `automind setup-automation-tools visual` + `automind visual-inspect ...`, screenshot diff, OCR, bounds/hierarchy, or project-native snapshot/layout tests. If measurable evidence and AI Visual Review still cannot prove correctness, capture screenshot(s) and ask the user to confirm as the final fallback. Do not pass from screenshot paths alone; explicit user confirmation must be recorded before finish. If no screenshot/evidence path exists, route to `blocked`/`ask_user`/`replan`.
+- known successful/avoid paths: before choosing build/test/verification commands, inspect `Reuse.md` for `Successful path:` and `Avoid path:` entries. Prefer a matching known-successful path, and record why if it is ignored.
 
 ## Runtime discovery required at task start
 
@@ -395,24 +270,16 @@ Mobile/visual automation helper packages are not installed by the public install
 
 For web/client/server target-project dependencies, use the target project's own package manager, lockfiles, and documented scripts. In full runtime mode, `automind dependency-check [task-code] [iteration]` is an optional read-only discovery helper for unclear dependency paths; it recommends commands such as `npm ci`, `pnpm install --frozen-lockfile`, `yarn install --immutable`, `uv sync --frozen`, `poetry install --sync`, Gradle/Maven wrappers, Docker config/build, or repo-specific setup; it does not install those dependencies. Ask the user before system SDK/runtime installs, Docker/database service startup, browser-driver installs, private registry credentials, signing, or device-trust changes.
 
-## When to use
+## Recommended installation / runtime
 
-Use AutoMind when work needs any of these:
+Best user experience is **full AutoMind installation** with the single public install command: `curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl.sh | bash`. It installs the AutoMind CLI/runtime, this skill, and the `/automind` command for supported coding agents. In that mode, the skill gives the agent the workflow and prompt protocol, while the full AutoMind checkout provides `automind` / `./automind.sh` plus orchestrator/scripts/adapters.
 
-- testable requirements instead of drifting prompts;
-- real build/test/device verification;
-- Android or iOS app harness validation;
-- structured `evaluation.json` feedback;
-- `workflow-check` continuity checks across `Rxx -> AC-xxx -> TC-* -> Plan -> evaluation`;
-- `completion-check` final gate for required `TC-*`, required `AC-xxx`, and evidence coverage. Required `TC-*` cases must pass with executed evidence; environment/device/tool blocker classification is routing information, not a pass. Required App/UI/runtime cases need hard product-launch/action/assertion evidence plus `evidenceAssessment.verdict=proved`. Required clean-build/release/merge cases need attached project-native build evidence plus `evidenceAssessment.verdict=proved`;
-- self-explaining `status` output with next recommended action and suggested commands;
-- repeated Generator/Evaluator loops;
-- human approval for sensitive or destructive actions;
-- reusable task summaries and lessons.
-- local reuse memory: `summary.md` plus `.automind/summary/*` seed the next task's `Reuse.md` in full runtime mode.
-- AI summary refinement preferred at Finish: `summary` first builds a deterministic seed; `summary --ai <agent>` / `summary-refine` asks an agent to classify and condense it, then deterministic validation filters the result before reuse memory is updated. If AI fails, deterministic summary remains the fallback.
-- Prefer measurable visual evidence first. AI visual review may supplement UI verification when screenshot/image evidence exists, the host model supports images, and pure technical measurement cannot fully settle the visual claim. Use `templates/visual_review_prompt.md` after deterministic app/UI evidence is captured; it can catch wrong screen, overlays, clipping, overlap, unreadable text, and visual mismatch, but it does not replace required UI execution, measurable bounds/frame checks, screenshot diff, deterministic visual inspection, OCR, or project-native tests. If a required visual assertion needs semantic image understanding and no vision-capable model is available, first try deterministic proof such as `automind setup-automation-tools visual` + `automind visual-inspect ...`, screenshot diff, OCR, bounds/hierarchy, or project-native snapshot/layout tests. If measurable evidence and AI Visual Review still cannot prove correctness, capture screenshot(s) and ask the user to confirm as the final fallback. Do not pass from screenshot paths alone; explicit user confirmation must be recorded before finish. If no screenshot/evidence path exists, route to `blocked`/`ask_user`/`replan`.
-- known successful/avoid paths: before choosing build/test/verification commands, inspect `Reuse.md` for `Successful path:` and `Avoid path:` entries. Prefer a matching known-successful path, and record why if it is ignored.
+When a full AutoMind runtime is available, agents may use:
+
+1. `automind` or `./automind.sh` helpers/gates first (`scaffold`, `status`, `workflow-check`, `context-pack`, `script-command`, `completion-check`, `trace`, `process-check`, `summary`, `summary-refine`);
+2. documented scripts/adapters from the full checkout only when the command catalog says direct script use is appropriate.
+
+Important workspace rule: AutoMind runtime and user workspace are separate. The public installer puts the runtime checkout at `$HOME/.automind/automind` by default (`AUTOMIND_HOME` may override it) and creates a wrapper at `$HOME/.local/bin/automind` by default (`AUTOMIND_BIN_DIR` may override it). Run AutoMind CLI commands from the target project/workspace root. Task artifacts are written to `$AUTOMIND_WORKSPACE_ROOT/.automind/tasks` when set, otherwise to the current working directory's `.automind/tasks`. If the agent is not currently in the target project root, set `AUTOMIND_WORKSPACE_ROOT=/path/to/project` before running `automind ...`; do not let an installed AutoMind checkout become the task workspace. Do not copy developer-machine absolute paths from old logs; resolve runtime resources relative to the current runtime root. See `docs/references/installation-runtime.md`.
 
 ## Mandatory startup read protocol
 
@@ -437,29 +304,6 @@ time/context is constrained, read at minimum `docs/workflow.md`,
 `docs/phase3-verification.md`, and `templates/evaluator_prompt.md`, then record
 that the remaining docs still need to be consulted before choosing commands,
 adapters, or platform-specific verification.
-
-## Core task files
-
-Each task must use these artifacts unless the user explicitly requested a single-stage helper operation:
-
-- `Brainstorm.md`
-- `Reuse.md`
-- `Requirements.md`
-- `TestCases.md`
-- `Plan.md`
-- `Delivery.md`
-- `Validation.md`
-- `evaluation.json`
-- `automind-workflow-state.json`
-- `automind-workflow-events.jsonl`
-- `stages/*-stage-state.json`
-- `runtime-state.json.stateSummary` (migration fallback)
-- `runtime-state.json`
-- `phase-gate` output for each skill/command handoff
-- `summary.md`
-- `logs/iter-N/`
-- phase sidecars when available: `brainstorm.json`, `requirements.json`, `testcases.json`, `plan.json`, `pre-implementation-review.json`, `delivery.json`, `completion-report.json`
-- observability/learning artifacts when available: `events.jsonl`, `user-answers.json`, `user-messages.json`, `trace.json`, `process-eval.json`, `run-card.json`
 
 ## Non-negotiable rules
 
@@ -522,6 +366,120 @@ Each task must use these artifacts unless the user explicitly requested a single
 - Quality cases are grouped by category batch; after quality-driven runtime/product code changes, the next iteration starts from the selected/affected functional batch again, not necessarily the entire product suite.
 - Probe-flow actions should be reviewable. A click is a decision: confidence, risk, fallback, and evidence all matter.
 - App UI action verification is first-class: prefer Android probe-flow, iOS XCUITest/probe-flow/action-plan, and Web probe-flow/project E2E before falling back to manual confirmation.
+
+## Core task files
+
+Each task must use these artifacts unless the user explicitly requested a single-stage helper operation:
+
+- `Brainstorm.md`
+- `Reuse.md`
+- `Requirements.md`
+- `TestCases.md`
+- `Plan.md`
+- `Delivery.md`
+- `Validation.md`
+- `evaluation.json`
+- `automind-workflow-state.json`
+- `automind-workflow-events.jsonl`
+- `stages/*-stage-state.json`
+- `runtime-state.json.stateSummary` (migration fallback)
+- `runtime-state.json`
+- `phase-gate` output for each skill/command handoff
+- `summary.md`
+- `logs/iter-N/`
+- phase sidecars when available: `brainstorm.json`, `requirements.json`, `testcases.json`, `plan.json`, `pre-implementation-review.json`, `delivery.json`, `completion-report.json`
+- observability/learning artifacts when available: `events.jsonl`, `user-answers.json`, `user-messages.json`, `trace.json`, `process-eval.json`, `run-card.json`
+
+## Continue-until-done protocol (Skill mode automation)
+
+Skill mode has no orchestrator while-loop, so the host agent must not stop early.
+After every `workflow-check` / `completion-check` / `phase-gate` / Evaluator turn,
+read the JSON `nextActionPrompt` and obey it; never paraphrase it into "I'll wait
+for input". Before each Generator/Evaluator turn, call `<AUTOMIND_CLI>
+tick-iteration <task-code> <phase>` to enforce the iteration budget client-side
+(non-zero exit means halt and escalate, not silently continue).
+
+The only legal stop conditions are:
+
+- `completion-check` returned `result=pass`; or
+- `evaluation.json.nextAction=ask_user` AND `askUserQuestion.category` is one of
+  the 5-item whitelist (`unauthorized_destructive_or_sensitive`,
+  `system_or_external_dependency`, `real_device_or_signing`,
+  `manual_visual_confirmation`, `repeated_same_failure`); or
+- `tick-iteration` exited non-zero (budget exhausted) and escalated to `ask_user`.
+
+Any "task complete" / "all done" reply must be backed by a green `completion-check`
+in the same turn; otherwise treat it as drift and re-run the loop. Resume context
+(`.automind/current-task`, `user-messages.json`) is read via `<AUTOMIND_CLI>
+continue` and must be reconciled with Requirements/TestCases/Plan before coding.
+
+## Skill-mode loop driver protocol
+
+The host agent is a lightweight loop driver: do exactly one next phase action per
+turn (refine Plan, Generator, Evaluator, `completion-check`, or an allowed
+`ask_user`), then re-gate. Start/resume with `<AUTOMIND_CLI> continue [task-code]`,
+run `<AUTOMIND_CLI> phase-gate <task-code> auto` before each handoff, and treat
+`automind-workflow-state.json` as the control source of truth (use
+`runtime-state.json.stateSummary` only as migration fallback). If `workflow-check`
+or `completion-check` is red, do not trust finish-style runtime-state markers;
+repair the blocking artifact (often `evaluation.json` missing
+`nextAction`/`testResults`) and continue. Stop only on the legal stop conditions
+above.
+
+Step-by-step loop driving, checklist/checkbox handling, and the central-JSON rule
+live in `docs/references/skill-command-driver-checklist.md`.
+
+## JSON handoff protocol for Skill mode
+
+Use the same JSON contracts as the CLI loop, not Markdown/chat memory alone. At
+each phase boundary read `workflow.json` and the upstream phase sidecars
+(`brainstorm.json`, `requirements.json`, `plan.json`, `testcases.json`,
+`pre-implementation-review.json`, `delivery.json`, `evaluation.json`,
+`completion-report.json`) before editing the human-readable artifacts; after
+edits run `<AUTOMIND_CLI> workflow-check <task-code>` to refresh/validate them.
+Require green Plan-side continuity before Generator, `delivery.json`/`Delivery.md`
+plus a context pack before Evaluator, and `completion-report.json` from
+`completion-check` before Finish. If the full CLI is unavailable, maintain the
+same sidecars manually and validate against `schemas/*.schema.json`.
+
+## TestCase -> verifier operation protocol
+
+During Verify, convert each required `TC-*` / `testcases.json.testcases[]` entry
+into one concrete verifier operation. Prefer structured `testcases.json` fields
+(`runtimeLevel`, `executor`, `runbook.*`) and pick the most concrete executor:
+project-native command first; then `script-command`; then Android probe-flow; then
+iOS XCUITest/probe-flow; then browser/project E2E; then external-sink proof;
+static/quality review only for quality/static or explicitly blocked cases. Map
+app/UI runbooks to executable steps (build/start, launch, tap/input/swipe, guarded
+`tap_if_present`, assertions, evidence); missing selectors trigger a
+discovery/refine/rerun cycle, not a pass. Normalize every operation into
+`evaluation.json.testResults[]` with result, evidence paths, coverage,
+`evidenceAssessment`, and nextAction; `completion-check` decides final finish.
+See `docs/phase3-verification.md` and `templates/evaluator_prompt.md` for detail.
+
+
+## Updating AutoMind itself
+
+When the user asks to update, upgrade, refresh, reinstall, or sync AutoMind itself,
+prefer the formal maintenance command:
+
+```bash
+<AUTOMIND_CLI> update
+```
+
+Examples of update intent:
+
+- "更新 AutoMind"
+- "升级一下 automind"
+- "refresh AutoMind runtime"
+- "同步最新 AutoMind skill/command"
+
+This updates the AutoMind runtime, CLI wrapper, skill package, and `/automind`
+slash-command integrations. Update-only intent is **not** an AutoMind task:
+do not run `scaffold`, do not create `.automind/tasks/<task>/`, and do not enter
+the harness loop. If `<AUTOMIND_CLI> update` is unavailable because the installed
+runtime is too old, suggest the documented one-line installer from
+`docs/references/installation-runtime.md`.
 
 ## Demo
 
