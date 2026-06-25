@@ -129,16 +129,29 @@ curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl
 
 ### In Codex / Claude Code / Trae
 
-After installation, restart or reload the coding agent, then run from your target
-project:
+AutoMind supports Codex, Claude Code, Trae, and Trae-CN in both their CLI
+environments and their app/desktop coding-agent environments, as long as the
+agent can load user skills and/or slash commands.
+
+After installation, restart or reload the coding agent, open your target
+project, then use the slash-command entrypoint:
 
 ```text
 /automind Fix the login crash and verify it
 ```
 
-This is the recommended current-session flow. The host coding agent remains the
+`/automind` is the user-facing slash command. It uses the installed
+`automind-skill` protocol; `automind-skill` is the skill/folder name, not the
+slash-command name. If your agent exposes skills directly, you can also invoke
+the skill in natural language:
+
+```text
+Use automind-skill to fix the login crash and verify it
+```
+
+Both forms are current-session flows: the host coding agent remains the
 Planner/Generator, while AutoMind provides scaffolding, gates, verification
-helpers, durable artifacts, and loop-control signals. It does **not** start a
+helpers, durable artifacts, and loop-control signals. They do **not** start a
 separate agent session by default.
 
 `/automind ask ...` is equivalent to `/automind ...` in current-session mode.
@@ -177,6 +190,10 @@ project root, set:
 ```bash
 AUTOMIND_WORKSPACE_ROOT=/path/to/project automind <command>
 ```
+
+Terminal TUI example:
+
+![AutoMind terminal TUI](docs/assets/automind_tui_screenshot.png)
 
 ## Full-auto mode
 

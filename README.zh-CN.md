@@ -131,10 +131,23 @@ curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl
 
 ### 在 Codex / Claude Code / Trae 中
 
-安装后，重启或 reload 你的 coding agent，然后输入：
+AutoMind 支持 Codex、Claude Code、Trae、Trae-CN 的 CLI 版本，也支持它们的
+App/桌面 coding-agent 环境；前提是该 agent 能加载用户级 skill 和/或 slash
+command。
+
+安装后，重启或 reload 你的 coding agent，打开目标项目，然后使用 slash command
+入口：
 
 ```text
 /automind Fix the login crash and verify it
+```
+
+`/automind` 是面向用户输入的 slash command；它会使用已安装的
+`automind-skill` 协议。`automind-skill` 是 skill 名/文件夹名，不是 slash
+command 名。如果 coding agent 支持直接选择或自然语言调用 skill，也可以这样写：
+
+```text
+Use automind-skill to fix the login crash and verify it
 ```
 
 等价的 current-session 写法：
@@ -167,6 +180,10 @@ automind ask "Fix the login crash and verify it"
 未指定 agent 时，`ask`、`plan`、`resume` 使用 `auto` 选择：AutoMind 依次检查 `codex`、`claude`、Trae/Trae-CN（`traecli`），运行第一个通过 preflight 的 CLI。如果都不可用，它会报告每个检查过的 adapter 并建议改用 current-session 模式，而不是因为单个缺失的二进制就静默失败。Planner/Generator 的 approval-bypass 由任务级、记录在 `runtime-state.json` 的 `agentExecutionPolicy` 控制；缺该字段时兜底按 bypass 处理，这样非 new task、detached 脚本/resume/helper 命令，或没能触发 ask 的流程仍保持高自动化。TUI 不再就这个默认值提问；新任务把 `agentExecutionPolicy` 记为 `default_bypass` 用于审计，而 resume/helper 命令遵循已有策略或兜底。模型 Evaluator 运行对所有支持的 Coding Agent 都始终 fresh-isolated 且 bypass，以便采集 runtime/device/build 证据，避免 approval 卡死。敏感/破坏性/系统变更动作仍走 AutoMind 的 `ask_user` 防护。
 
 如果 agent 的 shell 不在目标项目根目录，先设置 `AUTOMIND_WORKSPACE_ROOT=/path/to/project` 再运行 AutoMind 命令。Runtime 和 workspace 是分开的：已安装 runtime 通常在 `~/.automind/automind`（或 `$AUTOMIND_HOME`），而任务 artifact 在运行 AutoMind 的项目里。不要从旧日志照抄开发机绝对路径；helper 路径应从当前 runtime/workspace 或任务 `logs/iter-N/env.json` 解析。
+
+Terminal TUI 示例：
+
+![AutoMind terminal TUI](docs/assets/automind_tui_screenshot.png)
 
 ---
 
