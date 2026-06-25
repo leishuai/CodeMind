@@ -141,18 +141,12 @@ project, then use the slash-command entrypoint:
 ```
 
 `/automind` is the user-facing slash command. It uses the installed
-`automind-skill` protocol; `automind-skill` is the skill/folder name, not the
-slash-command name. If your agent exposes skills directly, you can also invoke
-the skill in natural language:
+`automind-skill` protocol; `automind-skill` is the skill/folder name, and you
+can also invoke the skill in natural language or using the skill name:
 
 ```text
 Use automind-skill to fix the login crash and verify it
 ```
-
-Both forms are current-session flows: the host coding agent remains the
-Planner/Generator, while AutoMind provides scaffolding, gates, verification
-helpers, durable artifacts, and loop-control signals. They do **not** start a
-separate agent session by default.
 
 `/automind ask ...` is equivalent to `/automind ...` in current-session mode.
 Use detached/background variants only when you explicitly want a separate CLI

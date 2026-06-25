@@ -143,8 +143,8 @@ command。
 ```
 
 `/automind` 是面向用户输入的 slash command；它会使用已安装的
-`automind-skill` 协议。`automind-skill` 是 skill 名/文件夹名，不是 slash
-command 名。如果 coding agent 支持直接选择或自然语言调用 skill，也可以这样写：
+`automind-skill` 协议。`automind-skill` 是 skill 名/文件夹名，也可以通过自然语言
+或 skill 名直接调用：
 
 ```text
 Use automind-skill to fix the login crash and verify it
