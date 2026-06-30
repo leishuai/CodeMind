@@ -71,13 +71,13 @@ input runs AutoMind commands. Non-command natural language uses session affinity
 Example current-task message:
 
 ```text
-automind> 这个任务优先复用项目里的验证脚本，不要自己乱造命令
+automind> prefer the project's existing verification scripts for this task; do not invent commands
 ```
 
 Equivalent command when a current task exists:
 
 ```bash
-automind message <current-task> --text "这个任务优先复用项目里的验证脚本，不要自己乱造命令" --resume auto
+automind message <current-task> --text "prefer the project's existing verification scripts for this task; do not invent commands" --resume auto
 ```
 
 Equivalent command before a task exists inside one bare-`automind` shell process:

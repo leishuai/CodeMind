@@ -323,7 +323,7 @@
         },
         "userAuthorized": {
           "type": "boolean",
-          "description": "Set true ONLY when the action you would otherwise pause for is already authorized by the user via the pre-implementation `runtime-state.json.planner.preImplementationReview.decisionBundle.destructiveActionsAllowList`. When true (and the allow list is non-empty), the completion gate trusts that the user already consented and rewrites the ask_user back to retry_generator so the loop proceeds without re-asking. You own the semantic match between the pending action and what the user authorized; never fabricate consent. Whether to pause is ultimately the user's call (拦不拦截以用户诉求为准)."
+          "description": "Set true ONLY when the action you would otherwise pause for is already authorized by the user via the pre-implementation `runtime-state.json.planner.preImplementationReview.decisionBundle.destructiveActionsAllowList`. When true (and the allow list is non-empty), the completion gate trusts that the user already consented and rewrites the ask_user back to retry_generator so the loop proceeds without re-asking. You own the semantic match between the pending action and what the user authorized; never fabricate consent. Whether to pause is ultimately the user's call (user intent is the final arbiter)."
         },
         "reason": {
           "type": "string"
