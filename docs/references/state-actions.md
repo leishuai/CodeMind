@@ -201,3 +201,81 @@ requires updating the registry `next` edges; the state reducer needs no change.
 - `replan` normalizes to `replan_pending / planner / run_test_planner`.
 - `ask_user` is a hard pause until a user answer is recorded.
 - After `finished/finish`, the loop must not dispatch Planner, Generator, or Evaluator unless a new explicit task epoch is started.
+
+## 8. Observability artifacts: metrics and audit
+
+AutoMind writes two categories of observability data alongside control state:
+**metrics** (quantitative measurements) and **audit** (qualitative decision/action
+trail). Both are written as standalone files so that `runtime-state.json` stays
+focused on routing/resume state.
+
+### 8.1 Metrics — `metrics.json`
+
+`metrics.json` is the standalone metrics file. It is written by
+`metrics.py:MetricsCollector.flush()` and referenced from `runtime-state.json`
+via the `metricsRef` field (value: `"metrics.json"`).
+
+**Backward compatibility**: older tasks may still have `runtime-state.json.metrics`
+(embedded). `read_metrics()` in `orchestrator/metrics.py` reads `metrics.json`
+first and falls back to the embedded `metrics` field for legacy tasks.
+
+What metrics covers:
+
+| Section | Contents |
+|---|---|
+| `taskDuration` | Total wall-clock task duration (seconds). |
+| `iterations[]` | Per-iteration breakdown: generator/evaluator durations, sub-phase timings (build, install, ui_execution, preflight), platform, agent calls. |
+| `aggregates` | Min/max/avg/sum/count for every recorded metric (phase durations, warm build, LLM tokens, resource usage, etc.). |
+| `phases` | Top-level phase duration records (planning, generator, evaluator, summary, …). |
+| `agentCalls` | All agent call records with duration, retries, exit code. |
+| `llmTokens` | LLM prompt/completion/total token counts and model name. |
+| `cache` | Warm-build and UI-path-cache hit/miss totals. |
+
+Schema: [`schemas/metrics.schema.json`](../../schemas/metrics.schema.json).
+
+### 8.2 Audit — `audit.jsonl` + `audit.json`
+
+The audit trail records **key decisions, logic branches, actions, gate results,
+policy evaluations, and recovery attempts** so you can trace *why* AutoMind did
+something, not just *what* it did.
+
+Two files are produced:
+
+| File | Format | Purpose |
+|---|---|---|
+| `audit.jsonl` | Append-only JSON Lines, one entry per line | Raw event stream — the source of truth. Written incrementally during the task. |
+| `audit.json` | Pretty-printed JSON summary | Aggregated report generated at task finish by `write_audit_report()`. Contains counts, high-risk entries, recent actions/gates/decisions. |
+
+Audit event types:
+
+| Event type | Meaning |
+|---|---|
+| `decision_made` | A key decision (retry, replan, ask_user, finish, recovery, fallback, skip, continue). |
+| `branch_taken` | A logic branch was selected (condition, outcome, alternatives). |
+| `action_executed` | An operation was performed (agent call, build, install, etc.). |
+| `gate_result` | A gate check completed (workflow-check, completion-gate, phase-gate). |
+| `policy_evaluation` | A policy was evaluated (retry policy, risk policy, completion policy). |
+| `recovery_attempt` | A recovery or self-repair action was attempted. |
+
+Each entry carries: `ts` (timestamp), `type`, `source`, plus optional
+`iteration`, `phase`, `message`, `details`, `decisionType`, `reason`,
+`action`, `riskLevel`.
+
+**Risk levels** (`low`, `medium`, `high`, `critical`) are auto-inferred from
+decision type and reason; callers can also override explicitly.
+
+**Sensitive data** is redacted using the same `redact_sensitive_*` helpers as
+`events.jsonl` — audit entries never contain raw credentials, tokens, or
+secrets.
+
+Schema: [`schemas/audit.schema.json`](../../schemas/audit.schema.json)
+(describes `audit.json`; `audit.jsonl` is an unbounded stream of the same
+entry objects).
+
+### 8.3 `runtime-state.json` fields related to observability
+
+| Field | Type | Meaning |
+|---|---|---|
+| `metricsRef` | string | Relative path to the standalone metrics file (always `"metrics.json"`). |
+| `metrics` | object | **DEPRECATED** — embedded metrics for backward compatibility with tasks created before the split. New tasks write `metricsRef` instead. |
+| `decisionLog` | array | Bounded recent decision log entries for compressed-session continuity. Mirrors a subset of audit events in a compact form. |

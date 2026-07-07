@@ -215,9 +215,13 @@
         }
       }
     },
+    "metricsRef": {
+      "type": "string",
+      "description": "Relative path to the standalone metrics JSON file (e.g. 'metrics.json')."
+    },
     "metrics": {
       "type": "object",
-      "description": "Collected metrics for task execution analysis.",
+      "description": "DEPRECATED: Embedded metrics for backward compatibility. Use metricsRef instead.",
       "additionalProperties": true,
       "properties": {
         "collectedAt": {
@@ -227,6 +231,52 @@
         "taskDuration": {
           "type": "number",
           "description": "Total task duration in seconds."
+        },
+        "iterationCount": {
+          "type": "integer",
+          "description": "Total number of harness iterations recorded."
+        },
+        "iterations": {
+          "type": "array",
+          "description": "Per-iteration metrics breakdown.",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "iteration": {
+                "type": "integer",
+                "description": "Iteration index (0-based or 1-based)."
+              },
+              "generator_duration": {
+                "type": "number",
+                "description": "Generator phase duration in this iteration (seconds)."
+              },
+              "evaluator_duration": {
+                "type": "number",
+                "description": "Evaluator phase duration in this iteration (seconds)."
+              },
+              "subphase_build_duration": {
+                "type": "number",
+                "description": "Build sub-phase duration (seconds)."
+              },
+              "subphase_install_duration": {
+                "type": "number",
+                "description": "Install sub-phase duration (seconds)."
+              },
+              "subphase_ui_execution_duration": {
+                "type": "number",
+                "description": "UI execution sub-phase duration (seconds)."
+              },
+              "subphase_preflight_duration": {
+                "type": "number",
+                "description": "Preflight sub-phase duration (seconds)."
+              },
+              "platform": {
+                "type": "string",
+                "description": "Platform where sub-phases ran (ios/android/web)."
+              }
+            }
+          }
         },
         "aggregates": {
           "type": "object",

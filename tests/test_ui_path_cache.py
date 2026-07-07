@@ -6,6 +6,7 @@ import pytest
 from orchestrator.ui_path_cache import (
     cache_ui_path,
     compute_ui_fingerprint,
+    expire_cached_ui_paths,
     get_cached_ui_path,
     get_ui_path_cache_status,
     is_ui_path_cache_valid,
@@ -239,7 +240,7 @@ def test_mark_ui_path_expired_updates_status(tmp_path: Path) -> None:
     """Test mark_ui_path_expired updates validity to expired."""
     task_dir = tmp_path / "task"
     task_dir.mkdir()
-    
+
     cache = {
         "TC-01": {
             "tcId": "TC-01",
@@ -250,12 +251,196 @@ def test_mark_ui_path_expired_updates_status(tmp_path: Path) -> None:
             "validity": "valid",
         }
     }
-    
+
     write_ui_path_cache(task_dir, cache)
     mark_ui_path_expired(task_dir, "TC-01")
-    
+
     cache = read_ui_path_cache(task_dir)
     assert cache["TC-01"]["validity"] == "expired"
+
+
+def test_mark_ui_path_expired_stores_reason(tmp_path: Path) -> None:
+    """Test mark_ui_path_expired stores the reason and timestamp."""
+    task_dir = tmp_path / "task"
+    task_dir.mkdir()
+
+    cache = {
+        "TC-01": {
+            "tcId": "TC-01",
+            "goal": "play audio",
+            "uiFingerprint": "abc123",
+            "actionSequence": [{"type": "click", "selector": "playButton"}],
+            "timestamp": "2026-07-06T10:00:00",
+            "validity": "valid",
+        }
+    }
+
+    write_ui_path_cache(task_dir, cache)
+    mark_ui_path_expired(task_dir, "TC-01", reason="execution_failed")
+
+    cache = read_ui_path_cache(task_dir)
+    assert cache["TC-01"]["validity"] == "expired"
+    assert cache["TC-01"]["expiredReason"] == "execution_failed"
+    assert "expiredAt" in cache["TC-01"]
+
+
+def test_is_ui_path_cache_invalid_when_expired(tmp_path: Path) -> None:
+    """Test cache with validity=expired is considered invalid."""
+    task_dir = tmp_path / "task"
+    task_dir.mkdir()
+
+    cache = {
+        "TC-01": {
+            "tcId": "TC-01",
+            "goal": "play audio",
+            "uiFingerprint": "abc123",
+            "actionSequence": [{"type": "click", "selector": "playButton"}],
+            "timestamp": "2026-07-06T10:00:00",
+            "validity": "expired",
+        }
+    }
+
+    write_ui_path_cache(task_dir, cache)
+
+    is_valid, reason = is_ui_path_cache_valid(task_dir, "TC-01", "abc123")
+    assert not is_valid
+    assert "expired" in reason.lower()
+
+
+def test_expire_cached_ui_paths_bulk(tmp_path: Path) -> None:
+    """Test expire_cached_ui_paths marks multiple entries as expired."""
+    task_dir = tmp_path / "task"
+    task_dir.mkdir()
+
+    cache = {
+        "TC-01": {
+            "tcId": "TC-01",
+            "goal": "play audio",
+            "uiFingerprint": "abc123",
+            "actionSequence": [{"type": "click", "selector": "playButton"}],
+            "timestamp": "2026-07-06T10:00:00",
+            "validity": "valid",
+        },
+        "TC-02": {
+            "tcId": "TC-02",
+            "goal": "stop audio",
+            "uiFingerprint": "abc123",
+            "actionSequence": [{"type": "click", "selector": "stopButton"}],
+            "timestamp": "2026-07-06T10:00:00",
+            "validity": "valid",
+        },
+        "TC-03": {
+            "tcId": "TC-03",
+            "goal": "skip track",
+            "uiFingerprint": "abc123",
+            "actionSequence": [{"type": "click", "selector": "nextButton"}],
+            "timestamp": "2026-07-06T10:00:00",
+            "validity": "valid",
+        },
+    }
+
+    write_ui_path_cache(task_dir, cache)
+    expired_count = expire_cached_ui_paths(task_dir, ["TC-01", "TC-03"], reason="test_bulk_expire")
+
+    assert expired_count == 2
+    cache = read_ui_path_cache(task_dir)
+    assert cache["TC-01"]["validity"] == "expired"
+    assert cache["TC-02"]["validity"] == "valid"
+    assert cache["TC-03"]["validity"] == "expired"
+
+
+def test_expire_cached_ui_paths_skips_already_expired(tmp_path: Path) -> None:
+    """Test expire_cached_ui_paths skips entries already expired."""
+    task_dir = tmp_path / "task"
+    task_dir.mkdir()
+
+    cache = {
+        "TC-01": {
+            "tcId": "TC-01",
+            "goal": "play audio",
+            "uiFingerprint": "abc123",
+            "actionSequence": [{"type": "click", "selector": "playButton"}],
+            "timestamp": "2026-07-06T10:00:00",
+            "validity": "expired",
+        },
+        "TC-02": {
+            "tcId": "TC-02",
+            "goal": "stop audio",
+            "uiFingerprint": "abc123",
+            "actionSequence": [{"type": "click", "selector": "stopButton"}],
+            "timestamp": "2026-07-06T10:00:00",
+            "validity": "valid",
+        },
+    }
+
+    write_ui_path_cache(task_dir, cache)
+    expired_count = expire_cached_ui_paths(task_dir, ["TC-01", "TC-02"], reason="test")
+
+    assert expired_count == 1
+
+
+def test_cache_ui_path_records_audit(tmp_path: Path) -> None:
+    """Test cache_ui_path writes an audit entry."""
+    from orchestrator.audit import read_audit_log
+
+    task_dir = tmp_path / "task"
+    task_dir.mkdir()
+
+    action_sequence = [{"type": "click", "selector": "playButton"}]
+    cache_ui_path(task_dir, "TC-01", "play audio", action_sequence, "abc123")
+
+    entries = read_audit_log(task_dir)
+    action_entries = [e for e in entries if e.get("type") == "action_executed"]
+    cache_writes = [
+        e for e in action_entries
+        if e.get("details", {}).get("actionType") == "ui_path_cache_write"
+    ]
+    assert len(cache_writes) >= 1
+    assert cache_writes[0]["details"]["target"] == "TC-01"
+
+
+def test_get_cached_ui_path_records_audit_hit(tmp_path: Path) -> None:
+    """Test get_cached_ui_path records audit branch_taken on hit."""
+    from orchestrator.audit import read_audit_log
+
+    task_dir = tmp_path / "task"
+    task_dir.mkdir()
+
+    cache = {
+        "TC-01": {
+            "tcId": "TC-01",
+            "goal": "play audio",
+            "uiFingerprint": "abc123",
+            "actionSequence": [{"type": "click", "selector": "playButton"}],
+            "timestamp": "2026-07-06T10:00:00",
+            "validity": "valid",
+        }
+    }
+    write_ui_path_cache(task_dir, cache)
+
+    result = get_cached_ui_path(task_dir, "TC-01", "abc123")
+    assert result is not None
+
+    entries = read_audit_log(task_dir)
+    branch_entries = [e for e in entries if e.get("type") == "branch_taken"]
+    hits = [e for e in branch_entries if e.get("details", {}).get("outcome") == "hit"]
+    assert len(hits) >= 1
+
+
+def test_get_cached_ui_path_records_audit_miss(tmp_path: Path) -> None:
+    """Test get_cached_ui_path records audit branch_taken on miss."""
+    from orchestrator.audit import read_audit_log
+
+    task_dir = tmp_path / "task"
+    task_dir.mkdir()
+
+    result = get_cached_ui_path(task_dir, "TC-99", "abc123")
+    assert result is None
+
+    entries = read_audit_log(task_dir)
+    branch_entries = [e for e in entries if e.get("type") == "branch_taken"]
+    misses = [e for e in branch_entries if e.get("details", {}).get("outcome") == "miss"]
+    assert len(misses) >= 1
 
 
 def test_wait_for_ui_exploration_returns_immediately_if_completed(tmp_path: Path) -> None:

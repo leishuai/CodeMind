@@ -558,6 +558,9 @@ automind-workflow-state.json
 automind-workflow-events.jsonl
 stages/*-stage-state.json
 runtime-state.json  # runtime/resume projection
+metrics.json        # standalone metrics (phase/subphase/iteration/agent/aggregate)
+audit.jsonl         # raw audit event stream (append-only JSON Lines)
+audit.json          # audit summary report (generated at finish)
 VerificationLedger.json
 summary.md
 logs/iter-N/

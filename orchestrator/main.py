@@ -14,6 +14,7 @@ import shutil
 import re
 import hashlib
 import tempfile
+import time
 from pathlib import Path
 from datetime import datetime
 from typing import Optional, Literal
@@ -43,13 +44,35 @@ from orchestrator.warm_build import (
 from orchestrator.ui_path_cache import (
     cache_ui_path,
     compute_ui_fingerprint,
+    expire_cached_ui_paths,
     get_cached_ui_path,
     wait_for_ui_exploration,
 )
 from orchestrator.metrics import (
     record_phase_start,
     record_phase_end,
+    record_subphase_start,
+    record_subphase_end,
+    record_iter_phase_start,
+    record_iter_phase_end,
+    record_agent_call,
+    record_iteration,
     flush_metrics,
+    SUBPHASE_BUILD,
+    SUBPHASE_INSTALL,
+    SUBPHASE_UI_EXECUTION,
+    SUBPHASE_PREFLIGHT,
+    SUBPHASE_COMPLETION_GATE,
+    SUBPHASE_FLOW_GENERATION,
+    SUBPHASE_RESULT_ANALYSIS,
+)
+from orchestrator.audit import (
+    record_decision,
+    record_branch,
+    record_action,
+    record_gate,
+    record_policy,
+    record_recovery,
 )
 from orchestrator.automation_tools import (
     AUTOMATION_TOOL_PROFILES,
@@ -3489,6 +3512,28 @@ def _cache_probe_flow_paths(task_dir: Path, flow_path: Optional[Path], summary: 
         cache_ui_path(task_dir, tc_id, goal, steps, fingerprint)
 
 
+def _expire_cached_probe_flow_on_failure(task_dir: Path, flow_path: Optional[Path], evaluation: dict) -> None:
+    """Expire cached UI paths when a cached probe-flow fails on-device.
+
+    Only expires entries when the current probe-flow was reused from cache
+    (flow.reusedFromCache == True and flow.reusedTc is set). The failure reason
+    is captured from evaluation.summary for audit trail.
+    """
+    if not flow_path:
+        return
+    try:
+        flow = json.loads(Path(flow_path).read_text())
+    except (OSError, json.JSONDecodeError):
+        return
+    if not flow.get("reusedFromCache"):
+        return
+    tc_id = flow.get("reusedTc")
+    if not tc_id:
+        return
+    reason = str(evaluation.get("summary") or "probe_flow_execution_failed")[:200]
+    expire_cached_ui_paths(task_dir, [tc_id], reason=reason)
+
+
 def _reuse_cached_probe_flow(task_dir: Path, flow_path: Path) -> bool:
     """Reuse a previously verified probe-flow when the source UI is unchanged.
 
@@ -4414,7 +4459,9 @@ def run_ui_evidence_gate(task_dir: Path, iteration: int, evaluation: dict) -> di
 
 def run_android_probe_flow_evaluator(task_dir: Path, iteration: int, iter_log_dir: Path, dry_run: bool = False, force_flow: bool = False, retries: int = 0) -> tuple[int, str]:
     """\u81ea\u52a8Generate/run Android probe-flow，\u5e76\u5199\u56de evaluation.json / Validation.md \u6240\u9700Evidence。"""
+    record_subphase_start(task_dir, SUBPHASE_FLOW_GENERATION, platform="android", iteration=iteration)
     flow_path, flow_or_error = generate_probe_flow_json(task_dir, force=force_flow)
+    record_subphase_end(task_dir, SUBPHASE_FLOW_GENERATION, platform="android", iteration=iteration)
     if not flow_path:
         evaluation = {
             "iteration": iteration,
@@ -4436,7 +4483,9 @@ def run_android_probe_flow_evaluator(task_dir: Path, iteration: int, iter_log_di
     # Real device execution should first pass platform readiness checks.
     # Dry-run skips preflight so schema/config checks can run without a device.
     if not (dry_run or os.environ.get("AUTOMIND_ANDROID_PROBE_DRY_RUN") == "1"):
+        record_subphase_start(task_dir, SUBPHASE_PREFLIGHT, platform="android", iteration=iteration)
         preflight_ok, preflight_eval, preflight_output = run_android_preflight_evaluator(task_dir, iteration, iter_log_dir)
+        record_subphase_end(task_dir, SUBPHASE_PREFLIGHT, platform="android", iteration=iteration)
         if not preflight_ok:
             evaluation = preflight_eval or {
                 "iteration": iteration,
@@ -4459,7 +4508,9 @@ def run_android_probe_flow_evaluator(task_dir: Path, iteration: int, iter_log_di
     build_command = android_app.get("buildCommand") if isinstance(android_app, dict) else None
     build_log = ""
     if build_command:
+        record_subphase_start(task_dir, SUBPHASE_BUILD, platform="android", iteration=iteration)
         code, stdout, stderr = run_cmd(["bash", "-lc", build_command], cwd=str(AUTOMIND_WORKSPACE_ROOT))
+        record_subphase_end(task_dir, SUBPHASE_BUILD, platform="android", iteration=iteration)
         build_log = stdout + stderr
         (iter_log_dir / "android-build.log").write_text(build_log)
         if code != 0:
@@ -4500,6 +4551,7 @@ def run_android_probe_flow_evaluator(task_dir: Path, iteration: int, iter_log_di
     output = ""
     code = 1
     summary_path = out_dir / "probe-flow-summary.json"
+    record_subphase_start(task_dir, SUBPHASE_UI_EXECUTION, platform="android", iteration=iteration)
     for attempt in range(1, max_attempts + 1):
         code, stdout, stderr = run_cmd(runner_cmd, cwd=str(AUTOMIND_WORKSPACE_ROOT))
         attempt_output = stdout + stderr
@@ -4521,8 +4573,10 @@ def run_android_probe_flow_evaluator(task_dir: Path, iteration: int, iter_log_di
         output += f"\n--- attempt {attempt}/{max_attempts} exit={code} summary={attempt_summary_result} ---\n" + attempt_output
         if code == 0 and attempt_summary_result in {"pass", None}:
             break
+    record_subphase_end(task_dir, SUBPHASE_UI_EXECUTION, platform="android", iteration=iteration)
     (iter_log_dir / "evaluator.log").write_text(output)
 
+    record_subphase_start(task_dir, SUBPHASE_RESULT_ANALYSIS, platform="android", iteration=iteration)
     summary: dict = {}
     if summary_path.exists():
         try:
@@ -4579,6 +4633,7 @@ def run_android_probe_flow_evaluator(task_dir: Path, iteration: int, iter_log_di
     for item in attempts:
         if isinstance(item, dict):
             evidence.append({"type": "log", "note": f"android-probe-flow-attempt-{item.get('attempt')}", "path": item.get("log")})
+    record_subphase_end(task_dir, SUBPHASE_RESULT_ANALYSIS, platform="android", iteration=iteration)
 
     if evaluation.get("nextAction") == "finish":
         evidence_refs = [str(summary_path)] if summary_path.exists() else [str(iter_log_dir / "evaluator.log")]
@@ -4589,14 +4644,18 @@ def run_android_probe_flow_evaluator(task_dir: Path, iteration: int, iter_log_di
             evidence_refs,
             "Android probe-flow adapter returned pass.",
         )
+        record_subphase_start(task_dir, SUBPHASE_COMPLETION_GATE, platform="android", iteration=iteration)
         evaluation, _completion_report = apply_completion_gate(
             task_dir,
             evaluation,
             allow_synthesize_pass=False,
             fail_next_action="retry_generator",
         )
+        record_subphase_end(task_dir, SUBPHASE_COMPLETION_GATE, platform="android", iteration=iteration)
         if evaluation.get("nextAction") == "finish":
             _cache_probe_flow_paths(task_dir, flow_path, summary if isinstance(summary, dict) else {})
+    else:
+        _expire_cached_probe_flow_on_failure(task_dir, flow_path, evaluation)
 
     if evaluation.get("testResults"):
         record_tc_attempts(task_dir, evaluation, source="android-probe-flow")
@@ -4614,7 +4673,9 @@ def run_ios_probe_flow_evaluator(task_dir: Path, iteration: int, iter_log_dir: P
     cmd = [sys.executable, str(script), task_dir.name, str(iteration)]
     if dry_run:
         cmd.append("--dry-run")
+    record_subphase_start(task_dir, SUBPHASE_UI_EXECUTION, platform="ios", iteration=iteration)
     proc = subprocess.run(cmd, cwd=str(AUTOMIND_WORKSPACE_ROOT), text=True, capture_output=True, timeout=runtime_timeout("AUTOMIND_EVALUATOR_TIMEOUT"))
+    record_subphase_end(task_dir, SUBPHASE_UI_EXECUTION, platform="ios", iteration=iteration)
     output = proc.stdout + proc.stderr
     ensure_dir(iter_log_dir)
     (iter_log_dir / "ios-probe-flow-wrapper.log").write_text(output)
@@ -4632,12 +4693,14 @@ def run_ios_probe_flow_evaluator(task_dir: Path, iteration: int, iter_log_dir: P
             evidence_refs,
             "iOS probe-flow adapter returned pass.",
         )
+        record_subphase_start(task_dir, SUBPHASE_COMPLETION_GATE, platform="ios", iteration=iteration)
         evaluation, _completion_report = apply_completion_gate(
             task_dir,
             evaluation,
             allow_synthesize_pass=False,
             fail_next_action="replan",
         )
+        record_subphase_end(task_dir, SUBPHASE_COMPLETION_GATE, platform="ios", iteration=iteration)
         write_evaluation_json(task_dir, evaluation)
     latest_evaluation = read_evaluation_json(task_dir)
     if latest_evaluation:
@@ -4815,7 +4878,9 @@ def run_ios_xcuitest_evaluator(task_dir: Path, iteration: int, iter_log_dir: Pat
     if ios.get("configuration"):
         cmd += ["--configuration", str(ios.get("configuration"))]
 
+    record_subphase_start(task_dir, SUBPHASE_UI_EXECUTION, platform="ios", iteration=iteration)
     proc = subprocess.run(cmd, cwd=str(AUTOMIND_WORKSPACE_ROOT), text=True, capture_output=True, timeout=runtime_timeout("AUTOMIND_EVALUATOR_TIMEOUT"))
+    record_subphase_end(task_dir, SUBPHASE_UI_EXECUTION, platform="ios", iteration=iteration)
     output = proc.stdout + proc.stderr
     ensure_dir(iter_log_dir)
     (iter_log_dir / "ios-xcuitest-runner.log").write_text(output)
@@ -4834,12 +4899,14 @@ def run_ios_xcuitest_evaluator(task_dir: Path, iteration: int, iter_log_dir: Pat
             evidence_refs,
             "iOS XCUITest adapter returned pass.",
         )
+        record_subphase_start(task_dir, SUBPHASE_COMPLETION_GATE, platform="ios", iteration=iteration)
         evaluation, _completion_report = apply_completion_gate(
             task_dir,
             evaluation,
             allow_synthesize_pass=False,
             fail_next_action="replan",
         )
+        record_subphase_end(task_dir, SUBPHASE_COMPLETION_GATE, platform="ios", iteration=iteration)
         write_evaluation_json(task_dir, evaluation)
     return 0, output
 
@@ -5195,7 +5262,10 @@ def run_ai_test_planner(task_dir: Path, agent: str = "auto", mode: Literal["cli"
     replan_context = build_replan_context(task_dir)
     extra_context = answer_context + message_context + replan_context
     prompt_with_answers = prompt + extra_context if extra_context else prompt
+    _agent_start = time.time()
     code, output = run_agent(mode, agent, prompt_with_answers, task_dir, phase="planner")
+    _agent_duration = time.time() - _agent_start
+    record_agent_call(task_dir, "planner", _agent_duration, exit_code=code)
     update_heartbeat(task_dir, owner="planner", note=f"phase2_refiner_exit_{code}")
     append_progress_log(task_dir, f"planner-phase-end exit={code}", owner="planner", level="info" if code == 0 else "warn")
     if answer_context and code == 0:
@@ -5594,6 +5664,7 @@ def run_harness_loop(
             update_runtime_state(task_dir, status="retry_pending", currentOwner="generator", nextAction="retry_generator")
         iteration += 1
         log(f"=== Iteration {iteration} ===")
+        record_iteration(task_dir, iteration)
         # Long-run signals: bump heartbeat and append a progress entry every
         # iteration so external supervisors / `automind doctor` can detect
         # stalled runs without scanning iteration logs.
@@ -5638,6 +5709,7 @@ def run_harness_loop(
         if not evaluator_only and not skip_generator_this_iteration:
             # ----- Generator Phase -----
             record_phase_start(task_dir, "generator")
+            record_iter_phase_start(task_dir, iteration, "generator")
             update_runtime_state(task_dir,
                 status="generating",
                 iteration=iteration,
@@ -5684,7 +5756,19 @@ def run_harness_loop(
             generator_prompt_with_answers = generator_prompt + answer_context + message_context if (answer_context or message_context) else generator_prompt
             write_rendered_prompt(iter_log_dir, "generator-prompt.md", generator_prompt_with_answers)
 
+            _agent_start = time.time()
             code, output = run_agent(mode, agent, generator_prompt_with_answers, task_dir, phase="generator")
+            _agent_duration = time.time() - _agent_start
+            record_agent_call(task_dir, "generator", _agent_duration, exit_code=code)
+            record_action(
+                task_dir,
+                iteration=iteration,
+                phase="generator",
+                action_type="agent_execution",
+                target=f"{agent} ({mode})",
+                result="success" if code == 0 else "failed",
+                details={"exitCode": code, "durationMs": int(_agent_duration * 1000)},
+            )
             if answer_context and code == 0:
                 mark_latest_answer_applied(task_dir, applied_by="generator")
             if message_context and code == 0:
@@ -5770,6 +5854,7 @@ def run_harness_loop(
                 reason=f"after_generator_iter_{iteration}",
             )
             record_phase_end(task_dir, "generator")
+            record_iter_phase_end(task_dir, iteration, "generator")
         elif skip_generator_this_iteration:
             log(f"Generator Phase skipped: resuming interrupted Evaluator for iteration {iteration}; existing generator.log is present")
         else:
@@ -5777,6 +5862,7 @@ def run_harness_loop(
 
         # ----- Evaluator Phase -----
         record_phase_start(task_dir, "evaluator")
+        record_iter_phase_start(task_dir, iteration, "evaluator")
         update_runtime_state(task_dir,
             status="evaluating",
             iteration=iteration,
@@ -5910,7 +5996,10 @@ def run_harness_loop(
                 evaluator_prompt = apply_runtime_language_instruction(evaluator_prompt, evaluator_user_input)
                 write_rendered_prompt(iter_log_dir, "evaluator-prompt.md", evaluator_prompt)
 
+                _agent_start = time.time()
                 code, output = run_agent(mode, agent, evaluator_prompt, task_dir, phase="evaluator")
+                _agent_duration = time.time() - _agent_start
+                record_agent_call(task_dir, "evaluator", _agent_duration, exit_code=code)
 
         # \u5199\u65e5\u5fd7
         (iter_log_dir / "evaluator.log").write_text(output)
@@ -6009,6 +6098,15 @@ def run_harness_loop(
                 allow_synthesize_pass=False,
                 fail_next_action="replan" if evaluator_only else "retry_generator",
             )
+            record_gate(
+                task_dir,
+                iteration=iteration,
+                phase="evaluator",
+                gate_type="completion_gate",
+                passed=completion_report.get("result") == "pass",
+                message="Completion check " + ("passed" if completion_report.get("result") == "pass" else "failed"),
+                details={"issues": completion_report.get("issues", []), "warnings": completion_report.get("warnings", [])},
+            )
             if completion_report.get("result") == "pass":
                 success("Completion check passed")
             else:
@@ -6033,16 +6131,38 @@ def run_harness_loop(
             reason=f"after_evaluator_iter_{iteration}",
         )
         record_phase_end(task_dir, "evaluator")
+        record_iter_phase_end(task_dir, iteration, "evaluator")
 
         next_action = evaluation["nextAction"]
         if next_action == "finish":
+            record_decision(
+                task_dir,
+                iteration=iteration,
+                phase="evaluator",
+                message="Task completed successfully",
+                decision_type="finish",
+                action="finish",
+                risk_level="low",
+            )
             success("Validation passed. Loop finished")
             reconcile_validation_status(task_dir)
             flush_metrics(task_dir)
+            from orchestrator.audit import write_audit_report
+            write_audit_report(task_dir)
             finalize_task_records(task_code, "finish")
             ensure_summary_generated(task_code, reason="finish")
             return True
         elif next_action == "retry_generator":
+            record_decision(
+                task_dir,
+                iteration=iteration,
+                phase="evaluator",
+                message="Validation failed, retrying generator",
+                decision_type="retry",
+                action="retry_generator",
+                reason=evaluation.get("summary"),
+                risk_level="low",
+            )
             if evaluator_only:
                 warn(f"Validation failed; current task is evaluator-only ({evaluator_only_kind}); stopped and waiting for external fix or Generator attachment")
                 finalize_task_records(task_code, "evaluator_only_retry_pending")
@@ -6050,6 +6170,16 @@ def run_harness_loop(
                 return False
             warn("Validation failed; continuing to next iteration...")
         elif next_action == "replan":
+            record_decision(
+                task_dir,
+                iteration=iteration,
+                phase="evaluator",
+                message="Replan required",
+                decision_type="policy",
+                action="replan",
+                reason=evaluation.get("summary"),
+                risk_level="high",
+            )
             if evaluator_only:
                 warn(f"Replan required; current task is evaluator-only ({evaluator_only_kind}); stopped for external replanning")
                 finalize_task_records(task_code, "evaluator_only_replan")
@@ -6136,11 +6266,30 @@ def run_harness_loop(
             update_runtime_state(task_dir, status="retry_pending", currentOwner="generator", nextAction="retry_generator")
             continue
         elif next_action == "ask_user":
+            record_decision(
+                task_dir,
+                iteration=iteration,
+                phase="evaluator",
+                message="Human input required",
+                decision_type="policy",
+                action="ask_user",
+                reason=evaluation.get("summary"),
+                risk_level="high",
+            )
             warn("Human input required; answer askUserQuestion before continuing")
             finalize_task_records(task_code, "ask_user")
             ensure_summary_generated(task_code, reason="ask_user")
             return False
         else:
+            record_decision(
+                task_dir,
+                iteration=iteration,
+                phase="evaluator",
+                message="Unknown nextAction, stopping",
+                decision_type="policy",
+                action=next_action,
+                risk_level="medium",
+            )
             warn("Validation failed and stopped")
             finalize_task_records(task_code, "stop")
             ensure_summary_generated(task_code, reason="stop")

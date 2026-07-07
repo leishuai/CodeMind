@@ -25,6 +25,7 @@ from orchestrator.config import AUTOMIND_WORKSPACE_ROOT
 from orchestrator.console import error, log, warn
 from orchestrator.state import append_progress_log, ensure_dir, read_runtime_state, update_runtime_state
 from orchestrator.metrics import get_metrics
+from orchestrator.audit import record_action, record_branch
 
 UI_PATH_CACHE_MAX_WAIT_SECONDS = 15
 UI_PATH_CACHE_EXPIRY_DAYS = 7
@@ -117,7 +118,10 @@ def is_ui_path_cache_valid(task_dir: Path, tc_id: str, current_fingerprint: str)
     
     if not cached_entry:
         return False, "no cached path for this TC"
-    
+
+    if cached_entry.get("validity") == "expired":
+        return False, "cache entry marked expired"
+
     if cached_entry.get("uiFingerprint") != current_fingerprint:
         return False, "UI fingerprint changed"
     
@@ -141,10 +145,25 @@ def get_cached_ui_path(task_dir: Path, tc_id: str, current_fingerprint: str) -> 
     is_valid, reason = is_ui_path_cache_valid(task_dir, tc_id, current_fingerprint)
     if not is_valid:
         get_metrics(task_dir).record_cache_miss("ui_path", tc_id)
+        record_branch(
+            task_dir,
+            phase="evaluator",
+            condition=f"ui_path_cache:{tc_id}",
+            outcome="miss",
+            reason=reason,
+        )
         return None
-    
+
     cache = read_ui_path_cache(task_dir)
     get_metrics(task_dir).record_cache_hit("ui_path", tc_id)
+    record_branch(
+        task_dir,
+        phase="evaluator",
+        condition=f"ui_path_cache:{tc_id}",
+        outcome="hit",
+        alternatives=["regenerate_probe_flow"],
+        reason="UI fingerprint matched",
+    )
     return cache.get(tc_id)
 
 
@@ -168,18 +187,47 @@ def cache_ui_path(
     }
     
     write_ui_path_cache(task_dir, cache)
-    
+
     _update_ui_path_cache_state(task_dir, cachedPaths=list(cache.keys()))
     append_progress_log(task_dir, f"UI path cached for TC {tc_id}", owner="ui_path_cache", level="info")
+    record_action(
+        task_dir,
+        phase="evaluator",
+        action_type="ui_path_cache_write",
+        target=tc_id,
+        result="success",
+        details={"goal": goal, "steps": len(action_sequence)},
+    )
 
 
-def mark_ui_path_expired(task_dir: Path, tc_id: str) -> None:
+def mark_ui_path_expired(task_dir: Path, tc_id: str, reason: str = "manual") -> None:
     """Mark a cached UI path as expired."""
     cache = read_ui_path_cache(task_dir)
     if tc_id in cache:
         cache[tc_id]["validity"] = "expired"
+        cache[tc_id]["expiredReason"] = reason
+        cache[tc_id]["expiredAt"] = datetime.now().isoformat(timespec="seconds")
         write_ui_path_cache(task_dir, cache)
-        append_progress_log(task_dir, f"UI path expired for TC {tc_id}", owner="ui_path_cache", level="info")
+        append_progress_log(task_dir, f"UI path expired for TC {tc_id}: {reason}", owner="ui_path_cache", level="info")
+        record_action(
+            task_dir,
+            phase="evaluator",
+            action_type="ui_path_cache_expire",
+            target=tc_id,
+            result="expired",
+            details={"reason": reason},
+        )
+
+
+def expire_cached_ui_paths(task_dir: Path, tc_ids: list[str], reason: str = "execution_failed") -> int:
+    """Mark multiple cached UI paths as expired. Returns the number of entries expired."""
+    expired = 0
+    for tc_id in tc_ids:
+        cache = read_ui_path_cache(task_dir)
+        if tc_id in cache and cache[tc_id].get("validity") == "valid":
+            mark_ui_path_expired(task_dir, tc_id, reason)
+            expired += 1
+    return expired
 
 
 def _ui_exploration_worker(task_dir: Path, warm_build_status: dict) -> None:

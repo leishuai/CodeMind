@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://automind.local/schemas/audit.schema.json",
+  "title": "AutoMind Audit Report",
+  "description": "Summary audit report generated at task finish. The raw event stream lives in audit.jsonl (append-only, one JSON object per line). This schema describes the aggregated audit.json summary written by write_audit_report().",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schemaVersion", "entryCount"],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schema version for forward-compatible parsing."
+    },
+    "entryCount": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Total number of audit entries in audit.jsonl."
+    },
+    "summary": {
+      "type": "object",
+      "description": "Aggregated counts and statistics.",
+      "additionalProperties": true,
+      "properties": {
+        "byType": {
+          "type": "object",
+          "description": "Count of entries by event type.",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "byPhase": {
+          "type": "object",
+          "description": "Count of entries by phase.",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "byRiskLevel": {
+          "type": "object",
+          "description": "Count of entries by risk level (low / medium / high / critical).",
+          "properties": {
+            "low": { "type": "integer", "minimum": 0 },
+            "medium": { "type": "integer", "minimum": 0 },
+            "high": { "type": "integer", "minimum": 0 },
+            "critical": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": true
+        },
+        "actionCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total action_executed events."
+        },
+        "gateCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total gate_result events."
+        },
+        "decisionCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total decision_made events."
+        },
+        "highRiskCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total high/critical risk entries."
+        }
+      }
+    },
+    "highRiskEntries": {
+      "type": "array",
+      "description": "Recent high and critical risk entries (capped at 50).",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "ts": { "type": "string", "description": "Timestamp (ISO format)." },
+          "type": { "type": "string", "description": "Event type." },
+          "phase": { "type": "string", "description": "Phase when event occurred." },
+          "message": { "type": "string", "description": "Human-readable message." },
+          "reason": { "type": "string", "description": "Reason for the decision/action." }
+        }
+      }
+    },
+    "recentActions": {
+      "type": "array",
+      "description": "Recent action_executed entries (capped at 20).",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "ts": { "type": "string" },
+          "actionType": { "type": "string" },
+          "target": { "type": "string" },
+          "result": { "type": "string" }
+        }
+      }
+    },
+    "recentGates": {
+      "type": "array",
+      "description": "Recent gate_result entries (capped at 20).",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "ts": { "type": "string" },
+          "gateType": { "type": "string" },
+          "passed": { "type": "boolean" },
+          "message": { "type": "string" }
+        }
+      }
+    },
+    "recentDecisions": {
+      "type": "array",
+      "description": "Recent decision_made entries (capped at 20).",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "ts": { "type": "string" },
+          "decisionType": { "type": "string" },
+          "phase": { "type": "string" },
+          "message": { "type": "string" },
+          "action": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -67,6 +67,8 @@ DOCS = [
     "schemas/process-eval.schema.json",
     "schemas/probe-flow.schema.json",
     "schemas/evaluation.schema.json",
+    "schemas/metrics.schema.json",
+    "schemas/audit.schema.json",
 ]
 
 REQUIREMENTS = [
@@ -388,7 +390,7 @@ Each task must use these artifacts unless the user explicitly requested a single
 - `summary.md`
 - `logs/iter-N/`
 - phase sidecars when available: `brainstorm.json`, `requirements.json`, `testcases.json`, `plan.json`, `pre-implementation-review.json`, `delivery.json`, `completion-report.json`
-- observability/learning artifacts when available: `events.jsonl`, `user-answers.json`, `user-messages.json`, `trace.json`, `process-eval.json`, `run-card.json`
+- observability/learning artifacts when available: `events.jsonl`, `user-answers.json`, `user-messages.json`, `trace.json`, `process-eval.json`, `run-card.json`, `metrics.json`, `audit.jsonl`, `audit.json`
 
 ## Continue-until-done protocol (Skill mode automation)
 

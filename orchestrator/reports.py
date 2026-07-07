@@ -203,6 +203,16 @@ def _load_json(path: Path) -> dict:
         return {}
 
 
+def _read_metrics(task_dir: Path, state: dict) -> dict:
+    """Read metrics from metrics.json, falling back to runtime-state.json.metrics."""
+    metrics_path = task_dir / "metrics.json"
+    if metrics_path.exists():
+        data = _load_json(metrics_path)
+        if data:
+            return data
+    return state.get("metrics") if isinstance(state.get("metrics"), dict) else {}
+
+
 def _html(text: object) -> str:
     return html.escape(str(text if text is not None else ""))
 
@@ -800,7 +810,7 @@ def generate_html_report_for_task_dir(task_dir: Path, task_code: str | None = No
     iteration_total = _count_iterations(task_dir)
     tc_total, tc_passed = _testcase_pass_counts(test_results)
     duration = _active_duration(task_dir)
-    metrics = state.get("metrics") if isinstance(state.get("metrics"), dict) else {}
+    metrics = _read_metrics(task_dir, state)
     global_screenshots = _global_screenshot_artifacts(task_dir, screenshots)
     runtime_ui_tc_ids = {
         str(tc.get("id") or "").upper()
@@ -894,6 +904,178 @@ def generate_html_report_for_task_dir(task_dir: Path, task_code: str | None = No
         for p in screenshots
     ) or "<p>No screenshot/image artifacts found under logs/.</p>"
 
+    aggregates = metrics.get("aggregates", {}) if isinstance(metrics, dict) else {}
+
+    subphase_labels = {
+        "build": "Build",
+        "install": "Install",
+        "ui_execution": "UI execution",
+        "preflight": "Preflight",
+        "flow_generation": "Flow generation",
+        "result_analysis": "Result analysis",
+        "completion_gate": "Completion gate",
+        "warm_build_wait": "Warm build wait",
+    }
+    subphase_cards = []
+    for key, value in aggregates.items():
+        if key.startswith("subphase_") and key.endswith("_duration"):
+            subphase_name = key[len("subphase_"):-len("_duration")]
+            label = subphase_labels.get(subphase_name, subphase_name.replace("_", " ").title())
+            subphase_cards.append(_render_metric_card(label, _format_duration(value.get("sum", 0))))
+    subphase_cards_html = "".join(subphase_cards)
+
+    agent_cards = []
+    agent_retries_total = 0
+    agent_failures_total = 0
+    for key, value in aggregates.items():
+        if key.startswith("agent_") and key.endswith("_duration"):
+            agent_name = key[len("agent_"):-len("_duration")]
+            label = f"Agent · {agent_name.title()}"
+            agent_cards.append(_render_metric_card(label, _format_duration(value.get("sum", 0))))
+        if key.startswith("agent_") and key.endswith("_retries"):
+            agent_retries_total += value.get("sum", 0)
+        if key.startswith("agent_") and key.endswith("_failures"):
+            agent_failures_total += value.get("sum", 0)
+    agent_cards_html = "".join(agent_cards)
+    if agent_retries_total:
+        agent_cards_html += _render_metric_card("Agent retries", f"{int(agent_retries_total)}")
+    if agent_failures_total:
+        agent_cards_html += _render_metric_card("Agent failures", f"{int(agent_failures_total)}")
+
+    iterations = metrics.get("iterations", []) if isinstance(metrics, dict) else []
+    iter_table_rows = ""
+    if iterations:
+        all_keys = set()
+        for it in iterations:
+            all_keys.update(it.keys())
+        ordered_keys = [
+            "iteration", "generator_duration", "evaluator_duration",
+            "subphase_build_duration", "subphase_install_duration",
+            "subphase_ui_execution_duration", "subphase_preflight_duration",
+            "subphase_flow_generation_duration", "subphase_result_analysis_duration",
+            "subphase_completion_gate_duration", "platform",
+        ]
+        display_keys = [k for k in ordered_keys if k in all_keys] + [k for k in sorted(all_keys) if k not in ordered_keys]
+
+        def _fmt_cell(key, val):
+            if val is None:
+                return "-"
+            if key.endswith("_duration"):
+                return _format_duration(val)
+            if key == "iteration":
+                return str(val)
+            return str(val)
+
+        def _header(key):
+            if key == "iteration":
+                return "Iter"
+            if key == "generator_duration":
+                return "Generator"
+            if key == "evaluator_duration":
+                return "Evaluator"
+            if key.startswith("subphase_") and key.endswith("_duration"):
+                sub = key[len("subphase_"):-len("_duration")]
+                return subphase_labels.get(sub, sub.replace("_", " ").title())
+            if key == "platform":
+                return "Platform"
+            return key.replace("_", " ").title()
+
+        iter_table_rows = "".join(
+            "<tr>" + "".join(f"<td>{_html(_fmt_cell(k, it.get(k)))}</td>" for k in display_keys) + "</tr>"
+            for it in iterations
+        )
+        iter_table_header = "<tr>" + "".join(f"<th>{_html(_header(k))}</th>" for k in display_keys) + "</tr>"
+        iterations_html = f"""
+    <h3>Per-iteration breakdown</h3>
+    <div style="overflow-x:auto;">
+      <table><thead>{iter_table_header}</thead><tbody>{iter_table_rows}</tbody></table>
+    </div>"""
+    else:
+        iterations_html = ""
+
+    audit_path = task_dir / "audit.json"
+    audit_data = {}
+    if audit_path.exists():
+        try:
+            audit_data = json.loads(audit_path.read_text(errors="ignore"))
+        except json.JSONDecodeError:
+            pass
+
+    audit_summary = audit_data.get("summary", {}) if isinstance(audit_data, dict) else {}
+    audit_entries = audit_data.get("entryCount", 0)
+
+    audit_cards = []
+    if audit_entries > 0:
+        audit_cards.append(_render_metric_card("Audit entries", str(audit_entries)))
+        audit_cards.append(_render_metric_card("Decisions", str(audit_summary.get("decisionCount", 0))))
+        audit_cards.append(_render_metric_card("Actions", str(audit_summary.get("actionCount", 0))))
+        audit_cards.append(_render_metric_card("Gates", str(audit_summary.get("gateCount", 0))))
+        if audit_summary.get("highRiskCount", 0) > 0:
+            audit_cards.append(_render_metric_card("High-risk events", str(audit_summary.get("highRiskCount", 0))))
+    audit_cards_html = "".join(audit_cards)
+
+    high_risk_rows = ""
+    high_risk_entries = audit_data.get("highRiskEntries", []) if isinstance(audit_data, dict) else []
+    if high_risk_entries:
+        high_risk_rows = "".join(
+            f"<tr><td>{_html(e.get('ts', '-'))}</td><td>{_html(e.get('type', '-'))}</td><td>{_html(e.get('phase', '-'))}</td><td>{_html(e.get('message', '-'))}</td><td>{_html(e.get('reason', '-'))}</td></tr>"
+            for e in high_risk_entries
+        )
+        high_risk_html = f"""
+    <h3>High-risk events</h3>
+    <table><thead><tr><th>Time</th><th>Type</th><th>Phase</th><th>Message</th><th>Reason</th></tr></thead><tbody>{high_risk_rows}</tbody></table>"""
+    else:
+        high_risk_html = ""
+
+    decision_rows = ""
+    decisions = audit_data.get("recentDecisions", []) if isinstance(audit_data, dict) else []
+    if decisions:
+        decision_rows = "".join(
+            f"<tr><td>{_html(d.get('ts', '-'))}</td><td>{_html(d.get('decisionType', '-'))}</td><td>{_html(d.get('phase', '-'))}</td><td>{_html(d.get('message', '-'))}</td><td>{_html(d.get('action', '-'))}</td></tr>"
+            for d in decisions
+        )
+        decisions_html = f"""
+    <h3>Recent decisions</h3>
+    <table><thead><tr><th>Time</th><th>Type</th><th>Phase</th><th>Message</th><th>Action</th></tr></thead><tbody>{decision_rows}</tbody></table>"""
+    else:
+        decisions_html = ""
+
+    action_rows = ""
+    actions = audit_data.get("recentActions", []) if isinstance(audit_data, dict) else []
+    if actions:
+        action_rows = "".join(
+            f"<tr><td>{_html(a.get('ts', '-'))}</td><td>{_html(a.get('actionType', '-'))}</td><td>{_html(a.get('target', '-'))}</td><td>{_html(a.get('result', '-'))}</td></tr>"
+            for a in actions
+        )
+        actions_html = f"""
+    <h3>Recent actions</h3>
+    <table><thead><tr><th>Time</th><th>Type</th><th>Target</th><th>Result</th></tr></thead><tbody>{action_rows}</tbody></table>"""
+    else:
+        actions_html = ""
+
+    gate_rows = ""
+    gates = audit_data.get("recentGates", []) if isinstance(audit_data, dict) else []
+    if gates:
+        gate_rows = "".join(
+            f"<tr><td>{_html(g.get('ts', '-'))}</td><td>{_html(g.get('gateType', '-'))}</td><td><span class='badge {'pass' if g.get('passed') else 'fail'}'>{_html('passed' if g.get('passed') else 'failed')}</span></td><td>{_html(g.get('message', '-'))}</td></tr>"
+            for g in gates
+        )
+        gates_html = f"""
+    <h3>Gate results</h3>
+    <table><thead><tr><th>Time</th><th>Gate</th><th>Result</th><th>Message</th></tr></thead><tbody>{gate_rows}</tbody></table>"""
+    else:
+        gates_html = ""
+
+    audit_html = f"""
+  <section><h2>Audit Log</h2>
+    {f'<div class="grid">{audit_cards_html}</div>' if audit_cards_html else '<p>No audit data available.</p>'}
+    {high_risk_html}
+    {decisions_html}
+    {actions_html}
+    {gates_html}
+    {_link(task_dir, 'audit.json', 'Open full audit.json')}
+  </section>""" if audit_entries > 0 else ""
+
     html_doc = f"""<!doctype html>
 <html lang="en">
 <head>
@@ -959,6 +1141,7 @@ def generate_html_report_for_task_dir(task_dir: Path, task_code: str | None = No
   <section><h2>Completed / Target Requirements</h2><ul>{req_html}</ul><p>{_link(task_dir, 'Requirements.md', 'Open Requirements.md')}</p></section>
 
   <section><h2>Execution Metrics</h2>
+    <h3>Phase totals</h3>
     <div class="grid">
       {_render_metric_card("Total duration", _format_duration(metrics.get("taskDuration", 0))) if metrics.get("taskDuration") else ""}
       {_render_metric_card("Planning", _format_duration(metrics.get("aggregates", {}).get("phase_planning_duration", {}).get("sum", 0))) if metrics.get("aggregates", {}).get("phase_planning_duration") else ""}
@@ -967,8 +1150,13 @@ def generate_html_report_for_task_dir(task_dir: Path, task_code: str | None = No
       {_render_metric_card("Warm build", _format_duration(metrics.get("aggregates", {}).get("warm_build_duration", {}).get("sum", 0))) if metrics.get("aggregates", {}).get("warm_build_duration") else ""}
       {_render_metric_card("LLM tokens", f"{int(metrics.get('aggregates', {}).get('llm_total_tokens', {}).get('sum', 0))} tokens") if metrics.get("aggregates", {}).get("llm_total_tokens") else ""}
     </div>
+    {f'<h3>Sub-phases</h3><div class="grid">{subphase_cards_html}</div>' if subphase_cards_html else ""}
+    {f'<h3>Agent calls</h3><div class="grid">{agent_cards_html}</div>' if agent_cards_html else ""}
+    {iterations_html}
     {f"<p class='muted'>Metrics collected at: {_html(metrics.get('collectedAt', '-'))}</p>" if metrics else ""}
   </section>
+
+  {audit_html}
 
   <section><h2>Generated / Changed Artifacts</h2><ul>
     <li>{_link(task_dir, 'Delivery.md', 'Delivery.md')} — generated/changed implementation report</li>

@@ -164,6 +164,9 @@ Key point: **the agent runs AutoMind through terminal commands**, not through an
 | **Workflow continuity** | `workflow-check` refreshes/validates the derived `workflow.json` contract and verifies `Rxx/AC-xxx -> TC-* -> Plan -> workflow.json -> evaluation` before phase handoff or finish |
 | **Completion gate** | `completion-check` verifies required `TC-*` pass results, required `AC-xxx` coverage, and evidence before finish |
 | **Complete records** | Commands, environment, evidence, `Report.html` with per-TC `Key Evidence`, and final/durable handoff summaries are traceable |
+| **Metrics measurement** | Phase/sub-phase/iteration durations, agent call statistics, LLM token usage, warm-build and UI-cache stats, and resource usage — all in standalone `metrics.json` |
+| **Build & UI caching** | Warm build pre-compilation and UI path cache significantly reduce repeated build/deploy time across iterations, with cache hit/miss stats tracked in metrics |
+| **Audit trail** | Key decisions, logic branches, actions, gate results, policy evaluations, and recovery attempts are recorded in `audit.jsonl` (raw stream) and `audit.json` (summary report) for full traceability of *why* AutoMind did something |
 | **Local reuse memory** | Finished or durable paused handoffs generate `summary.md`, append `.automind/summary/*`, and seed the next task's `Reuse.md` |
 
 ---

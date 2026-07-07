@@ -65,29 +65,83 @@ def update_runtime_state(task_dir: Path, **updates):
 DECISION_LOG_MAX_CHARS = 200
 DECISION_LOG_PROMPT_LIMIT = 5
 
+DECISION_TYPES = {
+    "gate": "门检查决策（如 completion_gate）",
+    "policy": "策略决策（如重试策略）",
+    "branch": "逻辑分支选择",
+    "action": "操作执行",
+    "retry": "重试决策",
+    "finish": "结束决策",
+    "recovery": "恢复决策",
+    "fallback": "降级/回退决策",
+    "skip": "跳过决策",
+    "continue": "继续决策",
+}
+
+RISK_LEVELS = ("low", "medium", "high", "critical")
+
+
+def _infer_risk_level(decision_type: str | None, reason: str | None) -> str:
+    if not decision_type:
+        return "medium"
+    dt = decision_type.lower()
+    if dt in {"finish", "recovery", "fallback", "skip"}:
+        return "high" if reason and ("fail" in reason.lower() or "error" in reason.lower()) else "medium"
+    if dt in {"gate"}:
+        return "high"
+    if dt in {"retry", "continue"}:
+        return "low"
+    return "medium"
+
 
 def append_decision_log(
     task_dir: Path,
     iteration: int,
     phase: str,
     text: str,
+    *,
+    decision_type: str | None = None,
+    reason: str | None = None,
+    context: dict | None = None,
+    action: str | None = None,
+    risk_level: str | None = None,
 ) -> dict:
     """Append a single decision-log entry to runtime-state.json.
 
     Truncates ``text`` to ``DECISION_LOG_MAX_CHARS`` characters.
     Returns the entry written.
+
+    Args:
+        decision_type: 决策类型（gate/policy/branch/action/retry/finish/recovery/fallback/skip/continue）
+        reason: 决策原因
+        context: 上下文数据（会被脱敏）
+        action: 后续动作（如 retry_generator、finish）
+        risk_level: 风险等级（low/medium/high/critical），不指定则自动推断
     """
+    from orchestrator.session.events import redact_sensitive_obj
+
     state = read_runtime_state(task_dir) or {}
     log = state.get("decisionLog")
     if not isinstance(log, list):
         log = []
     truncated = (text or "").strip()[:DECISION_LOG_MAX_CHARS]
+    inferred_risk = risk_level or _infer_risk_level(decision_type, reason)
     entry = {
         "iteration": int(iteration),
         "phase": str(phase or "generic"),
         "text": truncated,
         "timestamp": datetime.now().isoformat(timespec="seconds"),
     }
+    if decision_type:
+        entry["decisionType"] = decision_type
+    if reason:
+        entry["reason"] = reason
+    if context:
+        entry["context"] = redact_sensitive_obj(context)
+    if action:
+        entry["action"] = action
+    if inferred_risk:
+        entry["riskLevel"] = inferred_risk
     log.append(entry)
     state["decisionLog"] = log
     state["updatedAt"] = entry["timestamp"]
@@ -100,7 +154,7 @@ def format_recent_decisions(state: Optional[dict], limit: int = DECISION_LOG_PRO
 
     Returns "" when no entries exist. Format::
 
-        [iter=N phase=P] text...
+        [iter=N phase=P type=T] text...
     """
     if not isinstance(state, dict):
         return ""
@@ -112,8 +166,12 @@ def format_recent_decisions(state: Optional[dict], limit: int = DECISION_LOG_PRO
     for entry in tail:
         if not isinstance(entry, dict):
             continue
+        parts = [f"[iter={entry.get('iteration')} phase={entry.get('phase')}"]
+        if entry.get("decisionType"):
+            parts.append(f"type={entry.get('decisionType')}")
+        parts.append("]")
         lines.append(
-            f"[iter={entry.get('iteration')} phase={entry.get('phase')}] {entry.get('text', '')}"
+            " ".join(parts) + f" {entry.get('text', '')}"
         )
     return "\n".join(lines)
 
