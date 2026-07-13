@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Deterministic screenshot/image inspection for AutoMind.
+"""Deterministic screenshot/image inspection for CodeAutonomy.
 
 This is the default fallback when a host model cannot inspect images. It does
 not semantically understand a UI the way a vision model can; it provides bounded
@@ -30,7 +30,7 @@ def load_visual_deps() -> str | None:
 
     Keep imports lazy so a missing Pillow installation can still produce the
     normal task-local `visual-inspection.json` blocked artifact instead of
-    failing before AutoMind resolves the task directory.
+    failing before CodeAutonomy resolves the task directory.
     """
     global Image, ImageChops, ImageStat, np, imagehash
     try:

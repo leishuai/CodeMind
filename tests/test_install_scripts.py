@@ -1,4 +1,4 @@
-"""Smoke tests for the AutoMind install scripts.
+"""Smoke tests for the CodeAutonomy install scripts.
 
 These tests intentionally do not run the full installation (which requires git
 repository access and mutates the filesystem). Instead, they cover:
@@ -54,7 +54,7 @@ def test_bash_syntax_check_install_curl_sh() -> None:
 def test_install_sh_help_long_flag() -> None:
     code, out, _err = _run(["bash", str(INSTALL_SH), "--help"])
     assert code == 0, f"install.sh --help exited with {code}"
-    assert "AutoMind installer" in out
+    assert "CodeAutonomy installer" in out
     assert "AUTOMIND_REPO" in out
     assert "AUTOMIND_HOME" in out
 
@@ -62,7 +62,7 @@ def test_install_sh_help_long_flag() -> None:
 def test_install_sh_help_short_flag() -> None:
     code, out, _err = _run(["bash", str(INSTALL_SH), "-h"])
     assert code == 0, f"install.sh -h exited with {code}"
-    assert "AutoMind installer" in out
+    assert "CodeAutonomy installer" in out
 
 
 def test_install_curl_sh_help_long_flag() -> None:
@@ -89,6 +89,10 @@ def test_install_sh_structural_markers() -> None:
         "write_git_guard",
         "automind.sh",
         "install.sh",
+        'PRIMARY_WRAPPER="$AUTOMIND_BIN_DIR/codeautonomy"',
+        'LEGACY_WRAPPER="$AUTOMIND_BIN_DIR/automind"',
+        "--command-name codeautonomy",
+        "--command-name automind",
     ]:
         assert marker in text, f"install.sh missing structural marker: {marker}"
 

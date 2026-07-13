@@ -1,4 +1,4 @@
-"""Status guidance and user-facing report manifests for AutoMind.
+"""Status guidance and user-facing report manifests for CodeAutonomy.
 
 This module is presentation/reporting oriented. It reads task artifacts and
 gate reports to explain the next action, but it does not drive the harness
@@ -1081,7 +1081,7 @@ def generate_html_report_for_task_dir(task_dir: Path, task_code: str | None = No
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{_html(task_code)} Automind Report</title>
+  <title>{_html(task_code)} CodeAutonomy Report</title>
   <style>
     body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; color: #172033; background: #f6f7fb; }}
     header {{ background: #121826; color: white; padding: 28px 36px; }}
@@ -1118,7 +1118,7 @@ def generate_html_report_for_task_dir(task_dir: Path, task_code: str | None = No
 </head>
 <body>
 <header>
-  <h1>{_html(task_code)} Automind Report</h1>
+  <h1>{_html(task_code)} CodeAutonomy Report</h1>
   <div>Generated: {_html(generated_at)}</div>
 </header>
 <main>
@@ -1317,7 +1317,7 @@ def build_status_guidance(task_code: str) -> dict:
             commands.append(f"./automind.sh record-check {task_code}")
             read_files.extend([rel_to_root(task_dir / "summary.md"), rel_to_root(task_dir / "Validation.md")])
     elif status == "human_input_pending" or next_action == "ask_user":
-        reason = "Human input is required before AutoMind can safely continue."
+        reason = "Human input is required before CodeAutonomy can safely continue."
         recommended.append("Read askUserQuestion, ask the user for the missing decision, then update task artifacts/evaluation and resume.")
         ask = state.get("askUserQuestion")
         if not isinstance(ask, dict) and isinstance(evaluation, dict):
@@ -1394,7 +1394,7 @@ def build_status_guidance(task_code: str) -> dict:
             commands.append(f"./automind.sh record-check {task_code}")
         read_files.extend([rel_to_root(task_dir / "evaluation.json"), rel_to_root(task_dir / "Validation.md"), rel_to_root(task_dir / "summary.md")])
     elif status == "aborted":
-        reason = "Task is aborted; AutoMind should not resume without explicit user direction."
+        reason = "Task is aborted; CodeAutonomy should not resume without explicit user direction."
         recommended.append("Ask the user whether to restart as a new task or explicitly resume from a checkpoint.")
         read_files.extend(_runtime_state_read_files(task_dir))
     else:

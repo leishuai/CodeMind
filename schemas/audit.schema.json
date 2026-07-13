@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://automind.local/schemas/audit.schema.json",
-  "title": "AutoMind Audit Report",
+  "title": "CodeAutonomy Audit Report",
   "description": "Summary audit report generated at task finish. The raw event stream lives in audit.jsonl (append-only, one JSON object per line). This schema describes the aggregated audit.json summary written by write_audit_report().",
   "type": "object",
   "additionalProperties": true,

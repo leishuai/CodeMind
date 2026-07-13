@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run an offline AutoMind demo smoke without mobile devices.
+"""Run an offline CodeAutonomy demo smoke without mobile devices.
 
 The smoke creates a task under .automind/tasks/offline_demo_smoke, writes the
 standard task files, runs a script-command evaluator, generates a summary, and
@@ -41,19 +41,19 @@ def main() -> int:
         shutil.rmtree(TASK_DIR)
     TASK_DIR.mkdir(parents=True)
     now = datetime.now().isoformat(timespec="seconds")
-    script_command = "python3 - <<'PY'\nprint('AutoMind offline demo: evidence loop OK')\nPY"
+    script_command = "python3 - <<'PY'\nprint('CodeAutonomy offline demo: evidence loop OK')\nPY"
 
     write(TASK_DIR / "Brainstorm.md", """# Brainstorm
 
 ## Original user input
 
-Run the offline no-device AutoMind smoke demo.
+Run the offline no-device CodeAutonomy smoke demo.
 
 ## Questions and assumptions
 
 - No blocking questions.
 - Assumption: the target environment has `python3` and can run a shell heredoc command.
-- Assumption: this smoke demonstrates AutoMind artifact/evidence flow, not mobile platform capability.
+- Assumption: this smoke demonstrates CodeAutonomy artifact/evidence flow, not mobile platform capability.
 
 ## Decision
 
@@ -70,7 +70,7 @@ Proceed with a generic script-command evaluator.
 
 ## Goal
 
-Prove AutoMind's core harness-loop artifact shape without requiring iOS/Android devices.
+Prove CodeAutonomy's core harness-loop artifact shape without requiring iOS/Android devices.
 
 ## Requirements with inline Acceptance Criteria
 
@@ -93,7 +93,7 @@ verifyCommand: `{script_command}`
 
     write(TASK_DIR / "TestCases.md", """# TestCases
 
-| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / AutoMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |
+| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |
 |----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|
 | TC-F01 | R01 / AC-001 | Functional | static/runtime | Task directory created | file existence check during smoke script | Prepare clean task directory -> create standard artifacts -> check required artifact files exist. | Brainstorm/Requirements/TestCases/Plan/Validation/runtime-state exist. | - | yes |
 | TC-F02 | R02 / AC-002 | Functional | runtime | `python3` available; TC-F01 artifacts exist | `<AUTOMIND_CLI> script-command offline_demo_smoke 1` | Prepare configured `verifyCommand` -> run `script-command` evaluator -> assert exit code 0 and expected stdout. | `logs/iter-1/commands.md`, `evaluator.log`, `env.json`; exit code 0. | TC-F01 | yes |

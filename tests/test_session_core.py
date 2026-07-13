@@ -128,7 +128,7 @@ def test_latest_answer_prompt_context_and_delivery(tmp_path: Path) -> None:
     task_dir = _write_workflow_task(tmp_path, verification_target="real_device")
     apply_user_answer(task_dir, answer_text="继续按Home方案", selected_option="confirm", answered_by="test")
     context = latest_answer_prompt_context(task_dir)
-    assert "Latest AutoMind user answer" in context
+    assert "Latest CodeAutonomy user answer" in context
     assert "继续按Home方案" in context
     mark_latest_answer_delivered(task_dir, mode="generator_prompt")
     answers = read_answers(task_dir)
@@ -192,7 +192,7 @@ def test_user_message_context_delivery(tmp_path: Path) -> None:
     message = append_user_message(task_dir, "请优先复用项目里的验证脚本", source="test")
     context = pending_user_messages_prompt_context(task_dir)
     assert message["delivery"]["status"] == "pending"
-    assert "AutoMind user messages" in context
+    assert "CodeAutonomy user messages" in context
     assert "请优先复用" in context
     mark_pending_user_messages_delivered(task_dir, mode="planner_prompt")
     assert read_user_messages(task_dir)[-1]["delivery"]["status"] == "delivered"
@@ -353,7 +353,7 @@ def test_cmd_help_includes_update_command(capsys) -> None:
     out = capsys.readouterr().out
 
     assert "update" in out
-    assert "Update AutoMind runtime" in out
+    assert "Update CodeAutonomy runtime" in out
 
 
 def test_cmd_update_prefers_install_curl_bootstrap(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -375,7 +375,7 @@ def test_cmd_update_prefers_install_curl_bootstrap(tmp_path: Path, monkeypatch, 
     assert calls
     assert calls[0][0] == ["bash", str(bootstrap)]
     assert calls[0][1]["env"]["AUTOMIND_UPDATE"] == "1"
-    assert "AutoMind update complete" in out
+    assert "CodeAutonomy update complete" in out
 
 
 def test_cmd_update_falls_back_to_local_install_without_bootstrap(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -396,7 +396,7 @@ def test_cmd_update_falls_back_to_local_install_without_bootstrap(tmp_path: Path
     assert calls[0][0] == ["bash", str(installer)]
     assert calls[0][1]["cwd"] == str(runtime)
     assert "without fetching remote updates" in captured.out
-    assert "AutoMind local refresh complete" in captured.out
+    assert "CodeAutonomy local refresh complete" in captured.out
 
 
 def test_cmd_update_git_free_runtime_sets_current_automind_home(tmp_path: Path, monkeypatch) -> None:
@@ -407,7 +407,7 @@ def test_cmd_update_git_free_runtime_sets_current_automind_home(tmp_path: Path, 
     bootstrap = runtime / "install-curl.sh"
     bootstrap.write_text("#!/usr/bin/env bash\n")
     (runtime / ".git").write_text(
-        "AutoMind runtime install is intentionally not a Git checkout.\n",
+        "CodeAutonomy runtime install is intentionally not a Git checkout.\n",
         encoding="utf-8",
     )
     calls = []
@@ -581,7 +581,7 @@ def test_tui_owned_loop_prints_welcome_logo(tmp_path: Path, capsys) -> None:
 
     assert LOGO.splitlines()[0] in out
     assert automind_version_label() in out
-    assert "TUI-owned AutoMind session" in out
+    assert "TUI-owned CodeAutonomy session" in out
     assert out.count(automind_version_label()) == 1
 
 
@@ -710,12 +710,12 @@ def test_tui_snapshot_formats_agent_grep_line_numbers(tmp_path: Path) -> None:
     from orchestrator.tui.app import render_tui_snapshot
 
     task_dir = _write_workflow_task(tmp_path, verification_target="real_device")
-    append_event(task_dir, "agent_output", "13:- AutoMind release readiness entry", phase="planner", source="codex")
+    append_event(task_dir, "agent_output", "13:- CodeAutonomy release readiness entry", phase="planner", source="codex")
 
     out = render_tui_snapshot("task01", task_dir, show_logo=False)
 
     assert "L13" in out
-    assert "AutoMind release readiness entry" in out
+    assert "CodeAutonomy release readiness entry" in out
 
 
 def test_render_timeline_events_only_replaces_heartbeat(tmp_path: Path) -> None:
@@ -890,7 +890,7 @@ def test_pre_implementation_ask_question_bundles_direction_risk_and_device() -> 
         [
             "Please confirm the Brainstorm/Spec direction before implementation: goal and scope.",
             "Confirm the concrete success criteria and verification evidence before implementation.",
-            "Real-device-first policy: AutoMind detected connected physical device(s): ANDROID HRY.",
+            "Real-device-first policy: CodeAutonomy detected connected physical device(s): ANDROID HRY.",
         ],
         {"reason": "Non-trivial implementation and device target need confirmation.", "approvalScope": "scope/risks/verification"},
     )
@@ -1153,7 +1153,7 @@ def test_tui_snapshot_shows_effective_next_and_running_status(tmp_path: Path, mo
     assert "Phase next:" in out
     assert "Effective next:" in out
     assert "workflow-check blocker" in out
-    assert "Input disabled: AutoMind is running." in out
+    assert "Input disabled: CodeAutonomy is running." in out
     assert "Last heartbeat:" in out
     assert "Last event:" in out
     assert "quiet for several minutes" in out
@@ -1800,7 +1800,7 @@ def test_tui_hides_agent_output_when_waiting_for_human_answer(tmp_path: Path, mo
 
     out = app.render_tui_snapshot("task01", task_dir, show_logo=False)
 
-    assert "Input enabled: AutoMind needs user input." in out
+    assert "Input enabled: CodeAutonomy needs user input." in out
     assert "Retry environment?" in out
     assert "stale codex project analysis" not in out
     assert "agent output lines hidden" in out
@@ -2427,7 +2427,7 @@ def test_genuine_signing_ask_user_still_allowed() -> None:
         "nextAction": "ask_user",
         "askUserQuestion": {
             "category": "real_device_or_signing",
-            "question": "No valid signing identity found. Which signing path should AutoMind use?",
+            "question": "No valid signing identity found. Which signing path should CodeAutonomy use?",
             "reason": "Code signing failed: errSecInternalComponent.",
             "options": [{"id": "configure", "label": "Configure signing"}],
         },
@@ -2478,7 +2478,7 @@ def test_genuine_device_gate_ask_user_still_allowed() -> None:
         "nextAction": "ask_user",
         "askUserQuestion": {
             "category": "real_device_or_signing",
-            "question": "No device in state=device — AutoMind cannot operate the phone until you unlock it and approve the USB debugging trust prompt.",
+            "question": "No device in state=device — CodeAutonomy cannot operate the phone until you unlock it and approve the USB debugging trust prompt.",
             "reason": "adb devices shows no device; trust prompt unresolved.",
             "options": [{"id": "connect", "label": "Connect and trust"}],
         },
@@ -2515,7 +2515,7 @@ def test_completion_gate_rewrites_long_running_ask_user_to_retry() -> None:
 
 def test_temporary_unblock_patch_ask_user_is_rejected() -> None:
     """Authorizing a temporary verification-unblock code/script/wrapper patch is
-    AutoMind's own job and must not pause the loop."""
+    CodeAutonomy's own job and must not pause the loop."""
     from orchestrator.completion import validate_ask_user_category
 
     evaluation = {
@@ -2567,7 +2567,7 @@ def test_destructive_patch_ask_user_still_allowed() -> None:
 
 def test_signing_temp_patch_is_auto_handled_not_paused() -> None:
     """Signing/certificate/keychain-for-signing is NOT a sensitive guard:
-    AutoMind may re-sign with the user's own certs / automatic signing, so a
+    CodeAutonomy may re-sign with the user's own certs / automatic signing, so a
     temporary signing patch is auto-handled (rewritten back to retry) rather than
     paused."""
     from orchestrator.completion import validate_ask_user_category
@@ -2587,7 +2587,7 @@ def test_signing_temp_patch_is_auto_handled_not_paused() -> None:
 
 def test_compatible_runner_runtime_proof_ask_user_is_rejected() -> None:
     """A local reversible compatible/external runner unblock for runtime proof
-    is AutoMind's own job and must not ask_user."""
+    is CodeAutonomy's own job and must not ask_user."""
     from orchestrator.completion import validate_ask_user_category
 
     evaluation = {
@@ -2667,7 +2667,7 @@ def test_completion_gate_keeps_legitimate_ask_user_despite_boundary_violation() 
             "nextAction": "ask_user",
             "askUserQuestion": {
                 "category": "real_device_or_signing",
-                "question": "No valid signing identity found. Which signing path should AutoMind use?",
+                "question": "No valid signing identity found. Which signing path should CodeAutonomy use?",
                 "reason": "Code signing failed: errSecInternalComponent.",
                 "options": [{"id": "configure", "label": "Configure signing"}],
             },
@@ -2711,7 +2711,7 @@ def test_completion_gate_boundary_violation_clears_pending_when_rewriting() -> N
 
 
 def test_risk_tier_safe_self_service_ask_user_is_rejected() -> None:
-    """When the model self-assesses riskTier=safe_self_service, AutoMind trusts it
+    """When the model self-assesses riskTier=safe_self_service, CodeAutonomy trusts it
     and rejects the pause regardless of wording."""
     from orchestrator.completion import validate_ask_user_category
 

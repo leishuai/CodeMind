@@ -1,4 +1,4 @@
-"""Interactive AutoMind command shell.
+"""Interactive CodeAutonomy command shell.
 
 Bare `automind` in an interactive terminal opens this shell. Users can type the
 same subcommands without repeating the `automind` prefix, e.g.:
@@ -111,7 +111,7 @@ def run_command_shell() -> int:
     print("  ask 添加一个埋点")
     print("  resume <task-code> codex")
     print("  status [task-code]   # current task is used when omitted")
-    print("  update               # update AutoMind runtime + skill/command integrations")
+    print("  update               # update CodeAutonomy runtime + skill/command integrations")
     print("  也可以直接输入自然语言；有 current task 时会转给该 task/session 的 coding agent，没有 current task 时会转给当前 TUI 进程自己的默认 coding-agent session")
     print("  exit")
     print(style("Tip: say \"全自动\" or \"full auto\" to skip all ask_user gates.", GRAY))
@@ -124,7 +124,7 @@ def run_command_shell() -> int:
             print("")
             return 0
         except KeyboardInterrupt:
-            print("\nUse `exit` to leave AutoMind shell.")
+            print("\nUse `exit` to leave CodeAutonomy shell.")
             continue
         stripped = line.strip()
         if not stripped:
@@ -152,7 +152,7 @@ def run_command_shell() -> int:
         try:
             return_code = proc.wait()
         except KeyboardInterrupt:
-            print("\n[AutoMind shell] Ctrl+C received; interrupting current command and returning to shell.", file=sys.stderr)
+            print("\n[CodeAutonomy shell] Ctrl+C received; interrupting current command and returning to shell.", file=sys.stderr)
             try:
                 proc.send_signal(signal.SIGINT)
             except ProcessLookupError:
@@ -160,14 +160,14 @@ def run_command_shell() -> int:
             try:
                 return_code = proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                print("[AutoMind shell] command did not stop after SIGINT; terminating it.", file=sys.stderr)
+                print("[CodeAutonomy shell] command did not stop after SIGINT; terminating it.", file=sys.stderr)
                 proc.terminate()
                 try:
                     return_code = proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     proc.kill()
                     return_code = proc.wait()
-            print("[AutoMind shell] If an AutoMind task was paused, resume it with `automind resume <task-code> <agent>`.", file=sys.stderr)
+            print("[CodeAutonomy shell] If a CodeAutonomy task was paused, resume it with `automind resume <task-code> <agent>`.", file=sys.stderr)
         if return_code != 0:
-            print(f"[AutoMind shell] command exited with code {return_code}", file=sys.stderr)
+            print(f"[CodeAutonomy shell] command exited with code {return_code}", file=sys.stderr)
     return 0

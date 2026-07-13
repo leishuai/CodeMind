@@ -1,4 +1,4 @@
-"""Metrics collection for AutoMind task execution.
+"""Metrics collection for CodeAutonomy task execution.
 
 This module provides a lightweight, structured metrics system to track:
 - Phase durations (Planning, Generator, Evaluator, Summary)
@@ -43,7 +43,7 @@ SUBPHASE_WARM_BUILD_WAIT = "warm_build_wait"
 
 
 class MetricsCollector:
-    """Collect and manage metrics for a single AutoMind task."""
+    """Collect and manage metrics for a single CodeAutonomy task."""
 
     def __init__(self, task_dir: Path):
         self.task_dir = task_dir

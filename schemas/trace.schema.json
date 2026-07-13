@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://automind.local/schemas/trace.schema.json",
-  "title": "AutoMind Trace",
+  "title": "CodeAutonomy Trace",
   "type": "object",
   "required": ["schemaVersion", "traceId", "runId", "taskCode", "summary", "spans"],
   "properties": {

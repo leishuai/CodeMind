@@ -1,7 +1,7 @@
 # Accumulated Summaries
 
-Machine-global lessons accumulated automatically by AutoMind task summaries.
-This area lives in the AutoMind runtime install and is **install-exclude
+Machine-global lessons accumulated automatically by CodeAutonomy task summaries.
+This area lives in the CodeAutonomy runtime install and is **install-exclude
 protected** (see `install.sh --exclude='summaries/accumulated/'`), so entries
 written here survive runtime re-installs/updates.
 

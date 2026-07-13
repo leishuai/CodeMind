@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "schemas/automind-workflow-event.schema.json",
-  "title": "AutoMind Workflow Event",
+  "title": "CodeAutonomy Workflow Event",
   "type": "object",
   "additionalProperties": true,
   "required": ["schema", "id", "at", "type"],

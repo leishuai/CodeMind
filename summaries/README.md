@@ -1,6 +1,6 @@
-# AutoMind Summaries
+# CodeAutonomy Summaries
 
-This directory is AutoMind's long-lived summary knowledge system.
+This directory is CodeAutonomy's long-lived summary knowledge system.
 
 It has two roles:
 

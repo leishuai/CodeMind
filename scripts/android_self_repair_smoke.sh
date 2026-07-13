@@ -12,8 +12,8 @@ PKG="ai.openclaw.automind.demo"
 ACTIVITY=".MainActivity"
 
 if [[ ! -d "$ANDROID_VENV" ]]; then
-  echo "[AutoMind] Android tool venv not found: $ANDROID_VENV" >&2
-  echo "[AutoMind] Create it with: python3 -m venv $ANDROID_VENV && source $ANDROID_VENV/bin/activate && pip install adbutils uiautomator2" >&2
+  echo "[CodeAutonomy] Android tool venv not found: $ANDROID_VENV" >&2
+  echo "[CodeAutonomy] Create it with: python3 -m venv $ANDROID_VENV && source $ANDROID_VENV/bin/activate && pip install adbutils uiautomator2" >&2
   exit 2
 fi
 
@@ -43,7 +43,7 @@ python3 "$ROOT/scripts/android_app_harness_probe.py" \
   --package "$PKG" \
   --activity "$ACTIVITY" \
   --out "$TASK_DIR/logs/iter-1" \
-  --initial-text 'AutoMind Android Harness Demo' \
+  --initial-text 'CodeAutonomy Android Harness Demo' \
   --initial-text 'Probe state: Idle' \
   --tap-desc probe_button \
   --tap-text 'Run Probe' \
@@ -52,7 +52,7 @@ ITER1_CODE=$?
 set -e
 
 if [[ "$ITER1_CODE" -eq 0 ]]; then
-  echo "[AutoMind] Expected iter-1 to fail, but it passed" >&2
+  echo "[CodeAutonomy] Expected iter-1 to fail, but it passed" >&2
   exit 1
 fi
 
@@ -71,7 +71,7 @@ python3 "$ROOT/scripts/android_app_harness_probe.py" \
   --package "$PKG" \
   --activity "$ACTIVITY" \
   --out "$TASK_DIR/logs/iter-2" \
-  --initial-text 'AutoMind Android Harness Demo' \
+  --initial-text 'CodeAutonomy Android Harness Demo' \
   --initial-text 'Probe state: Idle' \
   --tap-desc probe_button \
   --tap-text 'Run Probe' \

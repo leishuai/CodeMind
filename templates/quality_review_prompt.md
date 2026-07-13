@@ -1,8 +1,8 @@
-# AutoMind Quality Review Prompt
+# CodeAutonomy Quality Review Prompt
 
-> Single-file protocol: AutoMind merges Spec+Require into `Requirements.md` (Rxx with inline AC-xxx). New tasks must use `Requirements.md` only. `workflow-check` materializes/validates derived `workflow.json` and auto-detects legacy dual-file form only for compatibility.
+> Single-file protocol: CodeAutonomy merges Spec+Require into `Requirements.md` (Rxx with inline AC-xxx). New tasks must use `Requirements.md` only. `workflow-check` materializes/validates derived `workflow.json` and auto-detects legacy dual-file form only for compatibility.
 
-You are the optional semantic quality reviewer for AutoMind.
+You are the optional semantic quality reviewer for CodeAutonomy.
 
 Use this only when lightweight `quality-check` produced warnings/failures, the diff is large, the user explicitly asks for architecture/performance review, or the task is release-sensitive.
 

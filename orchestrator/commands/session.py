@@ -1,8 +1,9 @@
-"""Low-risk session/report command handlers for the AutoMind CLI."""
+"""Low-risk session/report command handlers for the CodeAutonomy CLI."""
 from __future__ import annotations
 
 import json
 import sys
+from datetime import datetime
 from typing import Any
 
 from orchestrator.console import error, success, warn
@@ -15,7 +16,7 @@ from orchestrator.session.instructions import build_next_instruction
 from orchestrator.workflow_state import ensure_workflow_state, read_stage_state
 from orchestrator.session.messages import append_user_message
 from orchestrator.session.trace import build_trace, render_trace_text, write_trace
-from orchestrator.state import clear_current_task, get_task_dir, get_tui_chat_task_code, read_current_task, read_runtime_state, rel_to_root
+from orchestrator.state import clear_current_task, ensure_dir, get_task_dir, get_tui_chat_task_code, read_current_task, read_runtime_state, rel_to_root, write_runtime_state
 from orchestrator.tui.app import run_tui
 
 
@@ -70,7 +71,7 @@ def cmd_answer(task_code: str, args: list[str]) -> None:
 
 
 def cmd_event(task_code: str, args: list[str]) -> None:
-    """Append a shared AutoMind event for skill/TUI timelines."""
+    """Append a shared CodeAutonomy event for skill/TUI timelines."""
     task_dir = get_task_dir(task_code)
     if not task_dir.exists():
         error(f"Task does not exist: {task_code}")
@@ -124,7 +125,7 @@ def cmd_trace(task_code: str, args: list[str]) -> None:
 
 
 def cmd_tui(task_code: str, args: list[str]) -> None:
-    """Open the shared AutoMind TUI snapshot/watch/interactive view."""
+    """Open the shared CodeAutonomy TUI snapshot/watch/interactive view."""
     task_dir = get_task_dir(task_code)
     if not task_dir.exists():
         error(f"Task does not exist: {task_code}")
@@ -526,7 +527,7 @@ def cmd_message(task_code: str, args: list[str], *, resume_callback=None) -> Non
         if task_code == tui_chat_code or str(state.get("status") or "") == "chat":
             primary = state.get("agentSessions", {}).get("primary", {}) if isinstance(state.get("agentSessions"), dict) else {}
             chat_agent = primary.get("agent") if resume_agent == "auto" and primary.get("agent") else resume_agent
-            print(f"\033[2m[AutoMind] coding-agent chat ({chat_agent})...\033[0m")
+            print(f"\033[2m[CodeAutonomy] coding-agent chat ({chat_agent})...\033[0m")
             code, output = run_agent("cli", chat_agent, text, task_dir, phase="generator", quiet=True)
             reply = extract_agent_reply(chat_agent, output)
             if code == 0:
@@ -537,3 +538,52 @@ def cmd_message(task_code: str, args: list[str], *, resume_callback=None) -> Non
         if resume_callback is None:
             from orchestrator.main import cmd_resume as resume_callback  # lazy fallback
         resume_callback(task_code, resume_agent, tui=True)
+
+
+def cmd_chat_create(task_code: str, args: list[str]) -> None:
+    """Create (or reuse) a resident chat-mode task shell.
+
+    This is a front-end-friendly helper for channels (e.g. the Lark bridge)
+    that need a persistent ``S_chat`` topic session to route free-form
+    messages through ``message --resume``. It only creates the task dir and a
+    ``status: chat`` runtime-state; it never runs the harness loop, gates, or
+    state machine. Idempotent: re-running for an existing task leaves the
+    existing runtime-state untouched.
+    """
+    if task_code in {"-h", "--help"} or any(arg in {"-h", "--help"} for arg in args):
+        print("Usage: chat-create <task-code> [--status chat] [--json]")
+        return
+    status = "chat"
+    if "--status" in args:
+        idx = args.index("--status")
+        if idx + 1 < len(args):
+            status = args[idx + 1].strip() or "chat"
+    as_json = "--json" in args
+
+    task_dir = get_task_dir(task_code)
+    ensure_dir(task_dir)
+    state = read_runtime_state(task_dir) or {}
+    created = False
+    if not state:
+        now = datetime.now().isoformat(timespec="seconds")
+        write_runtime_state(task_dir, {
+            "taskId": task_code,
+            "status": status,
+            "currentOwner": "human",
+            "nextAction": "chat",
+            "createdAt": now,
+            "updatedAt": now,
+        })
+        created = True
+
+    result = {
+        "result": "ok",
+        "task": task_code,
+        "created": created,
+        "status": (read_runtime_state(task_dir) or {}).get("status", status),
+        "taskDir": rel_to_root(task_dir),
+    }
+    if as_json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        success(f"Chat task ready: {task_code} ({'created' if created else 'existing'})")

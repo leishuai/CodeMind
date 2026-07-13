@@ -208,7 +208,7 @@ Do not use it mechanically for every stable low-risk selector.
 
 ## UI action capability contract
 
-AutoMind probe-flow is the mechanism that lets coding agents operate real apps
+CodeAutonomy probe-flow is the mechanism that lets coding agents operate real apps
 for verification. It is not limited to screenshots or prose evaluation.
 
 Supported reviewable actions include:

@@ -6,7 +6,7 @@ Planner can produce testable work instead of generic checklists.
 
 ## 1. Design goal
 
-AutoMind test design converts a user request into evidence-producing checks:
+CodeAutonomy test design converts a user request into evidence-producing checks:
 
 ```text
 User intent -> Rxx requirements -> AC-xxx acceptance criteria -> TC-* runbooks -> Plan checklist
@@ -57,7 +57,7 @@ Use this shape for required functional cases:
 # Test Cases
 
 ## Functional cases
-| ID | Requirement/AC | Runtime level | Preconditions / tools | Command / AutoMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |
+| ID | Requirement/AC | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |
 |----|----------------|---------------|-----------------------|----------------------------|-----------------------------|--------------------------|------------|-----------|
 | TC-F01 | R01 / AC-001 | runtime | ... | ... | ... | ... | - | yes |
 
@@ -95,7 +95,7 @@ Every required functional testcase must contain these parts:
 
 1. **Preparation / preflight**: cwd, tools, fixtures, device/runtime state, data,
    credentials or explicit blocker.
-2. **Execution**: command, AutoMind helper, UI action sequence, API call, or
+2. **Execution**: command, CodeAutonomy helper, UI action sequence, API call, or
    project-native test.
 3. **Assertion**: expected output, state, log, UI hierarchy, screenshot/bounds,
    database/file/network/mock call, or other measurable result.
@@ -119,7 +119,7 @@ For client-facing work, required functional cases must state:
   bounds/geometry, screenshot diff, OCR, or human confirmation;
 - evidence: test report, log, screenshot, hierarchy JSON/XML, UI `action-trace.jsonl`, trace, or confirmation.
 
-Mobile App/UI automation capability is first-class in AutoMind:
+Mobile App/UI automation capability is first-class in CodeAutonomy:
 
 - Android: prefer `android-preflight` -> `android-probe-flow`; generated
   `probe-flow.android.json` can launch/install, close optional blockers with
@@ -155,7 +155,7 @@ Example:
 
 ## 5. TestCase -> verifier operation mapping
 
-When AutoMind enters Verify, the Evaluator converts each required `TC-*` row (or
+When CodeAutonomy enters Verify, the Evaluator converts each required `TC-*` row (or
 `testcases.json.testcases[]` entry) into one concrete verifier operation. This
 conversion should be mechanical enough for Skill mode to keep looping without
 asking the user for every step.
@@ -168,7 +168,7 @@ For each testcase, prefer structured fields from `testcases.json` and use
 - `id`, `required`, `runtimeLevel`, `executor`;
 - `requirementRefs` / `acceptanceCriteriaRefs`;
 - `runbook.preconditions` / preparation;
-- `runbook.command` or AutoMind command;
+- `runbook.command` or CodeAutonomy command;
 - `runbook.steps` / action sequence;
 - `runbook.assertions`;
 - `runbook.expectedEvidence`;
@@ -324,11 +324,11 @@ Good:
 ## 9. Preflight hints
 
 Use `docs/references/dependency-check.md` and `docs/references/verification-flow.md`
-for platform-specific checks. Low-risk helper venv setup may use AutoMind helper
+for platform-specific checks. Low-risk helper venv setup may use CodeAutonomy helper
 commands when the full runtime is installed, but system SDKs, signing material,
 keychains, trust settings, and privileged services require explicit user action.
 
 
 ## Temporary verification logging
 
-For iOS/Android/Web/Server testcases, prefer assertions and platform evidence over code instrumentation. If a testcase cannot be proven from available evidence, AutoMind may add temporary logs with `[AutoMind][Verify]` to expose a hidden state transition, callback, request, queue/event, or async completion. Keep these logs scoped to the testcase and remove them after verification unless the project owner decides they are useful production diagnostics.
+For iOS/Android/Web/Server testcases, prefer assertions and platform evidence over code instrumentation. If a testcase cannot be proven from available evidence, CodeAutonomy may add temporary logs with `[CodeAutonomy][Verify]` to expose a hidden state transition, callback, request, queue/event, or async completion. Keep these logs scoped to the testcase and remove them after verification unless the project owner decides they are useful production diagnostics.

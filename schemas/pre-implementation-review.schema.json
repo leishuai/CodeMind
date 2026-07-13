@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://automind.local/schemas/pre-implementation-review.schema.json",
-  "title": "AutoMind pre-implementation-review.json",
+  "title": "CodeAutonomy pre-implementation-review.json",
   "description": "Machine-readable pre-implementation review gate derived from Brainstorm.md and runtime-state.json before Generator edits product/runtime code.",
   "type": "object",
   "required": ["version", "phase", "sourceRefs", "dependencies", "decision", "needsUserInput", "reviewedRefs", "nextAction"],

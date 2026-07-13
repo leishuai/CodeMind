@@ -1,3 +1,3 @@
-# AutoMind iOS verification helper packages.
+# CodeAutonomy iOS verification helper packages.
 # Installed into the project-local .venv-ios-tools only.
 pymobiledevice3>=9.12,<10

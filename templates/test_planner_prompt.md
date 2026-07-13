@@ -1,7 +1,7 @@
 # Deprecated alias: phase2_planner_prompt.md
 
 This file name is kept only for backward compatibility with old external
-instructions. The canonical AutoMind Phase 2 Planning Orchestrator / Refiner
+instructions. The canonical CodeAutonomy Phase 2 Planning Orchestrator / Refiner
 prompt is now:
 
 ```text

@@ -1,10 +1,10 @@
-"""Terminal input helpers for AutoMind TUI.
+"""Terminal input helpers for CodeAutonomy TUI.
 
 For non-interactive callers, keep the helper tiny and dependency-free: import
 ``readline`` when available, then delegate to ``input``.
 
 For a real TTY, use a small raw-mode line editor instead of plain
-``input()``/readline. AutoMind's shell prompt is colored and users often paste
+``input()``/readline. CodeAutonomy's shell prompt is colored and users often paste
 large multi-line instructions. Readline/libedit handles that inconsistently on
 macOS: redisplay can make Backspace look stuck before the prompt, and pasted
 newlines can be accepted as Enter, sending only the first pasted line. The raw

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Web probe-flow runner for AutoMind Client UI evidence.
+"""Web probe-flow runner for CodeAutonomy Client UI evidence.
 
 This is intentionally lightweight. It does not install browsers or introduce a
 new browser automation framework. It validates reviewable web UI action intent,

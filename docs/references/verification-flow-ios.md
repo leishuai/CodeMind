@@ -1,13 +1,13 @@
 # iOS Verification Flow Reference
 
-iOS-specific verification commands and flows for AutoMind. This is loaded on
+iOS-specific verification commands and flows for CodeAutonomy. This is loaded on
 demand for iOS tasks; the cross-platform skeleton (generic script validation,
 visual, external-sink, verification-unblock policy, probe-flow, evidence,
 `Validation.md`/`evaluation.json`, retry semantics) lives in
 [`verification-flow.md`](verification-flow.md). The Android equivalent is
 [`verification-flow-android.md`](verification-flow-android.md).
 
-AutoMind should classify environment/device/tool blockers separately from
+CodeAutonomy should classify environment/device/tool blockers separately from
 product-code failures. Evidence beats guesses.
 
 ## Operational priority quick reference
@@ -39,7 +39,7 @@ Use this order when an iOS task needs real app/device verification:
    first, reach this step only after simulator coverage or runtime downgrade is
    approved.
 8. **Use human-assisted evidence capture after automated paths.** The user's
-   physical action is not proof unless AutoMind captures machine-checkable
+   physical action is not proof unless CodeAutonomy captures machine-checkable
    post-condition evidence.
 9. **Last resort is an explicit downgrade decision.** If everything above fails,
    ask the user whether to accept dry-run, static proof, compile/build-only proof,
@@ -118,7 +118,7 @@ Optional project-local Python helper for physical screenshots:
 automind setup-automation-tools ios
 ```
 
-Preflight/evaluator may run this automatically when screenshot/app-smoke requires the helper and it is missing; users can also run it up front. It creates `.venv-ios-tools` in the target workspace and installs packages from the AutoMind runtime `requirements/ios-tools.txt`; it does not install Xcode, change signing, start `tunneld`, or manipulate devices. `tunneld`/sudo remains a separate human-confirmed step when needed.
+Preflight/evaluator may run this automatically when screenshot/app-smoke requires the helper and it is missing; users can also run it up front. It creates `.venv-ios-tools` in the target workspace and installs packages from the CodeAutonomy runtime `requirements/ios-tools.txt`; it does not install Xcode, change signing, start `tunneld`, or manipulate devices. `tunneld`/sudo remains a separate human-confirmed step when needed.
 
 ### iOS real-device preflight
 
@@ -186,7 +186,7 @@ A simulator build with `CODE_SIGNING_ALLOWED=NO` cannot be installed on a real d
 
 ### Real-device UI automation
 
-AutoMind can operate iOS apps through XCUITest/probe-flow. Do not describe iOS
+CodeAutonomy can operate iOS apps through XCUITest/probe-flow. Do not describe iOS
 capability as "screenshot/evaluation only" when a required testcase needs app
 interaction. The safe path is:
 
@@ -208,13 +208,13 @@ interaction. The safe path is:
 
 When the device is connected and authorized, driving the required in-app actions
 — play, skip/next, trigger an error, interrupt/pause, navigate — and capturing
-`.xcresult`/logs is AutoMind's own verification work. Encode and run them through
+`.xcresult`/logs is CodeAutonomy's own verification work. Encode and run them through
 XCUITest/probe-flow; do not stop and ask the user "I cannot operate your physical
 device, please confirm how to verify". That phrasing is a non-whitelisted soft
 pause. Only escalate to `ask_user(real_device_or_signing)` for a genuine
 human/system gate: no usable device, an unresolved unlock / trust prompt, missing
 signing/provisioning material, or denied UI Automation permission — and then say
-exactly what AutoMind detected and the single physical action needed.
+exactly what CodeAutonomy detected and the single physical action needed.
 
 Selector strategy, the reliable action set (`tap`/`tap_if_present`/`input`/
 `scroll`/`assert_*`/`wait`), and the coordinate-fallback rule are owned by
@@ -279,7 +279,7 @@ Real-device automation tiers, from highest to lowest:
    with WDA/XCUITestService; the UI commands are serviced by WDA, not by a missing
    IDE interface.
 4. **Temporary project edit to obtain a real-device UI runner.** If tiers 1-3
-   cannot run and the blocker is fixable, AutoMind may add/enable a UI test
+   cannot run and the blocker is fixable, CodeAutonomy may add/enable a UI test
    target or `build-for-testing` support as a reversible verification-unblock
    change. Checkpoint first, record `verificationUnblockChanges[]`, and restore
    or explicitly promote the edit before finish.
@@ -311,7 +311,7 @@ After real-device runner tiers:
 3. **Human-assisted real-device evidence capture.** Only after automated
    real-device and allowed simulator paths are unavailable, inappropriate, or
    insufficient should the user perform one narrow physical action on the iPhone
-   while AutoMind captures screenshots/screen recording, syslog/console/runtime
+   while CodeAutonomy captures screenshots/screen recording, syslog/console/runtime
    logs, DB or event-cache diffs, external sink events, and post-action
    assertions. Manual action itself is not proof.
 4. **Explicit reduced-scope downgrade.** If all automation and human-assisted

@@ -26,7 +26,7 @@ Could not start screenshotr service!
 
 ## Precondition
 
-`tunneld` must already be running. Starting it may require sudo/root, so AutoMind must not start it silently.
+`tunneld` must already be running. Starting it may require sudo/root, so CodeAutonomy must not start it silently.
 
 Known working command used by the human:
 
@@ -35,7 +35,7 @@ sudo .venv-ios-tools/bin/python -m pymobiledevice3 remote tunneld \
   --host 127.0.0.1 --port 49151 --protocol tcp --no-wifi
 ```
 
-Then AutoMind can run:
+Then CodeAutonomy can run:
 
 ```bash
 ./automind.sh ios-screenshot <task-code> [iteration] \

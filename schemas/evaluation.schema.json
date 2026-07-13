@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://automind.local/schemas/evaluation.schema.json",
-  "title": "AutoMind Evaluation Result",
+  "title": "CodeAutonomy Evaluation Result",
   "description": "Latest structured Evaluator result. Validation.md remains the human/agent-readable cumulative history.",
   "type": "object",
   "additionalProperties": true,
@@ -281,7 +281,7 @@
     },
     "askUserQuestion": {
       "type": "object",
-      "description": "Structured question for human decision when the evaluator cannot safely choose a path automatically. AutoMind treats `nextAction=ask_user` as a hard interruption of the autonomous full_auto loop, so it must only be used for one of the whitelisted categories below. For screenshot-based visual fallback, include screenshot/evidence paths, expected claim, and explicit confirmation options.",
+      "description": "Structured question for human decision when the evaluator cannot safely choose a path automatically. CodeAutonomy treats `nextAction=ask_user` as a hard interruption of the autonomous full_auto loop, so it must only be used for one of the whitelisted categories below. For screenshot-based visual fallback, include screenshot/evidence paths, expected claim, and explicit confirmation options.",
       "additionalProperties": true,
       "required": [
         "question",
@@ -296,7 +296,7 @@
         },
         "category": {
           "type": "string",
-          "description": "Hard-interrupt category. Only these values may trigger nextAction=ask_user: unauthorized_destructive_or_sensitive (privilege escalation, account/privacy/legal, large-scale data deletion, force-push, signing key rotation), system_or_external_dependency (system SDK/runtime install, Docker/database services, browser drivers, private registry credentials, OS-level changes), real_device_or_signing (device unlock/Developer Mode/USB debugging/UDID, code-signing/provisioning/team selection, manual install on physical device), manual_visual_confirmation (final visual claim that pure measurement plus AI Visual Review still cannot prove), repeated_same_failure (same error/category fails N times in a row and AutoMind cannot break the loop without a human decision).",
+          "description": "Hard-interrupt category. Only these values may trigger nextAction=ask_user: unauthorized_destructive_or_sensitive (privilege escalation, account/privacy/legal, large-scale data deletion, force-push, signing key rotation), system_or_external_dependency (system SDK/runtime install, Docker/database services, browser drivers, private registry credentials, OS-level changes), real_device_or_signing (device unlock/Developer Mode/USB debugging/UDID, code-signing/provisioning/team selection, manual install on physical device), manual_visual_confirmation (final visual claim that pure measurement plus AI Visual Review still cannot prove), repeated_same_failure (same error/category fails N times in a row and CodeAutonomy cannot break the loop without a human decision).",
           "enum": [
             "unauthorized_destructive_or_sensitive",
             "system_or_external_dependency",
@@ -307,7 +307,7 @@
         },
         "riskTier": {
           "type": "string",
-          "description": "Model self-assessment that is the PRIMARY judge of whether this ask_user is a self-serviceable soft pause or a genuine hard gate. AutoMind biases toward automation and trusts this label over keyword heuristics. `safe_self_service`: AutoMind can resolve it itself (long build/compile, minimal reversible verification-unblock patch on code/script/wrapper/build-config, re-signing with the user's own certificates / automatic signing, in-app device driving, retryable env tweak) -- the completion gate rewrites the ask_user back to retry_generator so the loop keeps running. `sensitive_hard_gate`: a genuine human decision is required (irreversible/destructive action such as delete/wipe/reset/force-push, account/credential/keychain login, payment, or a real device/permission gate) -- the loop is allowed to pause. Signing/certificate selection alone is NOT a hard gate. Omit only when you cannot self-classify; then AutoMind falls back to conservative keyword heuristics.",
+          "description": "Model self-assessment that is the PRIMARY judge of whether this ask_user is a self-serviceable soft pause or a genuine hard gate. CodeAutonomy biases toward automation and trusts this label over keyword heuristics. `safe_self_service`: CodeAutonomy can resolve it itself (long build/compile, minimal reversible verification-unblock patch on code/script/wrapper/build-config, re-signing with the user's own certificates / automatic signing, in-app device driving, retryable env tweak) -- the completion gate rewrites the ask_user back to retry_generator so the loop keeps running. `sensitive_hard_gate`: a genuine human decision is required (irreversible/destructive action such as delete/wipe/reset/force-push, account/credential/keychain login, payment, or a real device/permission gate) -- the loop is allowed to pause. Signing/certificate selection alone is NOT a hard gate. Omit only when you cannot self-classify; then CodeAutonomy falls back to conservative keyword heuristics.",
           "enum": [
             "safe_self_service",
             "sensitive_hard_gate"
@@ -315,7 +315,7 @@
         },
         "reversible": {
           "type": "boolean",
-          "description": "Optional reinforcement of riskTier: true when the action AutoMind would take is fully reversible (checkpoint/restore/promote), false when it is irreversible or account/security-affecting."
+          "description": "Optional reinforcement of riskTier: true when the action CodeAutonomy would take is fully reversible (checkpoint/restore/promote), false when it is irreversible or account/security-affecting."
         },
         "selfServiceRationale": {
           "type": "string",
@@ -365,7 +365,7 @@
         },
         "defaultAction": {
           "type": "string",
-          "description": "What AutoMind should do if the human does not answer. Usually stop/replan."
+          "description": "What CodeAutonomy should do if the human does not answer. Usually stop/replan."
         }
       }
     },
@@ -574,7 +574,7 @@
                   },
                   "independent": {
                     "type": "boolean",
-                    "description": "Optional explicit independence flag; when true, AutoMind trusts the assessor as independent of the primary one."
+                    "description": "Optional explicit independence flag; when true, CodeAutonomy trusts the assessor as independent of the primary one."
                   },
                   "verdict": {
                     "type": "string",
@@ -904,7 +904,7 @@
     },
     "previousNextAction": {
       "type": "string",
-      "description": "Previous loop-control nextAction when AutoMind explicitly consumed or normalized a route signal."
+      "description": "Previous loop-control nextAction when CodeAutonomy explicitly consumed or normalized a route signal."
     },
     "replanResolution": {
       "type": "object",

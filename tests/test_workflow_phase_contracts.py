@@ -216,7 +216,7 @@ def test_workflow_check_emits_terminal_guard_for_false_finish(monkeypatch, tmp_p
     )
     (task_dir / "TestCases.md").write_text(
         "# TestCases\n\n"
-        "| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / AutoMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n"
+        "| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n"
         "|----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|\n"
         "| TC-F01 | R01 / AC-001 | Functional | static | preflight ready | command: pytest | run command | logs/iter-1/evidence.txt exists and pass | none | yes |\n"
     )

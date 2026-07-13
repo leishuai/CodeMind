@@ -13,7 +13,7 @@ def run(cmd: list[str], cwd: Path = ROOT) -> subprocess.CompletedProcess[str]:
 
 
 def test_export_skill_contains_skill_mode_json_handoff_contract(tmp_path: Path) -> None:
-    out_dir = tmp_path / "automind-skill"
+    out_dir = tmp_path / "codeautonomy-skill"
     run(["./automind.sh", "export-skill", str(out_dir), "--clean"])
 
     skill = (out_dir / "SKILL.md").read_text()
@@ -37,7 +37,7 @@ def test_export_skill_contains_skill_mode_json_handoff_contract(tmp_path: Path) 
     assert "run a CLI command only when that checklist item explicitly names" in skill
     assert "phase-reuse/<phase>.md" in skill
     assert "docs/references/skill-command-driver-checklist.md" in skill
-    assert "Updating AutoMind itself" in skill
+    assert "Updating CodeAutonomy itself" in skill
     assert "<AUTOMIND_CLI> update" in skill
     assert "do not run `scaffold`" in skill
     assert (out_dir / "docs" / "phases" / "demand-definition.md").exists()
@@ -52,7 +52,7 @@ def test_export_skill_contains_skill_mode_json_handoff_contract(tmp_path: Path) 
     assert (out_dir / "docs" / "references" / "skill-command-driver-checklist.md").exists()
     assert (out_dir / "docs" / "references" / "app-use-verification.md").exists()
     frontmatter = skill.split("---", 2)[1]
-    assert "name: automind-skill" in frontmatter
+    assert "name: codeautonomy-skill" in frontmatter
     description_line = next(line for line in frontmatter.splitlines() if line.startswith("description: "))
     assert description_line.startswith('description: "')
     assert description_line.endswith('"')
@@ -69,10 +69,10 @@ def test_export_skill_contains_skill_mode_json_handoff_contract(tmp_path: Path) 
 
 
 def test_export_command_contains_json_handoff_contract(tmp_path: Path) -> None:
-    out_dir = tmp_path / "automind-command"
+    out_dir = tmp_path / "codeautonomy-command"
     run(["./automind.sh", "export-command", str(out_dir), "--clean"])
 
-    command = (out_dir / "commands" / "automind.md").read_text()
+    command = (out_dir / "commands" / "codeautonomy.md").read_text()
     assert "JSON sidecars as the structured handoff protocol" in command
     assert "workflow-check" in command
     assert "docs/phases/demand-definition.md" in command
@@ -113,7 +113,7 @@ def test_export_skill_default_goes_to_downloads_with_temp_home(tmp_path: Path) -
         check=True,
         env={**__import__("os").environ, "HOME": str(home)},
     )
-    out_dir = home / "Downloads" / "automind-skill"
+    out_dir = home / "Downloads" / "codeautonomy-skill"
     assert out_dir.exists()
     assert (out_dir / "SKILL.md").exists()
     assert str(out_dir) in result.stdout
@@ -134,13 +134,38 @@ def test_export_skill_auto_installs_all_detected_agent_roots(tmp_path: Path) -> 
         check=True,
         env={**__import__("os").environ, "HOME": str(home)},
     )
-    assert (home / ".claude" / "skills" / "automind-skill" / "SKILL.md").exists()
-    assert (home / ".codex" / "skills" / "automind-skill" / "SKILL.md").exists()
+    assert (home / ".claude" / "skills" / "codeautonomy-skill" / "SKILL.md").exists()
+    assert (home / ".codex" / "skills" / "codeautonomy-skill" / "SKILL.md").exists()
     assert not (home / ".trae").exists()
     assert '"claude:user"' in result.stdout
     assert '"codex:user"' in result.stdout
     assert '"trae:user"' in result.stdout
     assert 'agent root not found' in result.stdout
+
+
+def test_legacy_automind_skill_and_command_aliases_remain_exportable(tmp_path: Path) -> None:
+    skill_dir = tmp_path / "legacy-skill"
+    command_dir = tmp_path / "legacy-command"
+
+    run([
+        "./automind.sh",
+        "export-skill",
+        str(skill_dir),
+        "--clean",
+        "--install-name",
+        "automind-skill",
+    ])
+    run([
+        "./automind.sh",
+        "export-command",
+        str(command_dir),
+        "--clean",
+        "--command-name",
+        "automind",
+    ])
+
+    assert (skill_dir / "SKILL.md").exists()
+    assert (command_dir / "commands" / "automind.md").exists()
 
 
 def test_export_skill_includes_public_preloaded_packs(tmp_path: Path) -> None:

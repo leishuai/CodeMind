@@ -69,7 +69,7 @@ def test_sensitive_overlay_routes_to_whitelisted_ask_user(tmp_path: Path) -> Non
     (task_dir / "TestCases.md").write_text("""
 # TestCases
 
-| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / AutoMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |
+| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |
 |----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|
 | TC-F01 | R01 / AC-001 | Functional App/UI | device | adb | android-probe-flow | open target page | target page evidence | - | yes |
 """)

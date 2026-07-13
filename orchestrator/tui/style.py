@@ -1,4 +1,4 @@
-"""ANSI style helpers for the dependency-light AutoMind TUI."""
+"""ANSI style helpers for the dependency-light CodeAutonomy TUI."""
 from __future__ import annotations
 
 import os

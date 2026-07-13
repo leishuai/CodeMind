@@ -1,4 +1,4 @@
-"""Runtime state and evaluation file helpers for the AutoMind orchestrator."""
+"""Runtime state and evaluation file helpers for the CodeAutonomy orchestrator."""
 from __future__ import annotations
 
 import json
@@ -649,7 +649,7 @@ def read_text_if_exists(path: Path) -> str:
 # ---------------------------------------------------------------------------
 # Long-running task helpers
 #
-# These helpers give long-running AutoMind tasks a lightweight liveness signal
+# These helpers give long-running CodeAutonomy tasks a lightweight liveness signal
 # without changing the canonical Plan -> Build -> Verify -> Finish loop. They
 # write strictly to `.automind/tasks/<task>/` artifacts so supervisors and
 # resume flows can read them as the source of truth.

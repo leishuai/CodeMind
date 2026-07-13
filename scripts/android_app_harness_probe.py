@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reusable Android app harness probe for AutoMind.
+"""Reusable Android app harness probe for CodeAutonomy.
 
 Validates an Android APK on a real device:
 - install APK
@@ -10,7 +10,7 @@ Validates an Android APK on a real device:
 - assert expected text after action
 - stop app
 
-Designed for AutoMind Evaluator usage. Writes JSON summary and artifacts.
+Designed for CodeAutonomy Evaluator usage. Writes JSON summary and artifacts.
 """
 
 from __future__ import annotations

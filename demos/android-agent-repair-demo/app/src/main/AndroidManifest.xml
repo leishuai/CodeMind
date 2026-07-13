@@ -2,7 +2,7 @@
     package="ai.openclaw.automind.demo">
     <application
         android:theme="@style/AppTheme"
-        android:label="AutoMind Android Demo"
+        android:label="CodeAutonomy Android Demo"
         android:supportsRtl="true">
         <activity
             android:name=".MainActivity"

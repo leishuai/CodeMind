@@ -1,4 +1,4 @@
-"""UI path caching and exploration for AutoMind tasks.
+"""UI path caching and exploration for CodeAutonomy tasks.
 
 This module handles:
 1. UI path exploration (finding successful action sequences for test goals)

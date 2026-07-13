@@ -1,14 +1,14 @@
-# AutoMind
+# CodeAutonomy
 
 [English](README.md) | 中文
 
-**AutoMind 是面向 coding agent 的高度自动化、证据驱动 harness loop，具备真实 UI 操作、结构化恢复和自我进化的项目知识。**
+**CodeAutonomy，原 AutoMind，是面向编程任务的自治式 coding harness，具备证据驱动自我验证、真实 UI 操作、结构化恢复和自我进化的项目知识。**
 
 它不替代 Codex、Claude Code、Trae 或其他 agent。它为这些 agent 提供一套有纪律的执行闭环，把一个请求转成需求、代码改动、真实的构建/测试/设备/UI 证据、retry/replan 决策、人类可读报告，以及可复用的项目知识。
 
 > 给 coding agent 一个 harness，而不只是一个 prompt。
 
-AutoMind 的重点：
+CodeAutonomy 的重点：
 
 - **高度自动化的 loop** —— 驱动 Planner → Generator → Evaluator → 修复/复验 循环，直到证据通过、需要用户输入，或证明遇到真实 blocker。
 - **Loop over Prompt** —— 用 prompt 引导 agent，但靠 harness loop、门禁、证据和恢复策略来提升任务完成质量。
@@ -19,14 +19,16 @@ AutoMind 的重点：
   `Key Evidence`、可用截图、关键 runtime proof 链接，并在最终自然语言总结里告诉用户做完了什么、优先看哪些文件。
 - **自我进化的知识** —— 写入 summary、reuse 索引、成功路径和 avoid 路径，让未来任务复用验证过的命令、环境和项目特定经验。
 - **证据优于感觉** —— 优先使用确定性构建/测试/设备/UI 证据而非模型自信，并用 `completion-check` 阻止虚假完成。
+- **持续做耗时优化** —— warm-build 预编译和 UI path cache 显著减少跨迭代的重复构建/部署和 UI 导航耗时，缓存命中/未命中统计记录在 `metrics.json`。
+- **可度量、可审计** —— 在 `metrics.json` 记录各阶段/迭代耗时、agent 调用和 LLM token 消耗，并把每个关键决策、门禁结果和恢复尝试写入 `audit.jsonl` / `audit.json`，让你能追踪 CodeAutonomy *为什么* 这样做 —— 这是我们持续把 loop 做得更快、更透明的一部分。
 
 ## 工作原理
 
-AutoMind 把每个任务作为一个自修复 harness loop 运行：
+CodeAutonomy 把每个任务作为一个自修复 harness loop 运行：
 
 ```text
 Request
-  -> Brainstorm：澄清意图、上下文、风险、方案选项和Home
+  -> Brainstorm：澄清意图、上下文、风险、方案选项和推荐
   -> Requirements + TestCases + Plan
   -> workflow.json + phase sidecar 保持各阶段之间的契约
   -> 动代码前 review：auto-proceed，或 ask_user 确认方向/风险/设备选择
@@ -40,15 +42,15 @@ Request
   -> Report.html + 自然语言交接 + summary 沉淀为可复用的项目知识
 ```
 
-关键行为是修复 loop：Evaluator 不只是说"失败"，而是记录证据和一个结构化的下一步动作，然后 AutoMind 把任务送回 Generator 修复并重新评估。模型仍然被信任去理解 UI 状态、选择路径、诊断失败；loop 负责判断证据是否足够强。对于 UI/runtime 任务，证明意味着执行到相关动作路径并满足 postCheck，而不只是启动 App 或截一张图。关键的连续性机制是文件协议：人类可读的 Markdown 解释意图，JSON 契约承载 phase 状态、覆盖率、下一步动作和门禁，让模型无法悄悄漂移到另一个需求或测试目标。在实现前，AutoMind 也把 plan review 显式化：低风险任务可以 auto-proceed，而方向不清、风险、授权、签名/设备选择或其他人类决策会变成一个 `ask_user` gate。
+关键行为是修复 loop：Evaluator 不只是说"失败"，而是记录证据和一个结构化的下一步动作，然后 CodeAutonomy 把任务送回 Generator 修复并重新评估。模型仍然被信任去理解 UI 状态、选择路径、诊断失败；loop 负责判断证据是否足够强。对于 UI/runtime 任务，证明意味着执行到相关动作路径并满足 postCheck，而不只是启动 App 或截一张图。关键的连续性机制是文件协议：人类可读的 Markdown 解释意图，JSON 契约承载 phase 状态、覆盖率、下一步动作和门禁，让模型无法悄悄漂移到另一个需求或测试目标。在实现前，CodeAutonomy 也把 plan review 显式化：低风险任务可以 auto-proceed，而方向不清、风险、授权、签名/设备选择或其他人类决策会变成一个 `ask_user` gate。
 
 ---
 
-## 为什么用 AutoMind
+## 为什么用 CodeAutonomy
 
 现代 coding agent 很快，但真实工程工作常常在边缘崩溃：需求模糊、缺验收标准、测试过期、环境 blocker、验证薄弱、需要真实交互的 UI 流程，以及没有证据的"完成"声明。
 
-AutoMind 帮助 agent：
+CodeAutonomy 帮助 agent：
 
 - 把用户请求转成明确的 `Requirements.md`、`TestCases.md` 和 `Plan.md`；
 - 通过任务 artifact 把实现和验证连接起来；
@@ -67,17 +69,19 @@ AutoMind 帮助 agent：
 使用 bootstrap 命令安装：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl.sh | bash
+curl -fsSL https://raw.githubusercontent.com/leishuai/CodeAutonomy/main/install-curl.sh | bash
 ```
 
 安装脚本会：
 
-- 默认把 AutoMind 安装到 `~/.automind/automind`（可用 `AUTOMIND_HOME=/custom/path` 覆盖）；
-- 默认创建 CLI wrapper `~/.local/bin/automind`（可用 `AUTOMIND_BIN_DIR=/custom/bin` 覆盖）；
+- 默认把 CodeAutonomy runtime 安装到 `~/.automind/automind`（可用 `AUTOMIND_HOME=/custom/path` 覆盖）；
+- 默认创建主 CLI wrapper `~/.local/bin/codeautonomy` 和兼容入口 `~/.local/bin/automind`（可用 `AUTOMIND_BIN_DIR=/custom/bin` 覆盖目录）；
 - 执行初始化；
-- 在可用的用户级目录里为 Claude Code、Codex、Trae、Trae-CN 安装 AutoMind skill 和 `/automind` 命令。
+- 在可用的用户级目录里为 Claude Code、Codex、Trae、Trae-CN 安装 CodeAutonomy skill、`/codeautonomy` 命令和旧 `automind` 兼容入口。
 
-Runtime 和 workspace 是分开的：AutoMind 本身安装在 `~/.automind/automind`，任务 artifact 写在目标项目 workspace 下（`<workspace>/.automind/tasks/<task-code>/`）。安装路径、runtime-root 规则、helper venv 和 coding-agent skill/command 目标见 [`docs/references/installation-runtime.md`](docs/references/installation-runtime.md)。
+Runtime 和 workspace 是分开的：CodeAutonomy 本身安装在 `~/.automind/automind`，任务 artifact 写在目标项目 workspace 下（`<workspace>/.automind/tasks/<task-code>/`）。为兼容已有脚本，CLI 仍保留 `automind`，workspace 目录仍保留 `.automind/`。安装路径、runtime-root 规则、helper venv 和 coding-agent skill/command 目标见 [`docs/references/installation-runtime.md`](docs/references/installation-runtime.md)。
+
+兼容策略：`codeautonomy` 和 `/codeautonomy` 是新的主入口；已有 `automind`、`/automind`、`automind-skill`、`.automind/`、`AUTOMIND_*` 以及机器可读的 `automind-*` artifact/schema 名称继续受支持，已有任务和集成无需迁移。
 
 如果 `~/.local/bin` 不在 `PATH` 中，安装脚本会打印需要添加的那一行。
 
@@ -88,18 +92,6 @@ automind smoke offline-demo
 ```
 
 这个不需要设备的 smoke test 会创建 `.automind/tasks/offline_demo_smoke/`，并验证基础 loop：命令证据、`evaluation.json`、completion check、summary 和 record check。
-
-### 手动导出 skill 文件夹
-
-安装器会在检测到用户级 agent 目录时，自动把 `automind-skill` 安装到 Claude Code、Codex、Trae、Trae-CN 等支持的 skill 目录。如果某个 agent 使用自定义 skill 目录，或者你想把 AutoMind skill 文件夹整体分享/导入给其他 agent，可以手动导出一份：
-
-```bash
-automind export-skill "$HOME/Downloads/automind-skill" --clean
-```
-
-然后把整个 `automind-skill` 文件夹导入或复制到对应 agent 的 skill 目录，例如 `~/.codex/skills/automind-skill`、`~/.claude/skills/automind-skill`、`~/.trae/skills/automind-skill`，或其它 agent 自己定义的 skills 目录。
-
-这个导出的文件夹包含 AutoMind skill 指令、workflow 文档、prompt templates、schemas、examples、requirements 和 public-safe summary packs。它不是完整 runtime 的替代品；最佳体验仍然建议保留 full install，这样 agent 可以调用 `automind` helper、gate 和验证工具。
 
 ### 更新
 
@@ -112,17 +104,13 @@ automind update
 或者，也可以重新跑同一条安装命令：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl.sh | bash
+curl -fsSL https://raw.githubusercontent.com/leishuai/CodeAutonomy/main/install-curl.sh | bash
 ```
 
-安装和更新使用同一套底层流程：AutoMind 会拉取最新版本，刷新
-`~/.automind/automind` 下的 git-free runtime，并重装各 agent 的
-skill/command。你的本地数据会被保留——`.automind/tasks/` 和
-`.automind/summary/` 下的任务产物和 reuse memory 不会被删除。可用
-`AUTOMIND_BRANCH` 固定到指定版本：
+安装和更新是同一套流程：CodeAutonomy 会拉取最新版本，刷新 `~/.automind/automind` 下的 runtime，并重装各 agent 的 skill/command。你的本地数据会被保留——`.automind/tasks/` 和 `.automind/summary/` 下的任务产物和 reuse memory 不会被删除。可用 `AUTOMIND_BRANCH` 固定到指定版本：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl.sh | AUTOMIND_BRANCH=0.2.0 bash
+curl -fsSL https://raw.githubusercontent.com/leishuai/CodeAutonomy/main/install-curl.sh | AUTOMIND_BRANCH=v0.2.0 bash
 ```
 
 ---
@@ -131,32 +119,19 @@ curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl
 
 ### 在 Codex / Claude Code / Trae 中
 
-AutoMind 支持 Codex、Claude Code、Trae、Trae-CN 的 CLI 版本，也支持它们的
-App/桌面 coding-agent 环境；前提是该 agent 能加载用户级 skill 和/或 slash
-command。
-
-安装后，重启或 reload 你的 coding agent，打开目标项目，然后使用 slash command
-入口：
+安装后，重启或 reload 你的 coding agent，然后输入：
 
 ```text
-/automind Fix the login crash and verify it
-```
-
-`/automind` 是面向用户输入的 slash command；它会使用已安装的
-`automind-skill` 协议。`automind-skill` 是 skill 名/文件夹名，也可以通过自然语言
-或 skill 名直接调用：
-
-```text
-Use automind-skill to fix the login crash and verify it
+/codeautonomy Fix the login crash and verify it
 ```
 
 等价的 current-session 写法：
 
 ```text
-/automind ask Fix the login crash and verify it
+/codeautonomy ask Fix the login crash and verify it
 ```
 
-在 slash-command 模式下，AutoMind 让当前 coding-agent session 继续担任 Planner/Generator，在目标项目的 `.automind/tasks/<task-code>/` 下创建任务 artifact，运行 helper gate，并持续执行 Evaluator 验证 -> Generator 修复 -> Evaluator 复验，直到证据通过、需要用户输入，或遇到真实 blocker / 最大迭代保护。
+在 slash-command 模式下，CodeAutonomy 让当前 coding-agent session 继续担任 Planner/Generator，在目标项目的 `.automind/tasks/<task-code>/` 下创建任务 artifact，运行 helper gate，并持续执行 Evaluator 验证 -> Generator 修复 -> Evaluator 复验，直到证据通过、需要用户输入，或遇到真实 blocker / 最大迭代保护。
 
 它默认**不会**启动一个独立的 agent session。
 
@@ -171,19 +146,15 @@ automind
 
 裸 `automind` 打开交互式 shell。如果在当前 task 存在前就开始聊天，那个终端会获得自己的隐藏 TUI chat session，之后在同一 shell 里的 `ask ...` 可以复用那个 coding-agent session。
 
-让 AutoMind 拥有一个独立的 CLI-driven loop：
+让 CodeAutonomy 拥有一个独立的 CLI-driven loop：
 
 ```bash
 automind ask "Fix the login crash and verify it"
 ```
 
-未指定 agent 时，`ask`、`plan`、`resume` 使用 `auto` 选择：AutoMind 依次检查 `codex`、`claude`、Trae/Trae-CN（`traecli`），运行第一个通过 preflight 的 CLI。如果都不可用，它会报告每个检查过的 adapter 并建议改用 current-session 模式，而不是因为单个缺失的二进制就静默失败。Planner/Generator 的 approval-bypass 由任务级、记录在 `runtime-state.json` 的 `agentExecutionPolicy` 控制；缺该字段时兜底按 bypass 处理，这样非 new task、detached 脚本/resume/helper 命令，或没能触发 ask 的流程仍保持高自动化。TUI 不再就这个默认值提问；新任务把 `agentExecutionPolicy` 记为 `default_bypass` 用于审计，而 resume/helper 命令遵循已有策略或兜底。模型 Evaluator 运行对所有支持的 Coding Agent 都始终 fresh-isolated 且 bypass，以便采集 runtime/device/build 证据，避免 approval 卡死。敏感/破坏性/系统变更动作仍走 AutoMind 的 `ask_user` 防护。
+未指定 agent 时，`ask`、`plan`、`resume` 使用 `auto` 选择：CodeAutonomy 依次检查 `codex`、`claude`、Trae/Trae-CN（`traecli`），运行第一个通过 preflight 的 CLI。如果都不可用，它会报告每个检查过的 adapter 并建议改用 current-session 模式，而不是因为单个缺失的二进制就静默失败。Planner/Generator 的 approval-bypass 由任务级、记录在 `runtime-state.json` 的 `agentExecutionPolicy` 控制；缺该字段时兜底按 bypass 处理，这样非 new task、detached 脚本/resume/helper 命令，或没能触发 ask 的流程仍保持高自动化。TUI 不再就这个默认值提问；新任务把 `agentExecutionPolicy` 记为 `default_bypass` 用于审计，而 resume/helper 命令遵循已有策略或兜底。模型 Evaluator 运行对所有支持的 Coding Agent 都始终 fresh-isolated 且 bypass，以便采集 runtime/device/build 证据，避免 approval 卡死。敏感/破坏性/系统变更动作仍走 CodeAutonomy 的 `ask_user` 防护。
 
-如果 agent 的 shell 不在目标项目根目录，先设置 `AUTOMIND_WORKSPACE_ROOT=/path/to/project` 再运行 AutoMind 命令。Runtime 和 workspace 是分开的：已安装 runtime 通常在 `~/.automind/automind`（或 `$AUTOMIND_HOME`），而任务 artifact 在运行 AutoMind 的项目里。不要从旧日志照抄开发机绝对路径；helper 路径应从当前 runtime/workspace 或任务 `logs/iter-N/env.json` 解析。
-
-Terminal TUI 示例：
-
-![AutoMind terminal TUI](docs/assets/automind_tui_screenshot.png)
+如果 agent 的 shell 不在目标项目根目录，先设置 `AUTOMIND_WORKSPACE_ROOT=/path/to/project` 再运行 CodeAutonomy 命令。Runtime 和 workspace 是分开的：已安装 runtime 通常在 `~/.automind/automind`（或 `$AUTOMIND_HOME`），而任务 artifact 在运行 CodeAutonomy 的项目里。不要从旧日志照抄开发机绝对路径；helper 路径应从当前 runtime/workspace 或任务 `logs/iter-N/env.json` 解析。
 
 ---
 
@@ -191,41 +162,35 @@ Terminal TUI 示例：
 
 | 需求 | 使用 |
 |---|---|
-| 你已经在 Codex / Claude Code / Trae 里 | `/automind <请求>` |
+| 你已经在 Codex / Claude Code / Trae 里 | `/codeautonomy <请求>` |
 | 你想要交互式终端 shell | `automind` |
-| 你想让 AutoMind 拥有独立 CLI-driven loop | `automind ask "..."` |
-| 你想从 slash 命令走 detached 模式 | `/automind detached ask <请求>` |
+| 你想让 CodeAutonomy 拥有独立 CLI-driven loop | `automind ask "..."` |
+| 你想从 slash 命令走 detached 模式 | `/codeautonomy detached ask <请求>` |
 | 你只需要 current-session 工作的任务 artifact | `automind scaffold "..."` |
 | 你需要继续之前的任务 | `automind resume <task-code>` 或 `automind continue [task-code]` |
 
-`scaffold`、`workflow-contract`、`phase-gate`、`context-pack`、`completion-check`、`record-check` 这类高级 helper/gate 命令主要给 AutoMind skill、slash-command current-session flow、CI/回归 fixture 和调试使用。新用户通常不需要手动执行它们。
+`scaffold`、`workflow-contract`、`phase-gate`、`context-pack`、`completion-check`、`record-check` 这类高级 helper/gate 命令主要给 CodeAutonomy skill、slash-command current-session flow、CI/回归 fixture 和调试使用。新用户通常不需要手动执行它们。
 
 ---
 
 ## 全自动模式（一站到底，不打断）
 
-默认情况下，非琐碎的实现任务会在 pre-implementation review 处停一次，
-确认范围、方案、风险和授权。如果你希望 AutoMind 自主跑完整个流程、
-不被这一步打断，可以在初始请求里声明全自动：
+默认情况下，非琐碎的实现任务会在 pre-implementation review 处停一次，确认范围、方案、风险和授权。如果你希望 CodeAutonomy 自主跑完整个流程、不被这一步打断，可以开启**全自动模式**：
 
-```text
-/automind 修复登录崩溃并验证，全自动
-```
+- **在初始请求里声明** —— 包含 `全自动`、`一站到底`、`全自动模式`、`不用问用户`、`不用确认`、`full auto`、`no confirmation` 等任意关键词，例如：
 
-或：
+  ```text
+  /codeautonomy 修复登录崩溃并验证，全自动
+  ```
+  ```bash
+  automind ask "修复登录崩溃并验证，一站到底"
+  ```
 
-```bash
-automind ask "修复登录崩溃并验证，一站到底"
-```
+- **或在被询问时选择** —— 在 pre-implementation `ask_user` 环节，选择 `全自动模式 / Full auto mode` 选项，或直接回复 `全自动` / `full auto`。
 
-也可以在 pre-implementation `ask_user` 环节选择 `Full auto mode`，或直接回复
-`全自动` / `full auto`。开启后，AutoMind 会把该决策记录到
-`runtime-state.json`（`preImplementationReview.fullAuto=true`），并在后续安全的
-completion gate 自动放行。
+开启后，CodeAutonomy 会把你声明的范围/目标/授权记录到 `runtime-state.json`（`preImplementationReview.fullAuto=true`），并在此后每个 completion gate 自动放行、不再询问。这是「用户意图优先」的覆盖：它会权威地跳过风险模型本应触发的 ask_user 暂停。
 
-全自动不会跳过未事先授权的真正敏感/不可逆操作：账号/凭证登录、支付、
-破坏性 delete/reset/force-push、签名/keychain 变更、设备信任、生产影响等仍可能
-需要用户批准；宿主 coding agent 自身的命令审批弹窗也可能照常出现。
+**全自动不会跳过什么：** 你未事先授权的真正敏感/不可逆操作 —— 账号/凭证登录、支付、破坏性 delete/reset/force-push，或真机/签名/权限 gate —— 仍会浮出来交由你决策；宿主 coding agent 自身的命令审批弹窗也可能照常出现。要预先授权特定破坏性操作，请在 pre-implementation 决策 bundle 的 `destructiveActionsAllowList` 中列出它们。
 
 ---
 
@@ -265,13 +230,14 @@ automind completion-check <task-code>
 automind record-check <task-code>
 ```
 
-在 skill/slash-command current-session 模式，phase 交接前应运行 `phase-gate`。它会刷新/seed `automind-workflow-state.json` 和兼容性 resolver projection，返回 `checklist[]` 加 `checkboxMarkdown[]`，让 host coding agent 把当前 phase checklist 复制到原生 TODO/checkbox plan 后再继续。当 handoff 即将进入 `delivery` 或 `evaluation` 时，`phase-gate` 还会用确定性脚本刷新缺失或过期的 `phase-reuse/generator.md` / `phase-reuse/evaluator.md`，并避免重置仍然新鲜且已 ack 的 reuse。
+这些 gate 让 loop 保持诚实：
 
-checklist 是有意轻量且有序的，覆盖每个 phase 内部的关键流转：读取 routing/reuse 输入、读取必要 JSON/Markdown artifact、执行 phase 工作、在适用时写入/更新 phase artifact 和 compact sidecar、在适用时记录 evidence/log，最后再运行对应 gate。`command` 是可选字段，只在 item 需要 `workflow-check`、`phase-gate`、`context-pack`、`completion-check`、`summary`、`report` 等 AutoMind helper 时出现；普通读/改/测/写仍由 host coding agent 自己完成。
+- **`workflow-check`** —— 在开始写代码前，确保规划 artifact 和可执行 contract 是自洽的。
+- **`phase-gate`**（skill/slash-command 模式）—— 返回下一个 phase 的轻量、有序 checklist，让 host agent 在交接前照着执行。
+- **`completion-check`** —— 比模型的"完成"消息更可信：它要求 required 测试用例带真实证据通过、required 验收标准被覆盖。
+- 安全的运行时中断（agent 超时/网络/进程抖动、context-window 溢出）会自动重试，并从持久 task artifact 恢复。
 
-相信 `completion-check` 而非模型的"完成"消息。完成要求 required `TC-*` 有证据通过、required 验收标准被覆盖、required 证据路径存在。对于 required pass 行，AutoMind 还要求一个正向 `evidenceAssessment`，其 `hardMetrics[].evidence` 或 `machineAnchor` 指向真实 artifact。实践中，Android 截图/logcat、iOS XCUITest/xcresult/log、Web E2E trace/log、server/CLI 测试日志都会归一到同一套 `evaluation.json.testResults[]` 契约，包括 `observedSignals`、证据路径和机器锚点。
-
-CLI/TUI-owned loop 会自动重试安全的 coding-agent/runtime 中断。单次 agent CLI 调用已经会对短暂 timeout/network/process failure 做短退避重试；如果 Generator/Evaluator 仍以 `agent_unavailable`、`agent_timeout`、`agent_stalled_no_output` 或 `agent_context_overflow` 失败，AutoMind 会写入 `evaluation.autoRecovery`，并在同一 task 内重新进入，默认最多 `AUTOMIND_SAFE_AUTO_RESUME_MAX`（默认 3）次。context-window overflow 会清掉已饱和的 primary session，用持久 task artifact 在 fresh session 中恢复。
+关于这些 gate 背后的设计思路和精确契约，见 [automind_design.md](automind_design.md)。
 
 ### 验证 helper
 
@@ -319,7 +285,7 @@ User request
 
 关键思想是连续性：
 
-1. **先 Brainstorm** —— 在冻结需求前澄清用户意图、项目上下文、假设、风险、方案选项、Home和验证策略。
+1. **先 Brainstorm** —— 在冻结需求前澄清用户意图、项目上下文、假设、风险、方案选项、推荐和验证策略。
 2. **定义契约** —— 把选定方向转成 `Requirements.md`、验收标准、`TestCases.md` 和 `Plan.md`。
 3. **用文件协议保持连续性** —— `workflow.json` 和 phase JSON sidecar 在各阶段之间承载需求、AC/TC 覆盖、gate 状态和 handoff 状态，让下一个模型回合不必从头重新理解任务。
 4. **编码前 review** —— 解决动代码前 gate：清晰/低风险工作可 auto-proceed，方向不清、风险、授权、签名/设备选择或其他人类决策走 `ask_user`。
@@ -334,7 +300,7 @@ User request
 
 ---
 
-## AutoMind 产出什么
+## CodeAutonomy 产出什么
 
 每个任务获得一个 workspace：
 
@@ -359,7 +325,7 @@ automind report <task-code>
 automind summary <task-code>
 ```
 
-AutoMind 还为 gate、adapter、TUI/status 和未来复用维护机器可读的状态、sidecar、trace、process eval 和知识索引。完整文件协议记录在 [`docs/workflow.md`](docs/workflow.md)。
+CodeAutonomy 还为 gate、adapter、TUI/status 和未来复用维护机器可读的状态、sidecar、trace、process eval 和知识索引。完整文件协议记录在 [`docs/workflow.md`](docs/workflow.md)。
 
 仓库结构：
 
@@ -414,7 +380,7 @@ automind record-check offline_demo_smoke
 - iOS 签名证书、keychain、provisioning profile 或 Team 设置；
 - 设备信任设置、特权服务或目标 app 数据。
 
-当移动端验证需要低风险 Python helper 包时，AutoMind 可以在目标 workspace 里创建本地 virtualenv：
+当移动端验证需要低风险 Python helper 包时，CodeAutonomy 可以在目标 workspace 里创建本地 virtualenv：
 
 ```bash
 automind setup-automation-tools android
@@ -422,11 +388,11 @@ automind setup-automation-tools ios
 automind setup-automation-tools visual
 ```
 
-这些命令使用 AutoMind runtime 里的 `requirements/*.txt`，在目标 workspace 创建 `.venv-android-tools/`、`.venv-ios-tools/` 和 `.venv-visual-tools/`。如果 helper 包安装因短暂网络/DNS 原因失败，AutoMind 会重试一次并记录重试日志；持续失败会被分类并路由到 runtime-helper 兜底、低能力兜底或 `ask_user`。visual helper 是确定性的截图/图片工具（`visual-inspect`），在没有视觉模型时做尺寸/裁剪/hash/基线 diff。
+这些命令使用 CodeAutonomy runtime 里的 `requirements/*.txt`，在目标 workspace 创建 `.venv-android-tools/`、`.venv-ios-tools/` 和 `.venv-visual-tools/`。如果 helper 包安装因短暂网络/DNS 原因失败，CodeAutonomy 会重试一次并记录重试日志；持续失败会被分类并路由到 runtime-helper 兜底、低能力兜底或 `ask_user`。visual helper 是确定性的截图/图片工具（`visual-inspect`），在没有视觉模型时做尺寸/裁剪/hash/基线 diff。
 
 系统 SDK、签名、信任变更、sudo 服务、OCR 引擎、浏览器驱动、破坏性 app 操作、私有 registry 凭据、Docker/数据库服务启动、账号/支付/隐私/法律决策和其他敏感变更，需要用户明确批准。
 
-对于 web、client、server 项目依赖，AutoMind 不会把它们当成 helper 安装随意安装。应使用目标项目自己的原生命令和 lockfile。当依赖路径不明确时，下面这个可选的只读 helper 可以检查常见标记并写出依赖计划：
+对于 web、client、server 项目依赖，CodeAutonomy 不会把它们当成 helper 安装随意安装。应使用目标项目自己的原生命令和 lockfile。当依赖路径不明确时，下面这个可选的只读 helper 可以检查常见标记并写出依赖计划：
 
 ```bash
 automind dependency-check [task-code] [iteration]
@@ -448,13 +414,13 @@ export PATH="$HOME/.local/bin:$PATH"
 
 然后重启 shell，运行 `automind help`。
 
-### 看不到 `/automind`
+### 看不到 `/codeautonomy`
 
-重启或 reload coding agent。确认对应用户级文件存在，例如 Codex 的 `~/.codex/commands/automind.md` 和 `~/.codex/skills/automind-skill`。
+重启或 reload coding agent。确认对应用户级文件存在，例如 Codex 的 `~/.codex/commands/codeautonomy.md` 和 `~/.codex/skills/codeautonomy-skill`。旧 `/automind` 仍可兼容使用。
 
 ### 提示缺少移动端工具
 
-手动安装所需平台工具后重新运行 preflight。AutoMind 可以创建 Python helper virtualenv，但不会替你安装 Xcode、Android Studio、SDK、签名材料或设备信任设置。
+手动安装所需平台工具后重新运行 preflight。CodeAutonomy 可以创建 Python helper virtualenv，但不会替你安装 Xcode、Android Studio、SDK、签名材料或设备信任设置。
 
 ### loop 一直失败
 
@@ -467,7 +433,7 @@ automind completion-check <task-code>
 automind doctor <task-code>
 ```
 
-如果同一个失败重复出现，AutoMind 可能会持续给模型修复机会；当证据表明策略或验证目标错了时，应使用 `replan`。
+如果同一个失败重复出现，CodeAutonomy 可能会持续给模型修复机会；当证据表明策略或验证目标错了时，应使用 `replan`。
 
 ### agent 说完成，但 completion 失败
 
@@ -495,15 +461,8 @@ automind doctor <task-code>
 
 ---
 
-## 许可证
+## CodeAutonomy 不是什么
 
-AutoMind 使用 MIT License 开源。详见 [LICENSE](LICENSE)。
-
-
----
-
-## AutoMind 不是什么
-
-AutoMind 不是另一个 coding agent，不是项目原生测试或平台 SDK 的替代品，不是静默绕过签名/权限的工具，也不是正确性的绝对保证。
+CodeAutonomy 不是另一个 coding agent，不是项目原生测试或平台 SDK 的替代品，不是静默绕过签名/权限的工具，也不是正确性的绝对保证。
 
 它是围绕 coding agent 的工程 loop：preflight、plan、generate、verify、recover、summarize、report、reuse。

@@ -36,7 +36,7 @@ def check_state_summary(task_dir: Path, *, repair: bool = False, reason: str = "
     It should not route to ask_user or stop by itself; any remaining issue is a
     bug report / warning for the caller, not a user-facing decision request.
 
-    Repair contract (single ordered self-heal pass; AutoMind never ``ask_user``s
+    Repair contract (single ordered self-heal pass; CodeAutonomy never ``ask_user``s
     from this checker):
 
     1. ``derive_effective_state`` is the first/source-of-truth pass.

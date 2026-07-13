@@ -1,4 +1,4 @@
-"""Prompt rendering and reuse-context helpers for AutoMind.
+"""Prompt rendering and reuse-context helpers for CodeAutonomy.
 
 This module owns reusable summary/preloaded context assembly and prompt file
 rendering. Runtime task orchestration stays in ``orchestrator.main``.
@@ -80,7 +80,7 @@ def runtime_language_instruction(user_input: object) -> str:
             "The user's request is primarily Chinese. Communicate with the user in Chinese by default: "
             "ask_user questions, concise status summaries, final replies, and user-facing explanations should be Chinese. "
             "Keep code identifiers, file paths, command names, enum values, event names, and existing English technical terms unchanged. "
-            "Public AutoMind artifact headings/templates may remain English when required by the workflow, but explanatory content for this task should be Chinese where practical.\n"
+            "Public CodeAutonomy artifact headings/templates may remain English when required by the workflow, but explanatory content for this task should be Chinese where practical.\n"
         )
     return (
         "## Runtime communication language\n"
@@ -167,7 +167,7 @@ def _parse_simple_frontmatter(text: str) -> tuple[dict, str]:
     """Parse the small YAML-like frontmatter used by preloaded README files.
 
     This intentionally supports only simple scalar fields and list fields; it
-    avoids adding a YAML dependency to AutoMind.
+    avoids adding a YAML dependency to CodeAutonomy.
     """
     if not text.startswith("---\n"):
         return {}, text
@@ -252,7 +252,7 @@ def accumulated_technical_summary_files(limit_files: int = 40) -> list[Path]:
     """Return machine-global accumulated technical summaries when present.
 
     These are cross-project, business-agnostic lessons accumulated by task
-    summaries in the AutoMind runtime install. They are public-safe but local to
+    summaries in the CodeAutonomy runtime install. They are public-safe but local to
     this machine (not maintainer-distributed like preloaded packs).
     """
     technical_root = AUTOMIND_ROOT / "summaries" / "accumulated" / "technical"
@@ -373,8 +373,8 @@ def build_reuse_context(task_type: Optional[str] = None, limit_chars: int = 16_0
             "These are public-safe generic playbooks selected by task type using pack prefixes. "
             "This section contains a compact index of preloaded summary file paths and one-line descriptions; read a specific file on demand when the task needs that capability. "
             "They are hints only; current Requirements.md, TestCases.md, and fresh evidence win.\n\n"
-            "Path rule: `Path` is relative to the AutoMind runtime root (`$AUTOMIND_HOME` when installed, or the directory containing `automind.sh`), not the target app project or `.automind/summary/`. "
-            "If the agent cwd is the app project, resolve it as `<AutoMind runtime root>/summaries/preloaded/...`.\n\n"
+            "Path rule: `Path` is relative to the CodeAutonomy runtime root (`$AUTOMIND_HOME` when installed, or the directory containing `automind.sh`), not the target app project or `.automind/summary/`. "
+            "If the agent cwd is the app project, resolve it as `<CodeAutonomy runtime root>/summaries/preloaded/...`.\n\n"
             + preloaded_context
         )
     technical_context = build_accumulated_technical_context(technical_limit)
@@ -382,7 +382,7 @@ def build_reuse_context(task_type: Optional[str] = None, limit_chars: int = 16_0
         sections.append(
             "## Accumulated technical lessons (machine-global)\n\n"
             "Cross-project, business-agnostic lessons accumulated by past task summaries on this machine "
-            "(AutoMind runtime `summaries/accumulated/technical/`). Treat them as local hints only; "
+            "(CodeAutonomy runtime `summaries/accumulated/technical/`). Treat them as local hints only; "
             "current Requirements.md, TestCases.md, and fresh evidence win.\n\n"
             + technical_context
         )
@@ -390,7 +390,7 @@ def build_reuse_context(task_type: Optional[str] = None, limit_chars: int = 16_0
     if business_context:
         sections.append(
             "## Local accumulated business/project summaries\n\n"
-            "These local/private project lessons exist in this AutoMind runtime checkout and are included for this machine's Reuse.md. "
+            "These local/private project lessons exist in this CodeAutonomy runtime checkout and are included for this machine's Reuse.md. "
             "They may contain project-specific commands, build paths, and domain assumptions. Treat them as local hints only; current Requirements.md, TestCases.md, and fresh evidence win. "
             "Public skill exports still exclude summaries/accumulated/business/** by default.\n\n"
             + business_context

@@ -9,7 +9,7 @@ def _write_contract(task: Path) -> None:
     task.mkdir(parents=True)
     (task / "TestCases.md").write_text(
         "# TestCases\n\n"
-        "| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / AutoMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n"
+        "| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n"
         "|----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|\n"
         "| TC-F05 | R01 / AC-005 | Functional | runtime | device | probe | trigger play fail | music_audio_stop stop_reason=play_fail | - | yes |\n"
         "| TC-F06 | R01 / AC-006 | Functional | runtime | device | probe | remote control | music_audio_stop stop_reason=remote_control | - | yes |\n"

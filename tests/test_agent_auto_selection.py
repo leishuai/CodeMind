@@ -1,4 +1,4 @@
-"""Tests for AutoMind coding-agent auto selection."""
+"""Tests for CodeAutonomy coding-agent auto selection."""
 from __future__ import annotations
 
 from orchestrator import agents

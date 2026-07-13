@@ -1,4 +1,4 @@
-"""Compatibility phase-transition projection for AutoMind tasks.
+"""Compatibility phase-transition projection for CodeAutonomy tasks.
 
 `automind-workflow-state.json` is the live workflow control state.  This module
 builds an in-memory current/next phase projection for CLI guidance.  The old
@@ -258,13 +258,13 @@ def build_phase_transition_summary(task_dir: Path) -> dict[str, Any]:
         next_phase = "human_input"
         next_action = "ask_user"
         next_owner = "human"
-        reason = "runtime/effective state is waiting for user input before AutoMind can continue."
+        reason = "runtime/effective state is waiting for user input before CodeAutonomy can continue."
         basis = ["runtime-state nextAction=ask_user or status=human_input_pending"]
     elif evaluation.get("nextAction") == "ask_user":
         next_phase = "human_input"
         next_action = "ask_user"
         next_owner = "human"
-        reason = "evaluation.json requests user input before AutoMind can continue."
+        reason = "evaluation.json requests user input before CodeAutonomy can continue."
         basis = ["evaluation.json nextAction=ask_user"]
     elif evaluation.get("nextAction") == "replan":
         next_phase = "planning"

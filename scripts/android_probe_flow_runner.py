@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Android dynamic probe flow runner for AutoMind.
+"""Android dynamic probe flow runner for CodeAutonomy.
 
 Executes a probe-flow.json generated from Requirements.md acceptance criteria.
 This runner is intentionally small and explicit: it maps generic steps to

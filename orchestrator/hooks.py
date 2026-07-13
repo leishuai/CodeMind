@@ -1,4 +1,4 @@
-"""AutoMind phase hook entrypoints.
+"""CodeAutonomy phase hook entrypoints.
 
 Hooks are intentionally small and deterministic. They are not summary-specific:
 callers can run them before/after any phase to prepare phase-local context,

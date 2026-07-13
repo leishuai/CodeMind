@@ -1,8 +1,8 @@
 # App-use Verification
 
-App-use verification is AutoMind's capability for proving client/UI behavior by operating the real app or browser, observing runtime state, and recording structured success or failure explanations. It is not a screenshot-only review and it is not a fixed coordinate script.
+App-use verification is CodeAutonomy's capability for proving client/UI behavior by operating the real app or browser, observing runtime state, and recording structured success or failure explanations. It is not a screenshot-only review and it is not a fixed coordinate script.
 
-This reference is for AutoMind Planner/Generator/Evaluator prompts, platform adapters, skill users, and maintainers. Platform-specific runners such as Android probe-flow, iOS XCUITest/probe-flow, and Web/browser probe-flow should follow this contract when a TestCase requires real UI/client behavior.
+This reference is for CodeAutonomy Planner/Generator/Evaluator prompts, platform adapters, skill users, and maintainers. Platform-specific runners such as Android probe-flow, iOS XCUITest/probe-flow, and Web/browser probe-flow should follow this contract when a TestCase requires real UI/client behavior.
 
 ## Operating rules (read first)
 
@@ -292,9 +292,9 @@ Soft failure should include:
 
 ## Ask-user policy
 
-Do not ask the human when AutoMind can determine the fact from artifacts.
+Do not ask the human when CodeAutonomy can determine the fact from artifacts.
 
-Examples AutoMind should diagnose directly:
+Examples CodeAutonomy should diagnose directly:
 
 - foreground package is launcher, not target app;
 - screen is off from dumpsys power;
@@ -315,7 +315,7 @@ Ask the human only when a real external action or decision remains necessary, su
 When asking, phrase it as a diagnosis plus requested action, not a guess:
 
 ```text
-AutoMind detected the Android lockscreen is focused from dumpsys window. Please unlock the device, then retry.
+CodeAutonomy detected the Android lockscreen is focused from dumpsys window. Please unlock the device, then retry.
 ```
 
 Avoid:

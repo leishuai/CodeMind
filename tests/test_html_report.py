@@ -18,7 +18,7 @@ def test_generate_html_report_includes_requirements_evidence_and_screenshots(tmp
     (task / "Delivery.md").write_text("# Delivery\n\n- Generated player fix.\n")
     (task / "Validation.md").write_text("# Validation\n\n- Result: PASS\n- Evidence: logs/iter-1/evaluator.log\n")
     (task / "summary.md").write_text("# Summary\n\nDone.\n")
-    (iter_dir / "evaluator.log").write_text("[AutoMind][Verify] playbackState=playing\n")
+    (iter_dir / "evaluator.log").write_text("[CodeAutonomy][Verify] playbackState=playing\n")
     (iter_dir / "screen.png").write_bytes(b"fake-png")
     (task / "evaluation.json").write_text(json.dumps({
         "iteration": 1,
@@ -34,7 +34,7 @@ def test_generate_html_report_includes_requirements_evidence_and_screenshots(tmp
 
     report = generate_html_report_for_task_dir(task, "html_report_task")
     html = report.read_text()
-    assert "html_report_task Automind Report" in html
+    assert "html_report_task CodeAutonomy Report" in html
     assert "Playback verified" in html
     assert "R01 — Playback" in html
     assert "AC-001" in html

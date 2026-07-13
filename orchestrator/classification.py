@@ -1,4 +1,4 @@
-"""Lightweight request/content classification helpers for AutoMind.
+"""Lightweight request/content classification helpers for CodeAutonomy.
 
 These helpers intentionally stay generic and product-agnostic. They are
 shared by scaffolding and workflow gates to avoid business-specific rules in

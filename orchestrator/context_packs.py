@@ -291,7 +291,7 @@ def _bytes_len(text: str) -> int:
 def _trim_to_bytes(text: str, limit: int) -> str:
     if _bytes_len(text) <= limit:
         return text
-    # ASCII-heavy markdown dominates AutoMind artifacts; char slicing keeps this dependency-free.
+    # ASCII-heavy markdown dominates CodeAutonomy artifacts; char slicing keeps this dependency-free.
     return text[: max(1_000, limit)]
 
 
@@ -560,7 +560,7 @@ def build_generator_context_pack(task_dir: Path, iteration: int, iter_log_dir: P
     md_parts = [
         f"# Generator Context Pack - {task_dir.name} iter-{iteration}",
         "",
-        "This is the compact auditable task context AutoMind expects the Generator to use before editing.",
+        "This is the compact auditable task context CodeAutonomy expects the Generator to use before editing.",
         "Raw artifacts remain on disk; this pack intentionally contains bounded excerpts to avoid polluting coding-agent context.",
         "",
         "## Validation",

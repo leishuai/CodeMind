@@ -364,7 +364,7 @@ def format_raw_path_for_reuse(record: dict[str, Any]) -> str:
     """Return a complete, agent-locatable path string for a matched record.
 
     phase-reuse/Reuse.md are read by agents whose working directory is the target
-    project, not the AutoMind runtime. A bare workspace-relative path can be
+    project, not the CodeAutonomy runtime. A bare workspace-relative path can be
     unresolvable from there, so emit absolute paths anchored on the right root
     and tag the source (runtime vs workspace) so the agent knows where it lives.
     """
@@ -415,7 +415,7 @@ def render_phase_reuse(task_dir: Path, phase: str, matches: list[dict[str, Any]]
         "## Matched knowledge index entries",
         "",
         "Raw path is an absolute, agent-locatable path (the source tag shows whether",
-        "it lives under the AutoMind runtime or the workspace). Open it from there.",
+        "it lives under the CodeAutonomy runtime or the workspace). Open it from there.",
         "\"Why matched\" lists the concrete signals (phase/taskType/surface/trigger);",
         "a `preloaded(curated baseline)` tag means a maintainer-preloaded first-run pack.",
         "",

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lightweight AutoMind checkpoint manager.
+"""Lightweight CodeAutonomy checkpoint manager.
 
 P0 supports create/list/plan-restore. It does not mutate or restore files.
 """
@@ -156,7 +156,7 @@ def plan_restore(args: argparse.Namespace) -> int:
         "options": [
             {
                 "id": "A",
-                "label": "Restore AutoMind task state files only.",
+                "label": "Restore CodeAutonomy task state files only.",
                 "impact": "Restores runtime-state/evaluation/Plan/Validation/probe-flow records without touching product code.",
                 "risk": "Low; still overwrites current task record files.",
                 "requiresConfirmation": True,
@@ -230,7 +230,7 @@ def restore(args: argparse.Namespace) -> int:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="AutoMind checkpoint manager")
+    parser = argparse.ArgumentParser(description="CodeAutonomy checkpoint manager")
     sub = parser.add_subparsers(dest="cmd", required=True)
     p_create = sub.add_parser("create")
     p_create.add_argument("task_code")

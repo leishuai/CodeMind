@@ -1,1 +1,1 @@
-"""AutoMind terminal UI package."""
+"""CodeAutonomy terminal UI package."""

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lightweight AutoMind quality evaluator.
+"""Lightweight CodeAutonomy quality evaluator.
 
 Runs after functional evaluation. It reads task evidence and repo diff, produces a
 quality summary, and can merge qualityChecks into the task's evaluation.json.
@@ -130,7 +130,7 @@ def iter_log_dir(task_dir: pathlib.Path, iteration: int | None) -> pathlib.Path:
 def should_scan_text_evidence(path: pathlib.Path, task_dir: pathlib.Path) -> bool:
     """Return whether a text evidence file should feed quality heuristics.
 
-    Quality checks should judge the current functional evidence, not AutoMind's
+    Quality checks should judge the current functional evidence, not CodeAutonomy's
     own prompts, context packs, Generator transcripts, or previous
     quality-summary output. Those orchestration files contain policy words such
     as "timeout" and "retry" that can otherwise create false hard failures.
@@ -172,7 +172,7 @@ def collect_evidence_paths_from_evaluation(task_dir: pathlib.Path) -> list[pathl
         p = pathlib.Path(raw_path)
         if not p.is_absolute():
             if raw_path.startswith(".automind/") or raw_path.startswith("logs/"):
-                # AutoMind artifacts use both workspace-relative
+                # CodeAutonomy artifacts use both workspace-relative
                 # `.automind/tasks/...` paths and task-relative `logs/...`
                 # paths. Resolve both without falling back to unrelated files.
                 p = (workspace_root / p) if raw_path.startswith(".automind/") else (task_dir / p)
@@ -510,7 +510,7 @@ def quality_checks(root: pathlib.Path, task_dir: pathlib.Path, log_dir: pathlib.
             "category": "architecture",
             "result": "pass",
             "actual": 0,
-            "reason": "No git diff detected in AutoMind repo; architecture scope check has no changed files to review.",
+            "reason": "No git diff detected in CodeAutonomy repo; architecture scope check has no changed files to review.",
             "triageSource": "code_deterministic",
             "needsModelReview": False,
         })
@@ -640,7 +640,7 @@ def merge_evaluation(task_dir: pathlib.Path, summary_path: pathlib.Path, quality
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("task_code")
-    parser.add_argument("--root", default=".", help="AutoMind repo root. Default: current directory.")
+    parser.add_argument("--root", default=".", help="CodeAutonomy repo root. Default: current directory.")
     parser.add_argument("--iteration", type=int, help="Iteration number. Default: runtime-state iteration or 1.")
     parser.add_argument("--merge", action="store_true", help="Merge qualityChecks into task evaluation.json.")
     args = parser.parse_args()

@@ -37,7 +37,7 @@ Use this pack when an Android task needs real-device verification, `android-pref
   it, the user selected it in one-shot planning, or a runtime downgrade is
   explicitly approved.
 - Manual action alone is not proof. If human-assisted evidence capture is used,
-  AutoMind must still collect machine-checkable postcondition evidence.
+  CodeAutonomy must still collect machine-checkable postcondition evidence.
 
 ## Recommended path
 
@@ -56,7 +56,7 @@ Use this pack when an Android task needs real-device verification, `android-pref
 
 3. Prefer the first ready helper Python in this order:
    - project-local `.venv-android-tools` when it exists **and** imports `adbutils` + `uiautomator2`;
-   - AutoMind runtime `.venv-android-tools` when it is already ready;
+   - CodeAutonomy runtime `.venv-android-tools` when it is already ready;
    - otherwise project-local setup via `setup-automation-tools android`.
 
 A project-local venv that exists but cannot import required modules is not ready. Do not let it hide a known-good runtime helper venv. Do not copy a developer-machine absolute runtime helper path such as `/Users/.../projects/automind/.venv-android-tools/bin/python` from old logs. Resolve the helper from the current installation/runtime root or from `logs/iter-N/env.json` (`androidToolsPython`) for the current task.
@@ -102,7 +102,7 @@ Classify as `tool_missing` / external environment. Do not keep reinstalling blin
 
 Safe next steps:
 
-- reuse a ready AutoMind runtime `.venv-android-tools` if available;
+- reuse a ready CodeAutonomy runtime `.venv-android-tools` if available;
 - otherwise ask the user to fix Python/pip/network/proxy or provide an approved package mirror/wheelhouse;
 - if verification can proceed with lower capability, ask/record an adb-only fallback decision.
 

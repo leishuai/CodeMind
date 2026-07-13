@@ -1,6 +1,6 @@
-"""Shared path resolution for AutoMind helper scripts.
+"""Shared path resolution for CodeAutonomy helper scripts.
 
-Runtime root is the AutoMind installation/checkout containing scripts and
+Runtime root is the CodeAutonomy installation/checkout containing scripts and
 requirements. Workspace root is the caller's target project; task artifacts and
 project-local helper virtualenvs live under it.
 """
@@ -31,7 +31,7 @@ IOS_TOOLS_PY = WORKSPACE_ROOT / ".venv-ios-tools" / "bin" / "python"
 VISUAL_TOOLS_PY = WORKSPACE_ROOT / ".venv-visual-tools" / "bin" / "python"
 
 # Propagate the resolved roots to child processes even if they run with cwd set
-# to the AutoMind runtime checkout.
+# to the CodeAutonomy runtime checkout.
 os.environ.setdefault("AUTOMIND_RUNTIME_ROOT", str(RUNTIME_ROOT))
 os.environ.setdefault("AUTOMIND_WORKSPACE_ROOT", str(WORKSPACE_ROOT))
 

@@ -1,4 +1,4 @@
-"""Minimal AutoMind TUI timeline renderer.
+"""Minimal CodeAutonomy TUI timeline renderer.
 
 This dependency-light terminal UI renders the shared `events.jsonl` timeline,
 workflow state, heartbeat, trace summary, and pending ask_user prompt.
@@ -267,7 +267,7 @@ def _runtime_status_lines(
     last_agent = agent_events[-1] if agent_events else None
     lines: list[str] = []
     if is_running:
-        lines.append(style("Input disabled: AutoMind is running.", YELLOW, bold=True))
+        lines.append(style("Input disabled: CodeAutonomy is running.", YELLOW, bold=True))
         lines.append(f"{style('Running:', MAGENTA, bold=True)} status={status} owner={owner} runtime next={next_action}")
         lines.append(f"{style('Phase next:', MAGENTA, bold=True)} {phase_next} / {phase_action}")
         lines.append(f"{style('Effective next:', MAGENTA, bold=True)} {effective_text}")
@@ -280,7 +280,7 @@ def _runtime_status_lines(
             lines.append(f"{style('Last agent event:', MAGENTA, bold=True)} {_event_brief(last_agent)}")
         lines.append("If this stays quiet for several minutes, use Ctrl+C to pause, then `automind status <task>` / `automind resume <task> <agent>`.")
     else:
-        lines.append(style("Input disabled: no pending question. AutoMind is ready to continue/resume.", GRAY))
+        lines.append(style("Input disabled: no pending question. CodeAutonomy is ready to continue/resume.", GRAY))
         lines.append(f"{style('Phase next:', MAGENTA, bold=True)} {phase_next} / {phase_action}")
         lines.append(f"{style('Effective next:', MAGENTA, bold=True)} {effective_text}")
     return lines
@@ -348,7 +348,7 @@ def render_tui_snapshot(task_code: str, task_dir: Path, *, limit: int = 80, show
             lines.append(f"{prefix} {style('Recorded answer:', YELLOW, bold=True)} {pending_answer.get('selectedOption') or pending_answer.get('answerText') or '-'}")
         elif state.get("status") == "human_input_pending" and owner in {"human", ""}:
             prefix = style(_now_prefix(), GRAY)
-            lines.append(f"{prefix} {style('Input enabled: AutoMind needs user input.', YELLOW, bold=True)}")
+            lines.append(f"{prefix} {style('Input enabled: CodeAutonomy needs user input.', YELLOW, bold=True)}")
             lines.append(f"{prefix} {style('Question:', YELLOW, bold=True)} {pending.get('question')}")
         else:
             prefix = style(_now_prefix(), GRAY)
@@ -365,7 +365,7 @@ def render_tui_snapshot(task_code: str, task_dir: Path, *, limit: int = 80, show
         elif state.get("status") == "human_input_pending" and str(state.get("currentOwner") or "") in {"human", ""}:
             lines.append("Answer in TUI with option number/id or free text. CLI: automind answer <task> --text '...' or --option <id|number>")
         else:
-            lines.append("Answer will be enabled after the current agent turn finishes. Do not answer yet; AutoMind will return to the prompt at the next safe boundary.")
+            lines.append("Answer will be enabled after the current agent turn finishes. Do not answer yet; CodeAutonomy will return to the prompt at the next safe boundary.")
     else:
         lines.extend(_runtime_status_lines(state=state, instruction=instruction, heartbeat=heartbeat, raw_events=raw_events))
     lines.append(style("─" * 56, GRAY))
@@ -396,7 +396,7 @@ def run_tui(task_code: str, task_dir: Path, *, watch: bool = False, interactive:
             time.sleep(interval)
     except KeyboardInterrupt:
         append_event(task_dir, "tui_closed", f"TUI closed for {task_code}", replace_key="tui:opened")
-        print("\nAutoMind TUI closed.")
+        print("\nCodeAutonomy TUI closed.")
 
 
 def run_tui_interactive(task_code: str, task_dir: Path) -> None:
@@ -430,7 +430,7 @@ def run_tui_interactive(task_code: str, task_dir: Path) -> None:
             argv = ["message", task_code, "--text", raw, "--resume", "auto"]
         proc = subprocess.run([sys.executable, str(_main_py()), *argv])
         if proc.returncode != 0:
-            print(f"[AutoMind TUI] command exited with code {proc.returncode}", file=sys.stderr)
+            print(f"[CodeAutonomy TUI] command exited with code {proc.returncode}", file=sys.stderr)
         print(render_tui_snapshot(task_code, task_dir, show_logo=False))
 
 
@@ -449,7 +449,7 @@ def prompt_for_pending_answer(task_code: str, task_dir: Path) -> dict[str, Any] 
     # the minimum guarantee the user reported missing in the iOS task.
     print()
     print(style("─" * 56, GRAY))
-    print(style("AutoMind needs your input", YELLOW, bold=True))
+    print(style("CodeAutonomy needs your input", YELLOW, bold=True))
     category = str(pending.get("category") or "").strip()
     if category:
         print(f"{style('Category:', YELLOW, bold=True)} {category}")
@@ -528,7 +528,7 @@ def prompt_for_pending_answer(task_code: str, task_dir: Path) -> dict[str, Any] 
             GRAY,
         ))
     print(style("─" * 56, GRAY))
-    raw = tui_input("\nAutoMind answer > ").strip()
+    raw = tui_input("\nCodeAutonomy answer > ").strip()
     selected = resolve_selected_option(task_dir, raw)
     answer = apply_user_answer(task_dir, answer_text=raw, selected_option=selected)
     print(f"Recorded answer: {answer.get('id')}")

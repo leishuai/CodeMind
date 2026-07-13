@@ -1,6 +1,6 @@
 # Dependency and Preflight Checklist
 
-This reference describes how AutoMind should check dependencies before validation. It is intentionally generic and should not contain machine-specific one-off results.
+This reference describes how CodeAutonomy should check dependencies before validation. It is intentionally generic and should not contain machine-specific one-off results.
 
 Use it with:
 
@@ -16,13 +16,13 @@ Do not classify missing tools, unavailable devices, signing problems, or permiss
 
 Separate dependency handling into three layers:
 
-1. **AutoMind helper dependencies** — AutoMind-owned Python helper packages for
+1. **CodeAutonomy helper dependencies** — CodeAutonomy-owned Python helper packages for
    Android/iOS/visual verification. These may be installed automatically into
    project-local `.venv-android-tools`, `.venv-ios-tools`, or
    `.venv-visual-tools` when required by the selected verifier.
 2. **Target project dependencies** — web/client/server dependencies owned by the
    user's project. Use project-native package managers, lockfiles, and scripts;
-   do not install arbitrary packages or rewrite lockfiles as an AutoMind helper
+   do not install arbitrary packages or rewrite lockfiles as a CodeAutonomy helper
    action.
 3. **System/high-impact dependencies** — Xcode, Android SDK, Node, Docker,
    database services, browser drivers, signing/certificates, device trust,
@@ -165,8 +165,8 @@ Client includes mobile, desktop, browser UI, and packaged app projects.
 Use project-native dependency/setup commands:
 
 - Android: Gradle wrapper (`./gradlew assembleDebug`, tests) plus
-  AutoMind Android helper venv only for UI/device probing.
-- iOS: Xcode/SPM/CocoaPods/Bundler commands plus AutoMind iOS helper venv only
+  CodeAutonomy Android helper venv only for UI/device probing.
+- iOS: Xcode/SPM/CocoaPods/Bundler commands plus CodeAutonomy iOS helper venv only
   for screenshot/app-smoke helpers.
 - Web UI: JS lockfile install, dev/test server, browser/E2E runner.
 - Desktop/Electron/Tauri/React Native/Flutter: project-native package manager
@@ -196,17 +196,17 @@ command -v xcodebuildmcp || true
 command -v ios || true
 ```
 
-Optional AutoMind screenshot helper setup, also auto-run by screenshot/app-smoke evaluators when required:
+Optional CodeAutonomy screenshot helper setup, also auto-run by screenshot/app-smoke evaluators when required:
 
 ```bash
 automind setup-automation-tools ios
 ```
 
-This installs packages from the AutoMind runtime `requirements/ios-tools.txt` into the target workspace `.venv-ios-tools` only. It does not install Xcode, change signing material, trust devices, or start `tunneld`/sudo services.
+This installs packages from the CodeAutonomy runtime `requirements/ios-tools.txt` into the target workspace `.venv-ios-tools` only. It does not install Xcode, change signing material, trust devices, or start `tunneld`/sudo services.
 
 ## Visual fallback helpers
 
-When no vision-capable model is available, AutoMind can still run deterministic
+When no vision-capable model is available, CodeAutonomy can still run deterministic
 image checks for screenshot readability, dimensions, crop inspection, perceptual
 hash, and baseline comparison:
 
@@ -281,7 +281,7 @@ Recommended Python toolchain:
 automind setup-automation-tools android
 ```
 
-Android preflight/evaluator may run it automatically when required helper packages are missing; users can also run it up front. It installs packages from the AutoMind runtime `requirements/android-tools.txt` into the target workspace `.venv-android-tools` only; it does not install Android Studio, Android SDK/platform-tools, `adb`, or change device settings.
+Android preflight/evaluator may run it automatically when required helper packages are missing; users can also run it up front. It installs packages from the CodeAutonomy runtime `requirements/android-tools.txt` into the target workspace `.venv-android-tools` only; it does not install Android Studio, Android SDK/platform-tools, `adb`, or change device settings.
 
 ### Device readiness
 

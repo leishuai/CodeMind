@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Export/install AutoMind slash-command entrypoints for coding agents.
+"""Export/install CodeAutonomy slash-command entrypoints for coding agents.
 
 This complements script / CLI / skill distribution with a command-style entry:
-users can type `/automind ...` in tools that support slash commands. The
-command is intentionally a current-session natural-language protocol entrypoint
-by default, not a shell alias for `automind ask ... <agent>`.
+users can type `/codeautonomy ...` in tools that support slash commands.
+`/automind` remains available as a compatibility alias when the installer
+generates it explicitly. The command is intentionally a current-session
+natural-language protocol entrypoint, not a shell alias for a detached task.
 """
 from __future__ import annotations
 
@@ -19,18 +20,18 @@ from agent_targets import command_targets as resolve_command_targets, display_pa
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 
-def command_body(command_name: str = "automind") -> str:
+def command_body(command_name: str = "codeautonomy") -> str:
     slash = f"/{command_name}"
     return f"""---
-description: "AutoMind evidence-driven harness loop command. Defaults to high automation: keep looping implement -> verify -> repair without pausing, unless a real sensitive/destructive decision or a hard gate needs the user. Use for testable requirements, current-session Generator work, isolated Evaluator evidence, and structured loop decisions."
+description: "CodeAutonomy evidence-driven harness loop command. Defaults to high automation: keep looping implement -> verify -> repair without pausing, unless a real sensitive/destructive decision or a hard gate needs the user. Use for testable requirements, current-session Generator work, isolated Evaluator evidence, and structured loop decisions."
 argument-hint: [ask|resume|status|summary|verify|detached|cli-ask|update|help] [task or request]
 ---
 
-# {slash} - AutoMind Command
+# {slash} - CodeAutonomy Command
 
-You are executing the AutoMind command entrypoint.
+You are executing the CodeAutonomy command entrypoint.
 
-AutoMind turns coding work into an evidence-driven harness loop:
+CodeAutonomy turns coding work into an evidence-driven harness loop:
 
 ```text
 Intent / Require / TestCases
@@ -78,13 +79,13 @@ If the host does not support `$ARGUMENTS`, infer the request from the user's mes
 ## Update intent
 
 If the user invokes `{slash} update` or asks to update, upgrade, refresh,
-reinstall, or sync AutoMind itself, run:
+reinstall, or sync CodeAutonomy itself, run:
 
 ```bash
 <AUTOMIND_CLI> update
 ```
 
-This is a maintenance command for AutoMind itself: it updates the AutoMind
+This is a maintenance command for CodeAutonomy itself: it updates the CodeAutonomy
 runtime, CLI wrapper, skill package, and `{slash}` slash-command integrations.
 Do not scaffold a task, do not create `.automind/tasks/<task>/`, and do not
 enter the harness loop for update-only intent. If `<AUTOMIND_CLI> update` is
@@ -99,7 +100,7 @@ one-line installer from `docs/references/installation-runtime.md`.
 - Evaluator must be context-isolated from Generator.
 - Evaluator context must be complete, audited, and non-redundant: include requirements, test cases, acceptance criteria, delivery artifacts, environment/device constraints, and prior validation state; exclude Generator reasoning/code-authoring process/raw transcripts.
 - Evaluator must have full independent verification capability: run Android/iOS preflight, probe-flow, XCUITest, script-command, tests, logs, screenshots, UI hierarchy, `ui-evidence-check`, or other deterministic checks when available.
-- For App/UI work, AutoMind verification is action-capable when platform runners are available: Android probe-flow can tap/click/input/swipe/assert; iOS XCUITest/probe-flow/action-plan can run or materialize tap/input/scroll/assert flows; iOS `pymobiledevice3 AccessibilityAudit` may be used as a low-risk exploration fallback to inspect the live accessibility tree and try reversible presses when XCUITest selectors/runner setup are not ready; Web probe-flow can record Client UI action evidence and delegate to project-native E2E commands. Safe close/skip/later/dismiss overlays may be auto-unblocked with evidence. Privacy/terms Agree/Allow/Continue, reject/deny, login/account grants, payment, delete/reset/uninstall, external upload, signing/device trust, or ambiguous/irreversible consent require explicit authorization or `ask_user`. Do not claim AutoMind cannot operate the app; encode reviewable actions and evidence, or route to ask_user/replan for missing runners/devices/selectors/authorization.
+- For App/UI work, CodeAutonomy verification is action-capable when platform runners are available: Android probe-flow can tap/click/input/swipe/assert; iOS XCUITest/probe-flow/action-plan can run or materialize tap/input/scroll/assert flows; iOS `pymobiledevice3 AccessibilityAudit` may be used as a low-risk exploration fallback to inspect the live accessibility tree and try reversible presses when XCUITest selectors/runner setup are not ready; Web probe-flow can record Client UI action evidence and delegate to project-native E2E commands. Safe close/skip/later/dismiss overlays may be auto-unblocked with evidence. Privacy/terms Agree/Allow/Continue, reject/deny, login/account grants, payment, delete/reset/uninstall, external upload, signing/device trust, or ambiguous/irreversible consent require explicit authorization or `ask_user`. Do not claim CodeAutonomy cannot operate the app; encode reviewable actions and evidence, or route to ask_user/replan for missing runners/devices/selectors/authorization.
 - Generator owns product/runtime-code implementation and repair. Evaluator owns
   verification, failure classification, evidence, `Validation.md`, and
   `evaluation.json`; it routes product failures to `retry_generator` rather
@@ -109,9 +110,9 @@ one-line installer from `docs/references/installation-runtime.md`.
   `failureClass`, `observedSignals`, optional `shouldRetry`, and `retryAdvice`
   into `evaluation.json.testResults[]` or `failedChecks[]`; use `unknown` when
   evidence is ambiguous rather than inventing project-specific classes.
-- If verification is blocked by unrelated build/test/workspace issues, AutoMind may create minimal reversible verification unblock changes only after checkpointing or recording a diff. Record them in `Delivery.md`/`Validation.md` and `evaluation.json.verificationUnblockChanges`, then restore or explicitly promote them before finish. Active temporary unblock changes block completion.
+- If verification is blocked by unrelated build/test/workspace issues, CodeAutonomy may create minimal reversible verification unblock changes only after checkpointing or recording a diff. Record them in `Delivery.md`/`Validation.md` and `evaluation.json.verificationUnblockChanges`, then restore or explicitly promote them before finish. Active temporary unblock changes block completion.
 - Required or strongly recommended verification actions default to automatic execution: build/compile/install/test/runtime smoke/project-native verifiers should run when needed for required TC/AC/evidence closure. Do not ask the user merely because the step is long-running or expensive; ask only for real sensitive/destructive/external decisions such as delete/uninstall/reset, account/login, external upload, payment, sudo/system configuration, keychain/signing material/device trust changes, production impact, or runtime/static downgrade.
-- Do not claim completion without `evaluation.json`, executed evidence, and required `TC-*`/`AC-xxx` coverage. Run `completion-check` when the AutoMind CLI is available; command mode runs it automatically before accepting `finish`. Environment/device/tool blocker classification is routing information, not a passed required testcase. Required App/UI/runtime cases need hard product-launch/action/assertion evidence plus positive `evidenceAssessment`; required clean-build/release/merge cases need attached build evidence plus positive `evidenceAssessment`, not blocker classification.
+- Do not claim completion without `evaluation.json`, executed evidence, and required `TC-*`/`AC-xxx` coverage. Run `completion-check` when the CodeAutonomy CLI is available; command mode runs it automatically before accepting `finish`. Environment/device/tool blocker classification is routing information, not a passed required testcase. Required App/UI/runtime cases need hard product-launch/action/assertion evidence plus positive `evidenceAssessment`; required clean-build/release/merge cases need attached build evidence plus positive `evidenceAssessment`, not blocker classification.
 - Crash/timeout quality failures require stack/page context before they are hard product failures. Record crash stack/backtrace, process/bundle, occurred page/screen/scene, reproduction path, and stability. Stable product-attributable crashes/timeouts should route to Generator self-repair; verifier timeouts, raw network/syslog timeouts, historical crash text, and control-plane/log-digest text should not fail completion by keyword alone.
 - For App/UI/runtime TC pass claims, capture or link screenshot/visual evidence for the executed TC or distinct page/state by default. Screenshots are not sufficient proof alone; pair them with logs/state/assertions/hardMetrics. If no screenshot is possible, record `noScreenshotReason` and attach `.xcresult`, UI hierarchy/accessibility, trace, or runner summary instead.
 - Do not edit product/runtime code while `workflow-check` has hard issues.
@@ -123,17 +124,17 @@ one-line installer from `docs/references/installation-runtime.md`.
 
 ## Session boundary
 
-`<AUTOMIND_CLI> ask "<request>" <codex|claude|trae|trae-cn>` starts a separate AutoMind-owned end-to-end loop through the adapter. For Codex/Claude/Trae/Trae-CN detached mode, Planner/Generator may reuse one task-local primary CLI session; Evaluator remains a fresh isolated invocation. It does **not** reuse the current slash-command conversation/session in Codex, Claude, Trae, or Trae-CN.
+`<AUTOMIND_CLI> ask "<request>" <codex|claude|trae|trae-cn>` starts a separate CodeAutonomy-owned end-to-end loop through the adapter. For Codex/Claude/Trae/Trae-CN detached mode, Planner/Generator may reuse one task-local primary CLI session; Evaluator remains a fresh isolated invocation. It does **not** reuse the current slash-command conversation/session in Codex, Claude, Trae, or Trae-CN.
 
 Therefore, inside this slash command:
 
-- `/automind <request>` is the canonical current-session form and means: use AutoMind in the current session to drive the task end-to-end until completion, `ask_user`, blocked environment/permission, max-iteration guard, or an explicitly requested single-stage stop. `/automind ask <request>` is kept as an alias for `/automind <request>` and behaves identically in the current session.
-- Treat the command as structured natural language: "use the AutoMind skill/protocol in this conversation, call AutoMind CLI helpers/gates as needed, and keep looping through Evaluator verify -> Generator repair -> Evaluator re-verify until the required evidence passes, `ask_user` needs a human decision, or an explicit unsafe/non-recoverable stop condition is reached." The host agent is the loop driver: after each helper/check/evaluator result, run `<AUTOMIND_CLI> phase-gate <task-code> auto` when available. That gate refreshes/reads `automind-workflow-state.json` first; when handing off into `delivery` or `evaluation`, it also deterministically refreshes missing/stale `phase-reuse/generator.md` or `phase-reuse/evaluator.md` without resetting fresh acknowledged reuse. It then uses local signals such as `evaluation.json.nextAction`, `completion-report.json`, runtime-state fields, and migration `stateSummary` only as resolver inputs before taking the next safe step.
-- `/automind --detached <request>` (or the equivalent `<AUTOMIND_CLI> ask "<request>" <agent>`) is the detached-CLI variant; use it only when the user explicitly asks for background/detached execution.
+- `{slash} <request>` is the canonical current-session form and means: use CodeAutonomy in the current session to drive the task end-to-end until completion, `ask_user`, blocked environment/permission, max-iteration guard, or an explicitly requested single-stage stop. `{slash} ask <request>` is kept as an alias for `{slash} <request>` and behaves identically in the current session.
+- Treat the command as structured natural language: "use the CodeAutonomy skill/protocol in this conversation, call CodeAutonomy CLI helpers/gates as needed, and keep looping through Evaluator verify -> Generator repair -> Evaluator re-verify until the required evidence passes, `ask_user` needs a human decision, or an explicit unsafe/non-recoverable stop condition is reached." The host agent is the loop driver: after each helper/check/evaluator result, run `<AUTOMIND_CLI> phase-gate <task-code> auto` when available. That gate refreshes/reads `automind-workflow-state.json` first; when handing off into `delivery` or `evaluation`, it also deterministically refreshes missing/stale `phase-reuse/generator.md` or `phase-reuse/evaluator.md` without resetting fresh acknowledged reuse. It then uses local signals such as `evaluation.json.nextAction`, `completion-report.json`, runtime-state fields, and migration `stateSummary` only as resolver inputs before taking the next safe step.
+- `{slash} --detached <request>` (or the equivalent `<AUTOMIND_CLI> ask "<request>" <agent>`) is the detached-CLI variant; use it only when the user explicitly asks for background/detached execution.
 
 ## Result exchange contract
 
-Current-session work, native isolated subagents, deterministic verifiers, and detached CLI processes communicate through AutoMind task artifacts, not hidden chat memory:
+Current-session work, native isolated subagents, deterministic verifiers, and detached CLI processes communicate through CodeAutonomy task artifacts, not hidden chat memory:
 
 ```text
 .automind/tasks/<task>/
@@ -150,14 +151,14 @@ Current-session work, native isolated subagents, deterministic verifiers, and de
 
 Use `automind-workflow-state.json` as the workflow control source of truth, with `evaluation.json`, `runtime-state.json`, migration `stateSummary`, and evidence files as local signals when resuming or integrating detached/subagent results. In skill/command mode, prefer `<AUTOMIND_CLI> phase-gate <task-code> auto` as the script gate for every phase handoff.
 
-Workspace rule: runtime and workspace are separate. The AutoMind runtime may be installed under `~/.automind/automind` by default, `$AUTOMIND_HOME`, or another checkout, but task artifacts must belong to the target project. Run `<AUTOMIND_CLI>` from the target project/workspace root. If the shell is not in that root, set `AUTOMIND_WORKSPACE_ROOT=/path/to/project` on every AutoMind command. Do not scaffold tasks from inside the AutoMind installation checkout unless that checkout itself is the project being worked on. Do not copy developer-machine absolute paths from old logs; resolve resources through the current runtime/workspace or task `logs/iter-N/env.json`.
+Workspace rule: runtime and workspace are separate. The CodeAutonomy runtime may be installed under `~/.automind/automind` by default, `$AUTOMIND_HOME`, or another checkout, but task artifacts must belong to the target project. Run `<AUTOMIND_CLI>` from the target project/workspace root. If the shell is not in that root, set `AUTOMIND_WORKSPACE_ROOT=/path/to/project` on every CodeAutonomy command. Do not scaffold tasks from inside the CodeAutonomy installation checkout unless that checkout itself is the project being worked on. Do not copy developer-machine absolute paths from old logs; resolve resources through the current runtime/workspace or task `logs/iter-N/env.json`.
 
-## Find the AutoMind CLI for helper/gate commands
+## Find the CodeAutonomy CLI for helper/gate commands
 
-Find the AutoMind CLI in this order, while keeping the shell cwd at the target project root:
+Find the CodeAutonomy CLI in this order, while keeping the shell cwd at the target project root:
 
-1. `automind` on `PATH`, if the user installed the wrapper.
-2. Current project checkout/vendor path: `./automind.sh` only when the target project contains AutoMind.
+1. `codeautonomy` on `PATH`, then `automind` as a compatibility fallback.
+2. Current project checkout/vendor path: `./automind.sh` only when the target project contains CodeAutonomy.
 3. Default install path: `$HOME/.automind/automind/automind.sh`.
 4. Environment override: `$AUTOMIND_HOME/automind.sh`.
 
@@ -192,12 +193,12 @@ Do not use `<AUTOMIND_CLI> ask ... <agent>` or `<AUTOMIND_CLI> resume ... <agent
 
 ## Default current-session end-to-end flow
 
-For `/automind <request>` and `/automind ask <request>`:
+For `{slash} <request>` and `{slash} ask <request>`:
 
 Use this as the required state check before each major action; in skill/command mode copy `checklist[]` / `checkboxMarkdown[]` from `phase-gate` into the native TODO/checkbox plan, complete required items with the host agent's normal read/edit/test/write abilities; run a CLI command only when that item explicitly provides one. Treat `phaseReuseRefresh` as evidence that the key generator/evaluator reuse file was refreshed or already fresh. Then rerun `phase-gate` when the CLI is available:
 
 ```text
-AutoMind State Check
+CodeAutonomy State Check
 - stage: Prepare | Plan | Build | Verify | Finish
 - last gate: pass | fail | not_run
 - missing artifact: ...
@@ -214,8 +215,8 @@ AutoMind State Check
 
    If the current shell cannot stay in the project root, run `AUTOMIND_WORKSPACE_ROOT=/path/to/project <AUTOMIND_CLI> scaffold "<user request>"`.
 
-   Capture `TASK_CODE` / `TASK_DIR` from stdout and verify `TASK_DIR` is under the target project. If it points under the AutoMind runtime checkout, stop and rerun with the correct cwd or `AUTOMIND_WORKSPACE_ROOT`.
-4. Execute the AutoMind mandatory startup read protocol. This is not optional reference reading. Before planning, coding, or validating, read and apply:
+   Capture `TASK_CODE` / `TASK_DIR` from stdout and verify `TASK_DIR` is under the target project. If it points under the CodeAutonomy runtime checkout, stop and rerun with the correct cwd or `AUTOMIND_WORKSPACE_ROOT`.
+4. Execute the CodeAutonomy mandatory startup read protocol. This is not optional reference reading. Before planning, coding, or validating, read and apply:
    - `SKILL.md`
    - `docs/workflow.md`
    - `docs/phase2-requirement.md`
@@ -262,15 +263,15 @@ AutoMind State Check
    ```
 
    If it fails, loop back through diagnosis, repair, and verification.
-14. Run `summary <task-code>` / `record-check <task-code>` / `report <task-code>` when the task is terminal or ready for reuse. Consume `completion-report.json`, `VerificationLedger.json`, `run-card.json`, and `Report.html` when present before claiming final handoff. `Report.html` should use `<task> Automind Report`, show Test Results with per-TC evidence/screenshots/logs, and summarize Summary / Knowledge Deposition.
+14. Run `summary <task-code>` / `record-check <task-code>` / `report <task-code>` when the task is terminal or ready for reuse. Consume `completion-report.json`, `VerificationLedger.json`, `run-card.json`, and `Report.html` when present before claiming final handoff. `Report.html` should use `<task> CodeAutonomy Report`, show Test Results with per-TC evidence/screenshots/logs, and summarize Summary / Knowledge Deposition.
 
-Default `/automind` should not stop after scaffolding or one verification round. Continue the harness loop until `completion-check` passes, the task needs human confirmation (`ask_user`), a human/system environment/tool/permission decision is required, the max-iteration guard asks for direction, or the user explicitly requested only one phase such as `verify`.
+Default `{slash}` should not stop after scaffolding or one verification round. Continue the harness loop until `completion-check` passes, the task needs human confirmation (`ask_user`), a human/system environment/tool/permission decision is required, the max-iteration guard asks for direction, or the user explicitly requested only one phase such as `verify`.
 
 If build/test/device/tool verification is blocked, keep trying through Generator repair, safe reversible verification-unblock, safe overlay auto-unblock, or replan when plausible. Use `ask_user` for human/system decisions such as device trust/unlock/Developer Mode, signing material, credentials, privileged services, reject/deny, login/account grants, payment, delete/reset/uninstall, external upload, signing/device trust, ambiguous/irreversible consent, or real-device vs simulator/emulator target. Do not convert `environment_blocked`, `mobile_device_unavailable`, `permission_blocked`, or `tool_missing` into a pass for required `TC-*`.
 
-If command helpers are not available, use the installed AutoMind skill/docs as the protocol:
+If command helpers are not available, use the installed CodeAutonomy skill/docs as the protocol:
 
-1. Read `SKILL.md` if present, otherwise locate the AutoMind skill package.
+1. Read `SKILL.md` if present, otherwise locate the CodeAutonomy skill package.
 2. Execute the same mandatory startup read protocol: `docs/workflow.md`, `docs/phase2-requirement.md`, `docs/phases/demand-definition.md`, `docs/phases/verification-execution-planning.md`, `templates/phase2_planner_prompt.md`, `docs/phase3-verification.md`, `templates/evaluator_prompt.md`, `docs/references/command-script-catalog.md`, and platform/adapter docs as applicable. Use `docs/references/test-design-guide.md` when concrete TestCases/runbooks need examples.
 3. Create/update `.automind/tasks/<task>/` artifacts manually following the workflow.
 4. For Generator, write/update `Delivery.md`.
@@ -293,15 +294,15 @@ This mode is useful for background loops and demos. Codex/Claude/Trae Planner/Ge
 
 Interpret the first argument as a soft subcommand:
 
-- `ask <request>`: current-session AutoMind flow. Equivalent to omitting `ask`.
+- `ask <request>`: current-session CodeAutonomy flow. Equivalent to omitting `ask`.
 - `<request>` with no subcommand: same as `ask <request>`.
-- `resume <task-code>`: inspect an existing AutoMind task and continue in the current session when possible; do not call detached CLI resume unless requested.
+- `resume <task-code>`: inspect an existing CodeAutonomy task and continue in the current session when possible; do not call detached CLI resume unless requested.
 - `status <task-code>`: inspect task status and follow its "Next recommended action" / suggested commands to keep the current-session loop moving.
 - `summary <task-code>`: generate or inspect task summary.
 - `verify <task-code>`: run/describe evaluator-only verification for the task.
-- `detached ask <request>` / `cli-ask <request>`: start AutoMind-owned detached CLI loop through the selected agent adapter.
-- `detached resume <task-code>` / `cli-resume <task-code>`: resume AutoMind-owned detached CLI loop through the selected agent adapter.
-- `help`: explain AutoMind usage in this repository.
+- `detached ask <request>` / `cli-ask <request>`: start CodeAutonomy-owned detached CLI loop through the selected agent adapter.
+- `detached resume <task-code>` / `cli-resume <task-code>`: resume CodeAutonomy-owned detached CLI loop through the selected agent adapter.
+- `help`: explain CodeAutonomy usage in this repository.
 
 If no subcommand is obvious, treat the whole input as `ask <request>`.
 """
@@ -316,7 +317,7 @@ def write_command_package(out_dir: pathlib.Path, command_name: str) -> list[str]
     files.append(str(command_path.relative_to(out_dir)))
 
     readme = out_dir / "README.md"
-    readme.write_text(f"""# AutoMind Command Export
+    readme.write_text(f"""# CodeAutonomy Command Export
 
 Generated at: {datetime.now().isoformat(timespec='seconds')}
 
@@ -326,7 +327,7 @@ This package provides a slash-command style entrypoint for coding agents that su
 
 - `/{command_name}` -> `commands/{command_name}.md`
 
-The command defaults to current-session AutoMind mode: it uses the host agent session as Planner/Generator and uses the AutoMind CLI for deterministic scaffolding and gates such as `scaffold`, `workflow-check`, `context-pack`, `completion-check`, and `summary`. Detached CLI loops are available only when the user explicitly asks for `detached` / `cli-ask` mode.
+The command defaults to current-session CodeAutonomy mode: it uses the host agent session as Planner/Generator and uses the CodeAutonomy CLI for deterministic scaffolding and gates such as `scaffold`, `workflow-check`, `context-pack`, `completion-check`, and `summary`. Detached CLI loops are available only when the user explicitly asks for `detached` / `cli-ask` mode.
 
 ## Install examples
 
@@ -375,10 +376,10 @@ def write_json(path: pathlib.Path, data: dict) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("out_dir", nargs="?", default=str(ROOT / "dist" / "automind-command"))
+    parser.add_argument("out_dir", nargs="?", default=str(ROOT / "dist" / "codeautonomy-command"))
     parser.add_argument("--clean", action="store_true", default=True, help="Remove existing output directory first (default true)")
     parser.add_argument("--install", choices=["none", "all", "auto", "claude", "codex", "trae", "trae-cn"], default="none", help="Optionally install to user-level slash-command folders. all=claude+codex+trae+trae-cn. Default: none.")
-    parser.add_argument("--command-name", default="automind", help="Slash command name without leading slash. Default: automind")
+    parser.add_argument("--command-name", default="codeautonomy", help="Slash command name without leading slash. Default: codeautonomy")
     args = parser.parse_args()
 
     command_name = args.command_name.strip().lstrip("/")

@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://automind.local/schemas/probe-flow.schema.json",
-  "title": "AutoMind Probe Flow",
+  "title": "CodeAutonomy Probe Flow",
   "description": "Dynamic validation flow generated from Require/TestCases acceptance criteria and executed by platform-specific probe runners.",
   "type": "object",
   "additionalProperties": false,

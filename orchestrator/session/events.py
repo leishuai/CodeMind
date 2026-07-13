@@ -1,4 +1,4 @@
-"""Durable event timeline for AutoMind sessions.
+"""Durable event timeline for CodeAutonomy sessions.
 
 The event stream is shared by CLI TUI and skill mode. Events are append-only in
 `events.jsonl`. Renderers keep chronological order by default; only heartbeat

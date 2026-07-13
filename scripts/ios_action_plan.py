@@ -2,7 +2,7 @@
 """Validate and materialize iOS UI action plans.
 
 This helper validates a declarative UI action plan and converts it into a
-reviewable XCUITest Swift draft. AutoMind can execute real iOS app UI actions
+reviewable XCUITest Swift draft. CodeAutonomy can execute real iOS app UI actions
 when that draft is added to or used by a project/external XCUITest runner and
 run with `ios-xcuitest`; this helper itself is the materialization/validation
 step and does not mutate the target app project.

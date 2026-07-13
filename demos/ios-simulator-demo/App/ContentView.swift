@@ -8,7 +8,7 @@ struct ContentView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                Text("AutoMind iOS Harness Demo")
+                Text("CodeAutonomy iOS Harness Demo")
                     .font(.title)
                     .bold()
                     .accessibilityIdentifier("demo_title")

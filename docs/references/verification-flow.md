@@ -1,6 +1,6 @@
 # Validation Flow Reference
 
-This document is the **cross-platform** validation command reference for AutoMind
+This document is the **cross-platform** validation command reference for CodeAutonomy
 (generic script/project validation, visual/image, external-sink, the
 verification-unblock policy, probe-flow, evidence, `Validation.md`/`evaluation.json`,
 retry semantics, and the agent execution/command guards). Platform-specific
@@ -19,7 +19,7 @@ Use it together with:
 - [`app-use-verification.md`](app-use-verification.md) for real app/browser operation, source UI maps, action ladders, and structured success/failure explanations;
 - [`command-script-catalog.md`](command-script-catalog.md) for the canonical command-to-script map.
 
-AutoMind should classify environment/device/tool blockers separately from product-code failures. Evidence beats guesses.
+CodeAutonomy should classify environment/device/tool blockers separately from product-code failures. Evidence beats guesses.
 
 ---
 
@@ -63,14 +63,14 @@ selected/approved.
    target or verification hook after no-edit runners fail, then restore/promote
    via `verificationUnblockChanges[]`.
 5. **Direct-route/page-load after normal UI automation is exhausted.** It is
-   lower fidelity than the UI-runner ladder, but still an AutoMind-controlled
+   lower fidelity than the UI-runner ladder, but still a CodeAutonomy-controlled
    automation path.
 6. **Simulator/emulator/browser-equivalent automation only when allowed** for a
    real-device testcase. Automation is still preferred, but the modality downgrade
    must be explicit when runtime proof required a physical device.
 7. **Human-assisted evidence capture after automated paths.** The user may
    perform one narrow physical action only when automation is unavailable,
-   inappropriate, or unsafe; AutoMind must still collect machine-checkable
+   inappropriate, or unsafe; CodeAutonomy must still collect machine-checkable
    post-condition evidence.
 8. **Ask for reduced-scope downgrade last** when no usable evidence path remains:
    dry-run, static proof, compile/build-only proof, or another scoped fallback.
@@ -334,11 +334,11 @@ these extra constraints:
 This applies only after the UI-runner ladder, reversible automation-preserving
 project edits, direct-route/page-load fallback, and any explicitly allowed
 simulator/emulator automation have been considered. It is lower priority than
-those paths because they remain AutoMind-controlled automation, while this mode
+those paths because they remain CodeAutonomy-controlled automation, while this mode
 asks the user to perform one physical action on the device.
 
 Use it when the remaining blocker is genuinely human-owned or device-local, and
-AutoMind can still collect machine evidence around the user's action. Examples:
+CodeAutonomy can still collect machine evidence around the user's action. Examples:
 the user taps a sensitive authorization/login/permission control, performs a
 physical-device-only gesture, or clears a system prompt that automation must not
 click directly.
@@ -349,7 +349,7 @@ Constraints:
   skip, navigate, close a safe dialog) while a real UI runner is available.
 - Ask for one narrow action with an explicit time window and reason; record the
   request as `ask_user`, not as an automatic pass.
-- AutoMind must collect before/during/after evidence where available: screenshot
+- CodeAutonomy must collect before/during/after evidence where available: screenshot
   or screen recording, device/runtime logs, console/syslog markers, DB/API/event
   cache diffs, external sink events, and post-action UI assertions.
 - The user's manual action alone is not proof. A pass still needs
@@ -427,7 +427,7 @@ Semantics: all `required` conditions must match, at least `minAnyOf` `anyOf` con
 
 ### UI action trace and critical-action screenshots
 
-Android and iOS are both client UI targets and should share the same evidence contract at the AutoMind layer: action trace, Client UI action evidence, screenshot/accessibility/hierarchy references, and compact `Validation.md` `Client UI action evidence` reporting. Platform-specific details stay inside each runner/adapter; web can reuse the same contract with simpler DOM/screenshot evidence. For app-use path exploration, source UI maps, launch/action ladders, `softFailure`, `ruledOut`, `remainingHypotheses`, and structured pass/fail explanations, follow [`app-use-verification.md`](app-use-verification.md).
+Android and iOS are both client UI targets and should share the same evidence contract at the CodeAutonomy layer: action trace, Client UI action evidence, screenshot/accessibility/hierarchy references, and compact `Validation.md` `Client UI action evidence` reporting. Platform-specific details stay inside each runner/adapter; web can reuse the same contract with simpler DOM/screenshot evidence. For app-use path exploration, source UI maps, launch/action ladders, `softFailure`, `ruledOut`, `remainingHypotheses`, and structured pass/fail explanations, follow [`app-use-verification.md`](app-use-verification.md).
 
 For Android probe-flow, critical UI actions (`launch`, `tap`, `tap_if_present`, `input`, `swipe`, `keyevent`, or any step with `critical: true`) should produce auditable action evidence:
 
@@ -504,7 +504,7 @@ flow docs point back here.
 **Screenshots are strongly recommended whenever they can be captured**, even
 though they are Tier-2. Capture before/after screenshots for key UI actions and
 attach them, and **surface them in `report.html`** so the user can visually see
-that AutoMind actually ran the verification — this makes the run clearer and more
+that CodeAutonomy actually ran the verification — this makes the run clearer and more
 trustworthy. Screenshots supplement, never replace, Tier-1 hard evidence.
 
 ---
@@ -570,26 +570,26 @@ Android and iOS should share the same high-level UI automation contract: intent/
 
 ## Temporary verification logs in target projects
 
-When AutoMind needs to add temporary logs to the target iOS/Android/Web/Server project to prove a testcase, every such log line should use a stable prefix:
+When CodeAutonomy needs to add temporary logs to the target iOS/Android/Web/Server project to prove a testcase, every such log line should use a stable prefix:
 
 ```text
-[AutoMind][Verify] <component> <event> key=value ...
+[CodeAutonomy][Verify] <component> <event> key=value ...
 ```
 
 Examples:
 
 ```text
-[AutoMind][Verify] iOS PlayerViewModel playbackState=playing trackId=123
-[AutoMind][Verify] Android LoginRepository requestFinished status=200 userId=fixture
-[AutoMind][Verify] Web CheckoutPage submitClicked orderId=fixture-001
-[AutoMind][Verify] Server PaymentWebhook received eventId=evt_fixture result=accepted
+[CodeAutonomy][Verify] iOS PlayerViewModel playbackState=playing trackId=123
+[CodeAutonomy][Verify] Android LoginRepository requestFinished status=200 userId=fixture
+[CodeAutonomy][Verify] Web CheckoutPage submitClicked orderId=fixture-001
+[CodeAutonomy][Verify] Server PaymentWebhook received eventId=evt_fixture result=accepted
 ```
 
 Use temporary verification logs only when existing hard evidence is insufficient or too indirect. Prefer existing deterministic evidence first: test assertions, exit codes, screenshots, UI hierarchy/accessibility, DOM snapshots, network mocks, database/API assertions, and platform test reports. If temporary logs are added, they must be minimal, non-secret, removable or explicitly promoted, and recorded in `Delivery.md` / `Validation.md` / `evaluation.json` as verification evidence. Do not log tokens, passwords, PII, payment data, private payloads, or full request/response bodies.
 
 ### Unsafe execution guard for no-sandbox/bypass modes
 
-AutoMind supports no-sandbox / permission-bypass coding-agent modes for highly
+CodeAutonomy supports no-sandbox / permission-bypass coding-agent modes for highly
 automated host-only verification. Coding-Agent Evaluator invocations must always
 be fresh-isolated and bypassed for all supported agents: Codex uses dangerous
 no-sandbox, Claude uses dangerous skip permissions, and Trae/Trae-CN uses YOLO
@@ -601,7 +601,7 @@ helper commands, or flows that cannot ask still keep high automation. TUI-owned
 sessions ask only when a new task is created and only once; resume/recover,
 detached scripts, and helper commands do not create new bypass grants and must
 follow the existing task policy or the missing-policy bypass fallback. The task-level policy does not apply to Evaluator. If bypass state
-changes, AutoMind must not reuse a primary Planner/Generator session created
+changes, CodeAutonomy must not reuse a primary Planner/Generator session created
 under the opposite execution mode. These modes are never a blanket approval for
 high-risk actions. When an agent runs with bypassed approvals/no sandbox,
 the workflow must still route sensitive/destructive/system-changing operations
@@ -638,9 +638,9 @@ failure happened:
    approval (for example `approval_policy=never`), do not retry the same
    restricted command blindly. Ask the user to choose one of: restart/use an
    agent session that can request exact-command approval, provide external
-   evidence/artifacts, use an AutoMind host-runner fallback after repeated
+   evidence/artifacts, use a CodeAutonomy host-runner fallback after repeated
    agent failure, or pause/replan/downgrade as appropriate.
-6. **Host-runner fallback** — AutoMind host runner is a fallback after repeated
+6. **Host-runner fallback** — CodeAutonomy host runner is a fallback after repeated
    agent-side failures or when the agent cannot safely/legitimately access the
    needed external resource. Prefer agent-native execution first, but collect
    host-runner evidence when it is the only reliable way to execute the selected

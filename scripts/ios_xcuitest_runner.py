@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run iOS XCUITest as an AutoMind evaluator.
+"""Run iOS XCUITest as a CodeAutonomy evaluator.
 
 This is the first reusable iOS adapter. It intentionally focuses on the
 validated P0 path: xcodebuild test on a physical iPhone, with xcodebuild logs
@@ -203,7 +203,7 @@ def classify_detailed(exit_code: int, log: str):
 def classify(exit_code: int, log: str) -> tuple[str, str, str, str]:
     """Return result, nextAction, category, reason.
 
-    Delegates to the shared AutoMind failure classifier so the iOS XCUITest
+    Delegates to the shared CodeAutonomy failure classifier so the iOS XCUITest
     runner stays consistent with the central iOS/external-runner taxonomy
     (P0-2/P0-6). In particular, this corrects the PoC-disproven assumption that
     `test-without-building` hits a Root-install device blocker: on retail
@@ -357,7 +357,7 @@ def rel_path(task_dir: pathlib.Path, path: pathlib.Path) -> str:
 def build_ask_user_question(category: str, reason: str, config: dict[str, str]) -> dict[str, Any] | None:
     if category == "permission_blocked" and "signing" in reason.lower():
         return {
-            "question": "iOS XCUITest is blocked by signing/provisioning. Which signing path should AutoMind use next?",
+            "question": "iOS XCUITest is blocked by signing/provisioning. Which signing path should CodeAutonomy use next?",
             "reason": reason,
             "options": [
                 {"id": "configure_signing_and_retry", "label": "Configure signing and retry", "impact": "Use valid Team/profile/certificate, then rerun real-device verification.", "requiresConfirmation": True},
@@ -383,7 +383,7 @@ def build_ask_user_question(category: str, reason: str, config: dict[str, str]) 
         }
     if category == "mobile_device_unavailable":
         return {
-            "question": "iOS XCUITest cannot find/use the selected device. Should AutoMind retry after device discovery is fixed or switch target?",
+            "question": "iOS XCUITest cannot find/use the selected device. Should CodeAutonomy retry after device discovery is fixed or switch target?",
             "reason": reason,
             "options": [
                 {"id": "fix_destination_and_retry", "label": "Fix device destination and retry", "impact": "Connect/unlock/trust the iPhone, verify the Xcode destination id, then continue real-device verification.", "requiresConfirmation": False},

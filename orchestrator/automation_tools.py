@@ -119,7 +119,7 @@ def get_android_tools_python() -> str:
 
     Prefer a project-local venv only when it has the required modules. If the
     project-local venv exists but setup failed (common under restricted pip
-    network), fall back to the AutoMind runtime helper venv when it is already
+    network), fall back to the CodeAutonomy runtime helper venv when it is already
     ready. Setup commands still create/repair the project-local venv; this
     fallback is read-only reuse of a known-good runtime helper.
     """
@@ -256,7 +256,7 @@ def classify_setup_failure(log_text: str) -> dict:
                 "Fix DNS/VPN/proxy/package-index access and rerun setup-automation-tools.",
                 "Configure an approved pip index mirror via pip.conf/PIP_INDEX_URL if your environment requires one.",
                 "Provide an approved offline wheelhouse and install from it if network is unavailable.",
-                "If a runtime AutoMind .venv-android-tools is already ready, let preflight reuse it instead of reinstalling project-local helpers.",
+                "If a runtime CodeAutonomy .venv-android-tools is already ready, let preflight reuse it instead of reinstalling project-local helpers.",
                 "For Android verification only, consider an explicit adb-only fallback if lower capability is acceptable.",
             ],
             "triageSource": "code_deterministic",
@@ -268,7 +268,7 @@ def classify_setup_failure(log_text: str) -> dict:
             "summary": "Python package setup hit filesystem/cache permission issues.",
             "suggestions": [
                 "Use a writable workspace and pip cache, or set PIP_CACHE_DIR to a writable path.",
-                "Do not use sudo for AutoMind helper venvs; they are project-local user-space environments.",
+                "Do not use sudo for CodeAutonomy helper venvs; they are project-local user-space environments.",
             ],
             "triageSource": "code_deterministic",
             "needsModelReview": False,
@@ -782,7 +782,7 @@ def _detect_python(root: Path) -> list[dict]:
             "lockfileFirst": any(name in files for name in ["uv.lock", "poetry.lock", "Pipfile.lock"]),
             "mayMutateLockfile": False,
             "autoRunPolicy": "project-native; prefer existing project venv instructions and record evidence",
-            "notes": ["Use the target project's documented venv name if it already has one; do not confuse it with AutoMind helper .venv-* folders."],
+            "notes": ["Use the target project's documented venv name if it already has one; do not confuse it with CodeAutonomy helper .venv-* folders."],
         },
         "verifyCommandCandidates": verify,
         "highImpactOrAskUser": [
@@ -861,7 +861,7 @@ def _detect_ios(root: Path) -> list[dict]:
             "lockfileFirst": bool((root / "Podfile.lock").exists() or (root / "Package.resolved").exists()),
             "mayMutateLockfile": not bool((root / "Podfile.lock").exists() or (root / "Package.resolved").exists()),
             "autoRunPolicy": "project-native; safe for simulator verification when signing is not required; ask for real-device signing/trust",
-            "notes": ["AutoMind setup-automation-tools ios only installs Python helper packages; it does not install Xcode, CocoaPods, signing profiles, or trust devices."],
+            "notes": ["CodeAutonomy setup-automation-tools ios only installs Python helper packages; it does not install Xcode, CocoaPods, signing profiles, or trust devices."],
         },
         "verifyCommandCandidates": ["xcodebuild test -workspace <App.xcworkspace> -scheme <Scheme> -destination 'platform=iOS Simulator,name=<Device>'"],
         "highImpactOrAskUser": [
@@ -1074,7 +1074,7 @@ def cmd_setup_automation_tools(target: str = "all", dry_run: bool = False):
                     ready_fallbacks = [str(candidate) for candidate in _runtime_android_tools_candidates() if candidate.exists() and android_tools_python_ready(str(candidate))]
                     target_report["readyFallbacks"] = ready_fallbacks
                     if ready_fallbacks:
-                        target_report["fallbackAdvice"] = "A ready AutoMind runtime Android helper venv exists and can be reused by android-preflight/probe-flow; project-local setup can be repaired later."
+                        target_report["fallbackAdvice"] = "A ready CodeAutonomy runtime Android helper venv exists and can be reused by android-preflight/probe-flow; project-local setup can be repaired later."
                 report["result"] = "fail"
             else:
                 target_report["status"] = "ready"

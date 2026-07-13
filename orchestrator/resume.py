@@ -1,4 +1,4 @@
-"""Stage-level resume/recovery helpers for interrupted AutoMind tasks."""
+"""Stage-level resume/recovery helpers for interrupted CodeAutonomy tasks."""
 from __future__ import annotations
 
 import json
@@ -11,7 +11,7 @@ def iter_dir_for(task_dir: Path, iteration: int) -> Path:
     return task_dir / "logs" / f"iter-{iteration}"
 
 
-# Whitelist of categories AutoMind considers safely auto-resumable.
+# Whitelist of categories CodeAutonomy considers safely auto-resumable.
 # Keep tightly scoped: product failures and authorization issues MUST NOT
 # be added here.
 RECOVERABLE_INTERRUPTION_CATEGORIES: frozenset[str] = frozenset({
@@ -84,7 +84,7 @@ def infer_interrupted_phase(state: dict, evaluation: Optional[dict]) -> str:
 def build_resume_recovery_entry(task_dir: Path, state: dict, evaluation: Optional[dict] = None) -> dict:
     """Decide the stage-level recovery entry from persisted task artifacts.
 
-    AutoMind cannot recover an agent's private call stack. It can recover at the
+    CodeAutonomy cannot recover an agent's private call stack. It can recover at the
     phase boundary recorded in runtime-state/evaluation/log artifacts:
 
     - interrupted Generator without `generator.log`: rerun Generator for that

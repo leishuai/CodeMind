@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# AutoMind main script
+# CodeAutonomy main script
 # Usage: automind <command>
 #
 
@@ -10,12 +10,12 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CALLER_CWD="$(pwd)"
 export AUTOMIND_RUNTIME_ROOT="${AUTOMIND_RUNTIME_ROOT:-$SCRIPT_DIR}"
 # Workspace root is the user's target project. Installed wrappers may live in a
-# different AutoMind runtime checkout, so never default task artifacts to SCRIPT_DIR
+# different CodeAutonomy runtime checkout, so never default task artifacts to SCRIPT_DIR
 # unless the user is actually invoking from that checkout.
 export AUTOMIND_WORKSPACE_ROOT="${AUTOMIND_WORKSPACE_ROOT:-$CALLER_CWD}"
 PYTHON_EXEC="${PYTHON_EXEC:-python3}"
 ORCHESTRATOR="$SCRIPT_DIR/orchestrator/main.py"
-CLI_NAME="${AUTOMIND_CLI_DISPLAY:-automind}"
+CLI_NAME="${AUTOMIND_CLI_DISPLAY:-codeautonomy}"
 
 # Colors
 RED='\033[0;31m'
@@ -24,10 +24,10 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-log() { echo -e "${BLUE}[AutoMind]${NC} $*"; }
-success() { echo -e "${GREEN}[AutoMind]${NC} $*"; }
-warn() { echo -e "${YELLOW}[AutoMind]${NC} $*"; }
-error() { echo -e "${RED}[AutoMind]${NC} $*" >&2; }
+log() { echo -e "${BLUE}[CodeAutonomy]${NC} $*"; }
+success() { echo -e "${GREEN}[CodeAutonomy]${NC} $*"; }
+warn() { echo -e "${YELLOW}[CodeAutonomy]${NC} $*"; }
+error() { echo -e "${RED}[CodeAutonomy]${NC} $*" >&2; }
 
 if [[ $# -eq 0 ]]; then
     if [[ -t 0 && -t 1 ]]; then
@@ -66,7 +66,7 @@ case "$command" in
         # Check Git. Runtime installs may contain a .git guard file (not a
         # repository) to prevent accidental parent-repo discovery/push. Do not
         # run git init in that guarded runtime directory.
-        if [[ -f ".git" ]] && grep -q "AutoMind runtime install is intentionally not a Git checkout" ".git" 2>/dev/null; then
+        if [[ -f ".git" ]] && grep -Eq "(CodeAutonomy|AutoMind) runtime install is intentionally not a Git checkout" ".git" 2>/dev/null; then
             success "Git: guarded runtime (no repository)"
         elif ! git rev-parse --is-inside-work-tree &>/dev/null; then
             warn "Initializing Git repository..."
@@ -155,7 +155,7 @@ case "$command" in
         fi
         USER_INPUT="$1"
 
-        log "Scaffolding task for current-session AutoMind workflow..."
+        log "Scaffolding task for current-session CodeAutonomy workflow..."
         $PYTHON_EXEC "$ORCHESTRATOR" scaffold "$USER_INPUT"
         ;;
 
@@ -793,9 +793,9 @@ PY
             EXPORT_DIR="$1"
             shift || true
         else
-            EXPORT_DIR="$HOME/Downloads/automind-skill"
+            EXPORT_DIR="$HOME/Downloads/codeautonomy-skill"
         fi
-        log "Exporting AutoMind skill package to: $EXPORT_DIR"
+        log "Exporting CodeAutonomy skill package to: $EXPORT_DIR"
         $PYTHON_EXEC "$SCRIPT_DIR/scripts/export_skill.py" "$EXPORT_DIR" "$@"
         success "Export complete: $EXPORT_DIR"
         ;;
@@ -809,9 +809,9 @@ PY
             EXPORT_DIR="$1"
             shift || true
         else
-            EXPORT_DIR="$SCRIPT_DIR/dist/automind-command"
+            EXPORT_DIR="$SCRIPT_DIR/dist/codeautonomy-command"
         fi
-        log "Exporting AutoMind command package to: $EXPORT_DIR"
+        log "Exporting CodeAutonomy command package to: $EXPORT_DIR"
         $PYTHON_EXEC "$SCRIPT_DIR/scripts/export_command.py" "$EXPORT_DIR" "$@"
         success "Export complete: $EXPORT_DIR"
         ;;
@@ -827,13 +827,14 @@ PY
 
     help|--help|-h|"")
         cat <<EOF
-AutoMind - evidence-driven harness loop for coding agents
+CodeAutonomy - evidence-driven harness loop for coding agents
 
 Usage:
   $CLI_NAME <command> [args]
 
 Entrypoints:
-  automind <command>                         # installed runtime
+  codeautonomy <command>                     # primary installed runtime
+  automind <command>                         # compatibility alias
   ./automind.sh <command>                    # source checkout
   $CLI_NAME shell                            # interactive command shell
 
@@ -896,7 +897,7 @@ Reports, reuse, and memory:
   preloaded-check
       Validate preloaded pack metadata and Reuse.md discovery.
   knowledge check|search|show ...
-      Inspect local AutoMind knowledge indexes and raw records.
+      Inspect local CodeAutonomy knowledge indexes and raw records.
 
 Diagnostics and task operations:
   logs [code]
@@ -906,7 +907,7 @@ Diagnostics and task operations:
   doctor <code> [--stale-seconds N]
       Diagnose heartbeat/progress/status for a task.
   tui <code>
-      Open AutoMind TUI snapshot/watch/interactive view.
+      Open CodeAutonomy TUI snapshot/watch/interactive view.
   event <code> [--type TYPE] [--message TEXT] [--phase PHASE]
       Append shared event timeline entry.
   checkpoint create|list|plan-restore|restore ...
@@ -976,18 +977,18 @@ Android / Web / iOS helpers:
 
 Install / export:
   init
-      Check environment and create AutoMind directories.
+      Check environment and create CodeAutonomy directories.
   version
-      Show AutoMind runtime version.
+      Show CodeAutonomy runtime version.
   update
-      Update AutoMind runtime, CLI wrapper, skill package, and /automind command.
+      Update CodeAutonomy runtime, CLI wrappers, skill package, and /codeautonomy command.
   shell
-      Open the AutoMind interactive command shell.
+      Open the CodeAutonomy interactive command shell.
   export-skill [dir] [--install auto|claude|codex|trae|trae-cn]
-      Export the AutoMind skill package. Default dir: ~/Downloads/automind-skill.
+      Export the CodeAutonomy skill package. Default dir: ~/Downloads/codeautonomy-skill.
       --install auto installs into the first detected supported local agent skill root.
   export-command [dir] [--install all|auto|claude|codex|trae|trae-cn]
-      Export the /automind slash command. This is separate from the skill package.
+      Export the /codeautonomy slash command. The legacy /automind command remains supported.
   help
       Show this help.
 
@@ -1013,7 +1014,7 @@ Common workflows:
     $CLI_NAME record-check <task-code>
     $CLI_NAME report <task-code>
 
-  Update AutoMind:
+  Update CodeAutonomy:
     $CLI_NAME update
 
   Install agent integrations:

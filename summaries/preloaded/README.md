@@ -2,7 +2,7 @@
 
 Preloaded summaries are curated, business-agnostic summary files available before a task starts.
 
-They solve the first-run problem: before `.automind/summary/*` has any local task lessons, AutoMind can still give the Planner/Generator/Evaluator a small set of evidence-backed hints through `.automind/tasks/<task>/Reuse.md`.
+They solve the first-run problem: before `.automind/summary/*` has any local task lessons, CodeAutonomy can still give the Planner/Generator/Evaluator a small set of evidence-backed hints through `.automind/tasks/<task>/Reuse.md`.
 
 Preloaded is intentionally flat:
 
@@ -19,7 +19,7 @@ summaries/accumulated/business/<project-slug>/
 
 ## Naming convention
 
-AutoMind discovers preloaded summaries by filename prefix when generating `Reuse.md`. Keep names short, explicit, and searchable by capability:
+CodeAutonomy discovers preloaded summaries by filename prefix when generating `Reuse.md`. Keep names short, explicit, and searchable by capability:
 
 - `ios-*` — iOS-specific playbooks verified through real iOS project/device work.
 - `android-*` — Android-specific playbooks; add only after Android evidence is accumulated.
@@ -49,7 +49,7 @@ solves:
 
 ## Progressive loading
 
-`Reuse.md` should not inline entire preloaded packs. It includes a compact index only: pack name/title, runtime-relative `Path`, one-line `Summary` from frontmatter `description`, and a fixed `Load` hint. The model should read the referenced file only when the current task needs that capability. `Path` is relative to the AutoMind runtime root (for example `~/.automind/automind` or `$AUTOMIND_HOME`), not the target project and not `.automind/summary/`.
+`Reuse.md` should not inline entire preloaded packs. It includes a compact index only: pack name/title, runtime-relative `Path`, one-line `Summary` from frontmatter `description`, and a fixed `Load` hint. The model should read the referenced file only when the current task needs that capability. `Path` is relative to the CodeAutonomy runtime root (for example `~/.automind/automind` or `$AUTOMIND_HOME`), not the target project and not `.automind/summary/`.
 
 Example:
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only iOS project probe for AutoMind."""
+"""Read-only iOS project probe for CodeAutonomy."""
 
 from __future__ import annotations
 

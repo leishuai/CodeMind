@@ -1,4 +1,4 @@
-"""Deterministic effective-state reducer for AutoMind tasks.
+"""Deterministic effective-state reducer for CodeAutonomy tasks.
 
 `runtime-state.json` is a resume cache/runtime projection, not the macro phase
 truth.  This module re-derives the effective loop state from phase artifacts and

@@ -1,4 +1,4 @@
-"""Phase registry and action constants for AutoMind workflow orchestration."""
+"""Phase registry and action constants for CodeAutonomy workflow orchestration."""
 from __future__ import annotations
 
 from typing import Any
@@ -113,7 +113,7 @@ PHASE_REGISTRY: dict[str, dict[str, Any]] = {
 
 
 # Workflow State Model v1 ----------------------------------------------------
-# These registries are the machine-readable bridge between AutoMind's existing
+# These registries are the machine-readable bridge between CodeAutonomy's existing
 # phase docs/checklists and the task workflow state files. They intentionally do
 # not replace the artifact-oriented PHASE_REGISTRY above; instead they add a
 # control-state view used by CLI and Skill mode.

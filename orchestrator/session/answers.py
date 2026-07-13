@@ -328,9 +328,9 @@ def latest_answer_prompt_context(task_dir: Path) -> str:
         return ""
     lines = [
         "",
-        "## Latest AutoMind user answer",
+        "## Latest CodeAutonomy user answer",
         "",
-        "A pending user answer was recorded by AutoMind and must be applied before continuing.",
+        "A pending user answer was recorded by CodeAutonomy and must be applied before continuing.",
         f"- Question: {answer.get('question') or '-'}",
         f"- Answer: {answer.get('answerText') or '-'}",
         f"- Selected option: {answer.get('selectedOption') or '-'}",

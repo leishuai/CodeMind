@@ -1,10 +1,10 @@
-# AutoMind Orchestrator
+# CodeAutonomy Orchestrator
 
-This folder is required. It contains the core AutoMind loop engine used by `automind.sh` and by repair/rerun helpers.
+This folder is required. It contains the core CodeAutonomy loop engine used by `automind.sh` and by repair/rerun helpers.
 
 ## Responsibility
 
-The orchestrator package owns the AutoMind task lifecycle:
+The orchestrator package owns the CodeAutonomy task lifecycle:
 
 - create and resume tasks;
 - write/read `.automind/tasks/<task>/` state;

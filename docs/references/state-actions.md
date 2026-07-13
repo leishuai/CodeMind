@@ -1,13 +1,13 @@
 # State and Actions Reference
 
-This reference explains AutoMind runtime state, route actions, and iteration
+This reference explains CodeAutonomy runtime state, route actions, and iteration
 boundaries. It is intentionally small: use it as a quick lookup when reading
 `automind-workflow-state.json` for workflow routing plus local signals such as
 `evaluation.json`, `workflow.json`, or `automind status`.
 
 ## 1. Three runtime-state fields
 
-AutoMind runtime state is not a single enum. The main route tuple in `runtime-state.json` is:
+CodeAutonomy runtime state is not a single enum. The main route tuple in `runtime-state.json` is:
 
 ```text
 status + currentOwner + nextAction
@@ -43,7 +43,7 @@ Another example:
 }
 ```
 
-Meaning: automation is paused, the human owns the next decision, and AutoMind
+Meaning: automation is paused, the human owns the next decision, and CodeAutonomy
 must ask/wait for the user before continuing.
 
 ## 2. Common route mapping
@@ -64,7 +64,7 @@ must ask/wait for the user before continuing.
   and implementation checklist progress.
 - Evaluator owns independent verification, `Validation.md`, `evaluation.json`,
   evidence paths, and verification checklist progress.
-- AutoMind owns deterministic gates such as `workflow-check`, `completion-check`,
+- CodeAutonomy owns deterministic gates such as `workflow-check`, `completion-check`,
   state reduction, terminal authority, summary/reuse handoff, and reports.
 - Human owns only explicit `ask_user` decisions.
 
@@ -95,7 +95,7 @@ required TC/AC/evidence coverage is not proven.
 
 ## 5. Iteration contract
 
-An AutoMind iteration is one Generator/Evaluator attempt unit, not one shell
+An CodeAutonomy iteration is one Generator/Evaluator attempt unit, not one shell
 command and not one testcase. Early planning/resume/ask-user bookkeeping may
 advance counters, but evidence-bearing iteration work must have a clear purpose
 and phase-owned outputs.
@@ -174,7 +174,7 @@ A passing final completion gate locks:
 
 ## 6. Live-state JSON consolidation
 
-AutoMind keeps one primary workflow control-state surface:
+CodeAutonomy keeps one primary workflow control-state surface:
 
 ```text
 automind-workflow-state.json
@@ -204,7 +204,7 @@ requires updating the registry `next` edges; the state reducer needs no change.
 
 ## 8. Observability artifacts: metrics and audit
 
-AutoMind writes two categories of observability data alongside control state:
+CodeAutonomy writes two categories of observability data alongside control state:
 **metrics** (quantitative measurements) and **audit** (qualitative decision/action
 trail). Both are written as standalone files so that `runtime-state.json` stays
 focused on routing/resume state.
@@ -236,7 +236,7 @@ Schema: [`schemas/metrics.schema.json`](../../schemas/metrics.schema.json).
 ### 8.2 Audit — `audit.jsonl` + `audit.json`
 
 The audit trail records **key decisions, logic branches, actions, gate results,
-policy evaluations, and recovery attempts** so you can trace *why* AutoMind did
+policy evaluations, and recovery attempts** so you can trace *why* CodeAutonomy did
 something, not just *what* it did.
 
 Two files are produced:

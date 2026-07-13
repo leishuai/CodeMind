@@ -1,10 +1,10 @@
-# AutoMind Command and Script Catalog
+# CodeAutonomy Command and Script Catalog
 
-This is the canonical map from **agent/user intent** to AutoMind commands and the scripts behind them.
+This is the canonical map from **agent/user intent** to CodeAutonomy commands and the scripts behind them.
 
 Use this file when you need to answer:
 
-- Which AutoMind command should I run for this task?
+- Which CodeAutonomy command should I run for this task?
 - Which `scripts/*.py` file implements the command?
 - Is a script meant to be called directly, or only through `./automind.sh` / `automind`?
 - Which phase writes the evidence and `evaluation.json`?
@@ -13,7 +13,7 @@ Use this file when you need to answer:
 
 ## 0. Invocation rule for coding agents
 
-Prefer the AutoMind CLI wrapper. Direct script invocation is an implementation detail unless this catalog explicitly says it is a direct adapter.
+Prefer the CodeAutonomy CLI wrapper. Direct script invocation is an implementation detail unless this catalog explicitly says it is a direct adapter.
 
 Use this placeholder in instructions:
 
@@ -24,16 +24,16 @@ Use this placeholder in instructions:
 Resolve it in this order:
 
 1. Installed wrapper on `PATH`: `automind`.
-2. Project-local/vendored AutoMind checkout: `./automind.sh` only when the target project contains AutoMind.
+2. Project-local/vendored CodeAutonomy checkout: `./automind.sh` only when the target project contains CodeAutonomy.
 3. Default full install path: `$HOME/.automind/automind/automind.sh`.
 4. Explicit home override: `$AUTOMIND_HOME/automind.sh`.
 5. Last resort in repo internals: `python3 orchestrator/main.py ...` or `python3 scripts/<adapter>.py ...`
 
-Examples in this repository usually show `./automind.sh`. Installed users can replace it with `automind`. Always run AutoMind commands from the target project root; otherwise set `AUTOMIND_WORKSPACE_ROOT=/path/to/project` so `.automind/tasks` is created in the project, not in the AutoMind runtime checkout.
+Examples in this repository usually show `./automind.sh`. Installed users can replace it with `automind`. Always run CodeAutonomy commands from the target project root; otherwise set `AUTOMIND_WORKSPACE_ROOT=/path/to/project` so `.automind/tasks` is created in the project, not in the CodeAutonomy runtime checkout.
 
-If you are reading this inside an exported skill-only package, executable runtime scripts and platform adapters are not bundled. The recommended setup is full AutoMind installation; then the skill may use the installed CLI and documented full-checkout scripts/adapters. Prefer the CLI wrapper first. Direct script use is allowed only when this catalog marks it as an adapter/debug/direct path. If no CLI is available, first suggest the single full install command (`curl -fsSL https://raw.githubusercontent.com/leishuai/Automind/main/install-curl.sh | bash`). If installation is not allowed, follow `docs/workflow.md` manually and use the target project's own build/test tools for evidence.
+If you are reading this inside an exported skill-only package, executable runtime scripts and platform adapters are not bundled. The recommended setup is full CodeAutonomy installation; then the skill may use the installed CLI and documented full-checkout scripts/adapters. Prefer the CLI wrapper first. Direct script use is allowed only when this catalog marks it as an adapter/debug/direct path. If no CLI is available, first suggest the single full install command (`curl -fsSL https://raw.githubusercontent.com/leishuai/CodeAutonomy/main/install-curl.sh | bash`). If installation is not allowed, follow `docs/workflow.md` manually and use the target project's own build/test tools for evidence.
 
-For slash-command integrations, treat `/automind <request>` as current-session natural language that invokes the AutoMind skill/protocol. It should normally map to helper/gate commands such as `scaffold`, `workflow-check`, `context-pack`, and `completion-check`, not to detached `ask`. In Skill/slash-command mode, JSON outputs are part of the command contract: `workflow-check` refreshes sidecars and `workflow.json`; `evaluation.json.nextAction`, `completion-report.json`, and `VerificationLedger.json` drive the next step.
+For slash-command integrations, treat `/automind <request>` as current-session natural language that invokes the CodeAutonomy skill/protocol. It should normally map to helper/gate commands such as `scaffold`, `workflow-check`, `context-pack`, and `completion-check`, not to detached `ask`. In Skill/slash-command mode, JSON outputs are part of the command contract: `workflow-check` refreshes sidecars and `workflow.json`; `evaluation.json.nextAction`, `completion-report.json`, and `VerificationLedger.json` drive the next step.
 
 Detached commands and current-session commands exchange results through `.automind/tasks/<task>/` artifacts. `automind-workflow-state.json`, `automind-workflow-events.jsonl`, stage state files, `evaluation.json`, `Validation.md`, `Delivery.md`, `VerificationLedger.json`, and `logs/iter-N/*` are the common contract.
 
@@ -43,10 +43,10 @@ Detached commands and current-session commands exchange results through `.automi
 
 | User / agent need | Recommended command | Behind the command | Phase | Main evidence/output | Notes |
 |---|---|---|---|---|---|
-| Check local AutoMind basics | `<AUTOMIND_CLI> init` | `automind.sh` | Setup | terminal output, `.automind/` dirs | Does not install mobile SDKs. It only checks optional tools and creates local AutoMind directories. |
-| Update AutoMind itself | `<AUTOMIND_CLI> update` | `orchestrator/main.py` → bundled `install-curl.sh` | Maintenance | updated runtime, CLI wrapper, skill package, `/automind` command | Prefer this when the user asks to update/upgrade/refresh/sync AutoMind. It is not a task workflow: do not scaffold a new task for update-only intent. If the runtime is too old to have `update`, use the documented one-line installer. |
+| Check local CodeAutonomy basics | `<AUTOMIND_CLI> init` | `automind.sh` | Setup | terminal output, `.automind/` dirs | Does not install mobile SDKs. It only checks optional tools and creates local CodeAutonomy directories. |
+| Update CodeAutonomy itself | `<AUTOMIND_CLI> update` | `orchestrator/main.py` → bundled `install-curl.sh` | Maintenance | updated runtime, CLI wrapper, skill package, `/automind` command | Prefer this when the user asks to update/upgrade/refresh/sync CodeAutonomy. It is not a task workflow: do not scaffold a new task for update-only intent. If the runtime is too old to have `update`, use the documented one-line installer. |
 | Create task for current-session skill/slash-command flow | `<AUTOMIND_CLI> scaffold "<request>"` | `orchestrator/main.py` | Phase 1 → 2 | `.automind/tasks/<task>/` | Creates deterministic starter artifacts only; the current host agent refines Brainstorm/Requirements/TestCases/Plan and acts as Generator. Does not launch another agent process. |
-| Create task and start AutoMind-owned CLI/TUI loop | `<AUTOMIND_CLI> ask "<request>" [auto\|codex\|claude\|trae] [--tui\|--detached]` | `orchestrator/main.py` | Phase 1 → 3 | `.automind/tasks/<task>/` | Starts AutoMind-owned loop. In an interactive terminal it uses the TUI-owned wrapper by default; new TUI tasks record `agentExecutionPolicy=default_bypass` without asking. Non-interactive scripts keep detached/plain behavior; if the task has no policy, Planner/Generator fall back to bypass. Planner/Generator reuse a task-local primary CLI session when the execution mode matches the task policy/fallback; model Evaluator still launches fresh isolated context and always uses the selected agent's bypass/high-automation mode. |
+| Create task and start CodeAutonomy-owned CLI/TUI loop | `<AUTOMIND_CLI> ask "<request>" [auto\|codex\|claude\|trae] [--tui\|--detached]` | `orchestrator/main.py` | Phase 1 → 3 | `.automind/tasks/<task>/` | Starts CodeAutonomy-owned loop. In an interactive terminal it uses the TUI-owned wrapper by default; new TUI tasks record `agentExecutionPolicy=default_bypass` without asking. Non-interactive scripts keep detached/plain behavior; if the task has no policy, Planner/Generator fall back to bypass. Planner/Generator reuse a task-local primary CLI session when the execution mode matches the task policy/fallback; model Evaluator still launches fresh isolated context and always uses the selected agent's bypass/high-automation mode. |
 | Refine planning only | `<AUTOMIND_CLI> plan <task-code> [agent]` | `orchestrator/main.py`, `templates/phase2_planner_prompt.md` | Phase 2 | `Brainstorm.md`, `Requirements.md`, `TestCases.md`, `Plan.md` | Use when requirements/tests need model reasoning before implementation. |
 | Resume existing loop | `<AUTOMIND_CLI> resume <task-code> [agent] [--tui\|--detached]` | `orchestrator/main.py` | Phase 3 | next iteration artifacts; `runtime-state.json.resumeRecovery` when an interruption is detected | Reads `automind-workflow-state.json`, `stages/*-stage-state.json`, `evaluation.json` compatibility artifact, obsolete `runtime-state.json.stateSummary` fallback, and `logs/iter-N/*` to recover at a safe phase boundary. In a TTY it uses TUI-owned resume by default; scripts keep plain behavior. It can rerun interrupted Generator/Evaluator iterations and can resume `agent_unavailable` / `agent_timeout` / `agent_stalled_no_output` failures after the external runtime issue is fixed. Resume follows the existing task-level `agentExecutionPolicy` and does not ask for a new bypass grant. Model Evaluator reruns remain fresh-isolated and bypassed. It does not auto-resume unsafe blocked states. |
 | Inspect task and get next step | `<AUTOMIND_CLI> status <task-code>` / `list` / `logs [task-code]` | `orchestrator/main.py` | Any | task status/log output + next recommended action | `status` is self-explaining for current-session agents; it prints suggested commands, files to inspect, and gate summaries. `logs` tails the latest generator log when present. |
@@ -54,7 +54,7 @@ Detached commands and current-session commands exchange results through `.automi
 | Create isolated Evaluator context pack | `<AUTOMIND_CLI> context-pack <task-code> [iteration]` | `orchestrator/main.py` | Before model Evaluator | `logs/iter-N/evaluator-context.md/json` | Use in current-session mode before launching a fresh isolated model Evaluator. Deterministic evaluators may not need this. |
 | Generate final reusable summary | `<AUTOMIND_CLI> summary <task-code> --ai <agent>` preferred; `<AUTOMIND_CLI> summary <task-code>` fallback | `orchestrator/main.py` | Phase 4 | `summary.md`, `.automind/summary/lessons-learned.md`, `.automind/summary/local-reuse-index.md` | AI mode first builds a deterministic seed and falls back if agent output is invalid/unavailable. Command mode may auto-generate deterministic summary at terminal/paused loop states. |
 | Run explicit AI Summary Refiner | `<AUTOMIND_CLI> summary-refine <task-code> <agent>` | `orchestrator/main.py`, `templates/summary_refiner_prompt.md` | Phase 4 | `logs/summary-refiner/*`, `summary.md`, `.automind/summary/*` | Equivalent to `summary --ai <agent>`; use before final `record-check` when an agent is available. |
-| Generate human-readable HTML report | `<AUTOMIND_CLI> report <task-code>` | `orchestrator/reports.py` | `.automind/tasks/<task-code>/Report.html` | One-page report for human review across success/failure/pause: title `<task> Automind Report`, requirements/AC, generated artifacts, Test Results with a per-TC `Key Evidence` summary (screenshots, machine anchors, hardMetrics, key files) plus a complete artifact details column, screenshot gallery, failed checks, quality checks, summary/knowledge deposition, and `Evidence Lookup` with a folded `All Artifacts Appendix`. Also refreshed when report manifests are printed at handoff points. |
+| Generate human-readable HTML report | `<AUTOMIND_CLI> report <task-code>` | `orchestrator/reports.py` | `.automind/tasks/<task-code>/Report.html` | One-page report for human review across success/failure/pause: title `<task> CodeAutonomy Report`, requirements/AC, generated artifacts, Test Results with a per-TC `Key Evidence` summary (screenshots, machine anchors, hardMetrics, key files) plus a complete artifact details column, screenshot gallery, failed checks, quality checks, summary/knowledge deposition, and `Evidence Lookup` with a folded `All Artifacts Appendix`. Also refreshed when report manifests are printed at handoff points. |
 | Check UI automation evidence completeness | `<AUTOMIND_CLI> ui-evidence-check <task-code> [iteration] [--json]` | `scripts/ui_evidence_check.py` | `logs/iter-N/ui-evidence-check.json`, `Validation.md` | Lightweight gate that checks `evaluation.json`, `Validation.md`, action trace, Android screenshots/hierarchy, iOS `.xcresult`/xcodebuild logs, and Web E2E evidence references. It does not decide product correctness; it checks whether evidence is auditable. |
 | Run AI Visual Review from screenshots | host-agent image understanding with `templates/visual_review_prompt.md` | `templates/visual_review_prompt.md` | Phase 3 optional visual/UX review | `logs/iter-N/ai-visual-review.json`, `Validation.md`, optional `evaluation.json.qualityChecks[]` | Use after real screenshot/image evidence is captured. It supplements deterministic UI tests, hierarchy/bounds assertions, and screenshot diff; it does not replace them when required. |
 | Check workflow continuity | `<AUTOMIND_CLI> workflow-check <task-code>` | `orchestrator/main.py` | Phase 2/3 gate | refreshed `workflow.json` + JSON report + PASS/FAIL exit code | Materializes/validates the derived `workflow.json` executable contract and checks `Rxx/AC-xxx -> TC-* -> Plan -> workflow.json -> evaluation` continuity; use after planning/refining and before Build/final verification. |
@@ -80,13 +80,13 @@ Detached commands and current-session commands exchange results through `.automi
 
 ## 2. Android command map
 
-Android helper package setup is lazy/local. The public installer does not install it. If `android-preflight` or `android-probe-flow` needs `adbutils` / `uiautomator2` and they are missing, AutoMind may auto-run:
+Android helper package setup is lazy/local. The public installer does not install it. If `android-preflight` or `android-probe-flow` needs `adbutils` / `uiautomator2` and they are missing, CodeAutonomy may auto-run:
 
 ```bash
 <AUTOMIND_CLI> setup-automation-tools android
 ```
 
-This only creates `.venv-android-tools` in the target workspace and installs packages from the AutoMind runtime `requirements/android-tools.txt`. It does not install Android Studio, Android SDK/platform-tools, `adb`, or change the device. If setup fails, first reuse a ready AutoMind runtime helper venv when available; otherwise ask the user whether to fix Python/pip/network or package mirror/wheelhouse access, use adb-only fallback, or stop.
+This only creates `.venv-android-tools` in the target workspace and installs packages from the CodeAutonomy runtime `requirements/android-tools.txt`. It does not install Android Studio, Android SDK/platform-tools, `adb`, or change the device. If setup fails, first reuse a ready CodeAutonomy runtime helper venv when available; otherwise ask the user whether to fix Python/pip/network or package mirror/wheelhouse access, use adb-only fallback, or stop.
 
 `<AUTOMIND_CLI> setup-automation-tools android --help` is help-only and must not create the venv, run pip, or write setup reports.
 
@@ -118,13 +118,13 @@ These scripts are lower-level adapters and are normally called by commands or de
 
 ## 3. iOS command map
 
-iOS helper package setup is lazy/local. The public installer does not install it. If screenshot/app-smoke evaluation needs `pymobiledevice3` and it is missing, AutoMind may auto-run:
+iOS helper package setup is lazy/local. The public installer does not install it. If screenshot/app-smoke evaluation needs `pymobiledevice3` and it is missing, CodeAutonomy may auto-run:
 
 ```bash
 <AUTOMIND_CLI> setup-automation-tools ios
 ```
 
-This only creates `.venv-ios-tools` in the target workspace and installs packages from the AutoMind runtime `requirements/ios-tools.txt`. It does not install Xcode, change signing/keychains/profiles, trust devices, start `tunneld`, or use sudo. If setup fails, ask the user whether to fix Python/pip/network, continue without screenshot, or stop.
+This only creates `.venv-ios-tools` in the target workspace and installs packages from the CodeAutonomy runtime `requirements/ios-tools.txt`. It does not install Xcode, change signing/keychains/profiles, trust devices, start `tunneld`, or use sudo. If setup fails, ask the user whether to fix Python/pip/network, continue without screenshot, or stop.
 
 `<AUTOMIND_CLI> setup-automation-tools ios --help` is help-only and must not create the venv, run pip, or write setup reports.
 
@@ -187,7 +187,7 @@ This only creates `.venv-ios-tools` in the target workspace and installs package
 ## 6. What coding agents should understand
 
 
-Canonical AutoMind flow:
+Canonical CodeAutonomy flow:
 
 ```text
 User request
@@ -206,7 +206,7 @@ User request
 ```
 
 A coding agent must not memorize every script or improvise tool order. It must
-follow this decision flow when choosing AutoMind commands/scripts:
+follow this decision flow when choosing CodeAutonomy commands/scripts:
 
 ```text
 Need to work on a task?
@@ -234,4 +234,4 @@ The important model contract is:
 
 | Show formal trace spans | `<AUTOMIND_CLI> trace <task-code> [--json|--write]` | `orchestrator/main.py`, `orchestrator/session/trace.py` | Observability | `trace.json` when `--write` | Projects `events.jsonl` + workflow/runtime state into OpenTelemetry-friendly spans. |
 | Show improve suggestions | `<AUTOMIND_CLI> improve-suggestions [--limit N]` | `orchestrator/main.py`, `orchestrator/summary.py` | Phase 4 / Reuse | `.automind/summary/run-cards.jsonl` | Advisory suggestions derived from summary run cards; review before applying. |
-| Evaluate harness process | `<AUTOMIND_CLI> process-check <task-code> [--json|--soft|--no-write]` | `orchestrator/main.py`, `orchestrator/process_eval.py` | Process Evals | `process-eval.json`, `trace.json` | Checks whether AutoMind followed required process gates; complements workflow-check/completion-check. |
+| Evaluate harness process | `<AUTOMIND_CLI> process-check <task-code> [--json|--soft|--no-write]` | `orchestrator/main.py`, `orchestrator/process_eval.py` | Process Evals | `process-eval.json`, `trace.json` | Checks whether CodeAutonomy followed required process gates; complements workflow-check/completion-check. |

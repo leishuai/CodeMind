@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://automind.local/schemas/delivery.schema.json",
-  "title": "AutoMind delivery.json",
+  "title": "CodeAutonomy delivery.json",
   "type": "object",
   "required": ["version", "phase", "sourceRefs", "exists", "summary", "changedFiles", "implementedRequirements", "touchedTestcases"],
   "properties": {

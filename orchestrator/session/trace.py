@@ -1,4 +1,4 @@
-"""Formal trace helpers for AutoMind runs.
+"""Formal trace helpers for CodeAutonomy runs.
 
 The durable source remains task-local artifacts (`events.jsonl`, workflow.json,
 logs).  This module projects them into an OpenTelemetry-friendly trace shape so
@@ -118,7 +118,7 @@ def build_trace(task_code: str, task_dir: Path) -> dict[str, Any]:
         {
             "spanId": "task",
             "parentSpanId": None,
-            "name": "AutoMind task",
+            "name": "CodeAutonomy task",
             "phase": "task",
             "actor": "automind",
             "action": "orchestrate_task",

@@ -1,4 +1,4 @@
-"""User natural-language messages for AutoMind TUI/shell sessions."""
+"""User natural-language messages for CodeAutonomy TUI/shell sessions."""
 from __future__ import annotations
 
 import json
@@ -60,11 +60,11 @@ def pending_user_messages_prompt_context(task_dir: Path) -> str:
         return ""
     lines = [
         "",
-        "## AutoMind user messages from TUI/session",
+        "## CodeAutonomy user messages from TUI/session",
         "",
-        "The user sent the following natural-language message(s) through the AutoMind TUI/session. Treat them as user intent or clarification for the current task, reconcile them with existing Requirements/TestCases/Plan/workflow state, and continue through the AutoMind workflow. If the message changes scope or creates risk, update artifacts and route through ask_user/replan as appropriate.",
+        "The user sent the following natural-language message(s) through the CodeAutonomy TUI/session. Treat them as user intent or clarification for the current task, reconcile them with existing Requirements/TestCases/Plan/workflow state, and continue through the CodeAutonomy workflow. If the message changes scope or creates risk, update artifacts and route through ask_user/replan as appropriate.",
     ]
-    for item in messages[-5:]:
+    for item in messages:
         lines.append(f"- {item.get('id')}: {item.get('text')}")
     return "\n".join(lines)
 

@@ -1,4 +1,4 @@
-"""Agent CLI adapter dispatch for AutoMind."""
+"""Agent CLI adapter dispatch for CodeAutonomy."""
 from __future__ import annotations
 
 import json
@@ -244,7 +244,7 @@ def _maybe_clear_stale_codex_primary_session(task_dir: Path, primary: dict) -> b
 
     Codex stores the approval policy in the persistent session. If an older
     primary session was created with approval=never, `codex exec resume <id>`
-    keeps that policy even after AutoMind's adapter default changes to
+    keeps that policy even after CodeAutonomy's adapter default changes to
     --ask-for-approval on-request. In that case, resuming is actively harmful:
     the session can neither request host approvals nor prove host-only Android
     commands. Clear it so the next primary command starts fresh.
@@ -545,7 +545,7 @@ def run_agent(
     if mode == "cli":
         resolved_agent, info = resolve_agent(agent)
         if not resolved_agent:
-            return -1, "[AutoMind] Agent preflight failed:\n" + format_preflight_failure(info)
+            return -1, "[CodeAutonomy] Agent preflight failed:\n" + format_preflight_failure(info)
         if info.get("requested") == "auto" and not quiet:
             log(f"Auto-selected coding agent: {resolved_agent}")
         return run_agent_cli(resolved_agent, prompt, task_dir, phase=phase, quiet=quiet)

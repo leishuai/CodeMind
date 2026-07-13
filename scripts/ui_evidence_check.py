@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check UI automation evidence completeness for AutoMind tasks.
+"""Check UI automation evidence completeness for CodeAutonomy tasks.
 
 This is intentionally lightweight: it does not decide product correctness. It
 checks whether a UI verification run left enough auditable evidence to support

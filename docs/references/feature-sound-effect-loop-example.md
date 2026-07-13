@@ -1,6 +1,6 @@
 # Example: Add Sound Effect Selection to Playback
 
-This example fixes the intended AutoMind loop semantics for a realistic feature request:
+This example fixes the intended CodeAutonomy loop semantics for a realistic feature request:
 
 > Add a sound-effect selector to the playback screen. Users can open an effect panel, choose an effect such as Original/Reverb/Electronic/Airy, and playback should apply the selected effect.
 

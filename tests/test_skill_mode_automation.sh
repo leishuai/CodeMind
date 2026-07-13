@@ -76,7 +76,7 @@ cat > "$TASK_DIR/TestCases.md" <<'MD'
 
 ## Testcase list
 
-| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / AutoMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |
+| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |
 |----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|
 | TC-F01 | R01 / AC-001 | Functional / Key Path | unit | preflight: artifacts | command: automind workflow-check | run script-command and assert exit_code=0 | nextActionPrompt present | none | yes |
 
