@@ -7,7 +7,7 @@ This reference defines where CodeMind is installed, how agents should resolve th
 Recommended public install command:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash
+curl -fsSL https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh | bash
 ```
 
 Default paths:
@@ -43,7 +43,7 @@ codemind update
 If the installed runtime is too old to support `codemind update`, rerun the one-line installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash
+curl -fsSL https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh | bash
 ```
 
 Set `AUTOMIND_BRANCH=<ref>` to install or pin a specific version, and `AUTOMIND_UPDATE=0` to reuse the existing cache without fetching. A local source checkout can sync its current state instead with `AUTOMIND_HOME=~/.automind/automind ./install.sh` (uses the checkout's code rather than fetching the remote).

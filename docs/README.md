@@ -65,7 +65,7 @@ CodeMind currently focuses on an evidence-driven harness loop, not a complete mo
 Users can install CodeMind from the remote git repository with:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash
+curl -fsSL https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh | bash
 ```
 
 This is the single supported public install command. It installs the CodeMind runtime under the compatibility path `~/.automind/automind` by default (`AUTOMIND_HOME=/custom/path` overrides it), creates the canonical `~/.local/bin/codemind` wrapper plus a legacy `automind` alias (`AUTOMIND_BIN_DIR=/custom/bin` overrides the directory), runs initialization, and installs the CodeMind skill plus `/codemind` command for Claude/Codex/Trae/Trae-CN by default. See [`references/installation-runtime.md`](references/installation-runtime.md) for exact runtime/workspace/skill/command path rules.
@@ -109,7 +109,7 @@ In a full CodeMind checkout, platform demo projects live under `demos/` and may 
 
 The recommended user setup is **Install full CodeMind**. The full CodeMind checkout provides the executable CLI/runtime (`codemind`, `./automind.sh`, orchestrator, and documented scripts/adapters), while the exported skill gives Codex/Claude/Trae the workflow, prompts, schemas, and operating rules.
 
-The exported skill package itself is a protocol/docs/templates/schemas/examples package and does not bundle executable runtime scripts. When the full runtime is installed, agents should prefer `codemind` / `./automind.sh` commands and may use documented full-checkout scripts/adapters when the command catalog says direct script use is appropriate. If only the skill is available, the agent must first suggest the single full install command (`curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash`). If installation is not allowed, it can still follow `workflow.md` manually and use project-native build/test/device commands to produce `Validation.md`, `evaluation.json`, and evidence logs.
+The exported skill package itself is a protocol/docs/templates/schemas/examples package and does not bundle executable runtime scripts. When the full runtime is installed, agents should prefer `codemind` / `./automind.sh` commands and may use documented full-checkout scripts/adapters when the command catalog says direct script use is appropriate. If only the skill is available, the agent must first suggest the single full install command (`curl -fsSL https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh | bash`). If installation is not allowed, it can still follow `workflow.md` manually and use project-native build/test/device commands to produce `Validation.md`, `evaluation.json`, and evidence logs.
 
 ## Skill / command export / installation
 

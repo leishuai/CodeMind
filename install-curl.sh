@@ -3,7 +3,7 @@
 # CodeMind public curl installer bootstrap.
 #
 # Host this file at a public URL, then install with one command:
-#   curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash
+#   curl -fsSL https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh | bash
 #
 # This bootstrap downloads only the installer script from the public URL. It then
 # clones or updates the CodeMind git repository in a private installer cache,
@@ -49,7 +49,7 @@ disable_cache_push_url() {
     fi
 }
 
-BOOTSTRAP_URL="https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh"
+BOOTSTRAP_URL="https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh"
 # Public sync rewrites this URL to the canonical CodeMind GitHub raw URL.
 
 usage() {

@@ -56,7 +56,7 @@ For the complete workflow and evidence contract, see
 Install CodeMind:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash
+curl -fsSL https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh | bash
 ```
 
 Run the no-device smoke test:

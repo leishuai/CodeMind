@@ -242,7 +242,7 @@ this guided-install loop instead of silently giving up or silently installing:
    single public install command:
 
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash
+   curl -fsSL https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh | bash
    ```
 
 3. If the user agrees (or the user already requested full-auto/no-confirmation
@@ -270,7 +270,7 @@ Think of `/codemind <request>` as structured natural language for the current mo
 
 Result exchange across current sessions, native isolated subagents, deterministic verifiers, and detached CLI processes happens through `.automind/tasks/<task>/` artifacts rather than hidden chat memory. `automind-workflow-state.json`, `automind-workflow-events.jsonl`, stage state files, `runtime-state.json`, `evaluation.json`, `Validation.md`, `Delivery.md`, `VerificationLedger.json`, and `logs/iter-N/*` are the shared contract for control state, evidence, resume, and integration.
 
-When only this skill package is available, first suggest the single full install command (`curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash`). If installation is not allowed, follow the same workflow manually and use project-native build/test/device commands for evidence.
+When only this skill package is available, first suggest the single full install command (`curl -fsSL https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh | bash`). If installation is not allowed, follow the same workflow manually and use project-native build/test/device commands for evidence.
 
 Mobile/visual automation helper packages are not installed by the public installer and are not bundled as executable code in this skill. In full runtime mode, required low-risk Python helpers may be auto-created/repaired during preflight/evaluation with `codemind setup-automation-tools android`, `codemind setup-automation-tools ios`, or `codemind setup-automation-tools visual`; those commands use the full runtime `requirements/android-tools.txt`, `requirements/ios-tools.txt`, and `requirements/visual-tools.txt`. They create project-local Python virtualenvs in the target workspace only and do not install system SDKs, signing material, device trust settings, OCR engines, browser drivers, or privileged services. Transient network/DNS package-index failures may be retried once with explicit logs; persistent failures must be classified and routed to runtime-helper fallback, lower-capability fallback, or `ask_user`. Human approval is still required for high-impact actions such as installing Xcode/Android SDKs, changing signing/keychains, trusting devices, or starting `tunneld`/sudo services.
 
@@ -278,7 +278,7 @@ For web/client/server target-project dependencies, use the target project's own 
 
 ## Recommended installation / runtime
 
-Best user experience is **full CodeMind installation** with the single public install command: `curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash`. It installs the CodeMind CLI/runtime, this skill, `/codemind`, and legacy aliases for supported coding agents. In that mode, the skill gives the agent the workflow and prompt protocol, while the full CodeMind checkout provides `codemind`, legacy `automind`, and `./automind.sh` plus orchestrator/scripts/adapters.
+Best user experience is **full CodeMind installation** with the single public install command: `curl -fsSL https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh | bash`. It installs the CodeMind CLI/runtime, this skill, `/codemind`, and legacy aliases for supported coding agents. In that mode, the skill gives the agent the workflow and prompt protocol, while the full CodeMind checkout provides `codemind`, legacy `automind`, and `./automind.sh` plus orchestrator/scripts/adapters.
 
 When a full CodeMind runtime is available, agents may use:
 
@@ -363,7 +363,7 @@ adapters, or platform-specific verification.
 - Do not silently run destructive or sensitive actions.
 - Low-risk Android/iOS Python helper package setup may run automatically when it is required by the selected verifier; it must use the full checkout's requirements files and project-local `.venv-*` folders only. Do not silently install system SDKs, signing material, device trust settings, or privileged services.
 - For web/client/server target dependencies, prefer project docs, CI, lockfiles, and `Reuse.md`; use `codemind dependency-check` only as optional read-only discovery when the path is unclear, then project-native lockfile/documented commands. Do not silently install system runtimes, Docker/database services, browser drivers, private registry credentials, signing, or device trust.
-- Prefer platform-native verification: project-native tests or script commands for generic projects, XCUITest for iOS, and adb/uiautomator-style evidence for Android. In skill-only mode, first suggest full install (`curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash`); if installation is not allowed, run those tools directly and write the same CodeMind artifacts. In full CLI mode, use `codemind` / `./automind.sh`.
+- Prefer platform-native verification: project-native tests or script commands for generic projects, XCUITest for iOS, and adb/uiautomator-style evidence for Android. In skill-only mode, first suggest full install (`curl -fsSL https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh | bash`); if installation is not allowed, run those tools directly and write the same CodeMind artifacts. In full CLI mode, use `codemind` / `./automind.sh`.
 - Evidence beats vibes. Always write structured results.
 - Functional verification runs first: complete the selected functional batch before formal quality-check; do not interleave quality after every functional testcase.
 - Crash/timeout quality failures require stack/page context before they are hard product failures. Record crash stack/backtrace, process/bundle, occurred page/screen/scene, reproduction path, and stability. Stable product-attributable crashes/timeouts should route to Generator self-repair; verifier timeouts, raw network/syslog timeouts, historical crash text, and control-plane/log-digest text should not fail completion by keyword alone.
@@ -510,7 +510,7 @@ def write_readme(out_dir: pathlib.Path, copied: dict[str, list[str]], include_in
 
 Generated at: {datetime.now().isoformat(timespec='seconds')}
 
-This package is a generic CodeMind skill bundle for coding agents. It packages the stable workflow docs, prompt templates, schemas, selected summary knowledge, and a minimal artifact-shape example. The recommended setup is full CodeMind installation via `curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash`: the CLI/runtime provides `codemind` commands and scripts/adapters, while this skill teaches agents how to use them correctly. The public skill package itself does not package the executable CodeMind runtime.{public_note}
+This package is a generic CodeMind skill bundle for coding agents. It packages the stable workflow docs, prompt templates, schemas, selected summary knowledge, and a minimal artifact-shape example. The recommended setup is full CodeMind installation via `curl -fsSL https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh | bash`: the CLI/runtime provides `codemind` commands and scripts/adapters, while this skill teaches agents how to use them correctly. The public skill package itself does not package the executable CodeMind runtime.{public_note}
 
 ## What CodeMind gives a coding agent
 
@@ -568,7 +568,7 @@ examples/offline-script-demo/    # artifact-shape example, not local runtime tas
 {internal_note}
 ## Note about command/script references
 
-The catalog in `docs/references/command-script-catalog.md` names the commands and scripts behind CodeMind capabilities. The recommended user setup is full CodeMind installation, where this skill may call `codemind` / `./automind.sh` and, when documented, full-checkout scripts/adapters. This public skill export intentionally does **not** bundle those executable runtime scripts or platform adapters; it is a protocol/docs/templates/schemas/examples package. If no full CodeMind CLI checkout or installed `codemind` wrapper is available, first suggest the single full install command (`curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash`). If installation is not allowed, follow `docs/workflow.md` manually and use the target project's own build/test/device tools to collect equivalent evidence.
+The catalog in `docs/references/command-script-catalog.md` names the commands and scripts behind CodeMind capabilities. The recommended user setup is full CodeMind installation, where this skill may call `codemind` / `./automind.sh` and, when documented, full-checkout scripts/adapters. This public skill export intentionally does **not** bundle those executable runtime scripts or platform adapters; it is a protocol/docs/templates/schemas/examples package. If no full CodeMind CLI checkout or installed `codemind` wrapper is available, first suggest the single full install command (`curl -fsSL https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh | bash`). If installation is not allowed, follow `docs/workflow.md` manually and use the target project's own build/test/device tools to collect equivalent evidence.
 
 Mobile/visual automation helper packages are lazy/local. The installer and this skill export do not install Android/iOS/visual helper kits by default. In full runtime mode, required low-risk Python helpers may be auto-created/repaired during preflight/evaluation via `codemind setup-automation-tools android`, `codemind setup-automation-tools ios`, or `codemind setup-automation-tools visual`. These commands use the CodeMind runtime `requirements/*.txt`, create local Python virtualenvs in the target workspace, retry transient network/DNS package-index failures once with explicit logs, and must not install system SDKs, signing material, OCR engines, browser drivers, device trust settings, or privileged services.
 

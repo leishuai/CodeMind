@@ -6,7 +6,7 @@
 #   ./install.sh
 #
 # For public curl installation, host install-curl.sh at a public URL and use:
-#   curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash
+#   curl -fsSL https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh | bash
 #
 
 set -euo pipefail
@@ -75,7 +75,7 @@ Environment variables:
 
 Examples:
   ./install.sh
-  curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash
+  curl -fsSL https://github.com/leishuai/CodeMind/raw/refs/heads/main/install-curl.sh | bash
 EOF
 }
 
