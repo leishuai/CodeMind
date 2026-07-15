@@ -50,6 +50,7 @@ disable_cache_push_url() {
 }
 
 BOOTSTRAP_URL="https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh"
+# Public sync rewrites this URL to the canonical CodeMind GitHub raw URL.
 
 usage() {
     cat <<USAGE_EOF
