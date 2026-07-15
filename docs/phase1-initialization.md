@@ -2,7 +2,7 @@
 
 ## When to run
 
-Run environment initialization once when CodeAutonomy is first used in a project, or whenever the local platform/tooling state may have changed.
+Run environment initialization once when CodeMind is first used in a project, or whenever the local platform/tooling state may have changed.
 
 ---
 
@@ -10,7 +10,7 @@ Run environment initialization once when CodeAutonomy is first used in a project
 
 ### 1. Check operating system
 
-CodeAutonomy currently targets macOS (Darwin).
+CodeMind currently targets macOS (Darwin).
 
 ```bash
 uname -s

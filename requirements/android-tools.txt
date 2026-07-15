@@ -1,4 +1,4 @@
-# CodeAutonomy Android verification helper packages.
+# CodeMind Android verification helper packages.
 # Installed into the project-local .venv-android-tools only.
 adbutils>=2.12,<3
 uiautomator2>=3.5,<4

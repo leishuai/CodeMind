@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read-only iOS workspace command-surface probe for AutoMind.
+"""Read-only iOS workspace command-surface probe for CodeMind.
 
 This public runner discovers common iOS build/run command surfaces without
 installing dependencies, generating projects, building, or mutating the target

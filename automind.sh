@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# CodeAutonomy main script
+# CodeMind main script
 # Usage: automind <command>
 #
 
@@ -9,13 +9,21 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 CALLER_CWD="$(pwd)"
 export AUTOMIND_RUNTIME_ROOT="${AUTOMIND_RUNTIME_ROOT:-$SCRIPT_DIR}"
+# Track whether the user explicitly set a workspace root before we default it.
+# The `channel` launcher must ask the user for the project directory instead of
+# silently adopting the launch directory, so it needs to know the difference.
+if [[ -n "${AUTOMIND_WORKSPACE_ROOT:-}" ]]; then
+    AUTOMIND_WORKSPACE_ROOT_EXPLICIT="yes"
+else
+    AUTOMIND_WORKSPACE_ROOT_EXPLICIT="no"
+fi
 # Workspace root is the user's target project. Installed wrappers may live in a
-# different CodeAutonomy runtime checkout, so never default task artifacts to SCRIPT_DIR
+# different CodeMind runtime checkout, so never default task artifacts to SCRIPT_DIR
 # unless the user is actually invoking from that checkout.
 export AUTOMIND_WORKSPACE_ROOT="${AUTOMIND_WORKSPACE_ROOT:-$CALLER_CWD}"
 PYTHON_EXEC="${PYTHON_EXEC:-python3}"
 ORCHESTRATOR="$SCRIPT_DIR/orchestrator/main.py"
-CLI_NAME="${AUTOMIND_CLI_DISPLAY:-codeautonomy}"
+CLI_NAME="${AUTOMIND_CLI_DISPLAY:-codemind}"
 
 # Colors
 RED='\033[0;31m'
@@ -24,10 +32,10 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-log() { echo -e "${BLUE}[CodeAutonomy]${NC} $*"; }
-success() { echo -e "${GREEN}[CodeAutonomy]${NC} $*"; }
-warn() { echo -e "${YELLOW}[CodeAutonomy]${NC} $*"; }
-error() { echo -e "${RED}[CodeAutonomy]${NC} $*" >&2; }
+log() { echo -e "${BLUE}[CodeMind]${NC} $*"; }
+success() { echo -e "${GREEN}[CodeMind]${NC} $*"; }
+warn() { echo -e "${YELLOW}[CodeMind]${NC} $*"; }
+error() { echo -e "${RED}[CodeMind]${NC} $*" >&2; }
 
 if [[ $# -eq 0 ]]; then
     if [[ -t 0 && -t 1 ]]; then
@@ -66,7 +74,7 @@ case "$command" in
         # Check Git. Runtime installs may contain a .git guard file (not a
         # repository) to prevent accidental parent-repo discovery/push. Do not
         # run git init in that guarded runtime directory.
-        if [[ -f ".git" ]] && grep -Eq "(CodeAutonomy|AutoMind) runtime install is intentionally not a Git checkout" ".git" 2>/dev/null; then
+        if [[ -f ".git" ]] && grep -Eq "(CodeMind|AutoMind) runtime install is intentionally not a Git checkout" ".git" 2>/dev/null; then
             success "Git: guarded runtime (no repository)"
         elif ! git rev-parse --is-inside-work-tree &>/dev/null; then
             warn "Initializing Git repository..."
@@ -153,10 +161,8 @@ case "$command" in
             echo "Usage: $CLI_NAME scaffold <requirement>"
             exit 1
         fi
-        USER_INPUT="$1"
-
-        log "Scaffolding task for current-session CodeAutonomy workflow..."
-        $PYTHON_EXEC "$ORCHESTRATOR" scaffold "$USER_INPUT"
+        log "Scaffolding task for current-session CodeMind workflow..."
+        $PYTHON_EXEC "$ORCHESTRATOR" scaffold "$@"
         ;;
 
     context-pack)
@@ -342,6 +348,32 @@ case "$command" in
         $PYTHON_EXEC "$ORCHESTRATOR" message "$@"
         ;;
 
+    chat-create)
+        if [[ $# -lt 1 ]]; then
+            error "Please provide a task code"
+            echo "Usage: $CLI_NAME chat-create <task-code> [--status chat] [--json]"
+            exit 1
+        fi
+        $PYTHON_EXEC "$ORCHESTRATOR" chat-create "$@"
+        ;;
+
+    classify)
+        if [[ $# -lt 1 ]]; then
+            error "Please provide a task code"
+            echo "Usage: $CLI_NAME classify <task-code> --text TEXT [--agent AGENT]"
+            exit 1
+        fi
+        $PYTHON_EXEC "$ORCHESTRATOR" classify "$@"
+        ;;
+
+    converse)
+        if [ "$#" -lt 1 ]; then
+            echo "Usage: $CLI_NAME converse <task-code> --text PROMPT --user-text TEXT [--agent AGENT]"
+            exit 1
+        fi
+        $PYTHON_EXEC "$ORCHESTRATOR" converse "$@"
+        ;;
+
     event)
         if [[ $# -lt 1 ]]; then
             error "Please provide a task code"
@@ -349,6 +381,15 @@ case "$command" in
             exit 1
         fi
         $PYTHON_EXEC "$ORCHESTRATOR" event "$@"
+        ;;
+
+    observe)
+        if [[ $# -lt 1 ]]; then
+            error "Please provide a task code"
+            echo "Usage: $CLI_NAME observe <chat-or-task-code> --json JSON"
+            exit 1
+        fi
+        $PYTHON_EXEC "$ORCHESTRATOR" observe "$@"
         ;;
 
     tui)
@@ -793,9 +834,9 @@ PY
             EXPORT_DIR="$1"
             shift || true
         else
-            EXPORT_DIR="$HOME/Downloads/codeautonomy-skill"
+            EXPORT_DIR="$HOME/Downloads/codemind-skill"
         fi
-        log "Exporting CodeAutonomy skill package to: $EXPORT_DIR"
+        log "Exporting CodeMind skill package to: $EXPORT_DIR"
         $PYTHON_EXEC "$SCRIPT_DIR/scripts/export_skill.py" "$EXPORT_DIR" "$@"
         success "Export complete: $EXPORT_DIR"
         ;;
@@ -809,9 +850,9 @@ PY
             EXPORT_DIR="$1"
             shift || true
         else
-            EXPORT_DIR="$SCRIPT_DIR/dist/codeautonomy-command"
+            EXPORT_DIR="$SCRIPT_DIR/dist/codemind-command"
         fi
-        log "Exporting CodeAutonomy command package to: $EXPORT_DIR"
+        log "Exporting CodeMind command package to: $EXPORT_DIR"
         $PYTHON_EXEC "$SCRIPT_DIR/scripts/export_command.py" "$EXPORT_DIR" "$@"
         success "Export complete: $EXPORT_DIR"
         ;;
@@ -825,16 +866,74 @@ PY
         $PYTHON_EXEC "$ORCHESTRATOR" workflow-contract "$1"
         ;;
 
+    channel)
+        # Multi-bot Feishu channel launcher. CodeMind supports many Feishu bots;
+        # each bot is one daemon process bound to one project workspace, so a
+        # task always belongs to exactly one bot (no cross-bot mixups). Bots live
+        # in a persistent registry under ~/.automind/channels/.
+        #
+        # This is a pure external front-end: it never changes the CodeMind core,
+        # and the TUI/skill modes work whether or not `channel` is ever used.
+        SUBCMD="${1:-}"
+        shift || true
+        BRIDGE_DIR="$SCRIPT_DIR/lark-bridge"
+        case "$SUBCMD" in
+            -h|--help|"")
+                cat <<EOF
+Usage: $CLI_NAME channel <command> [args]
+
+Commands:
+  start [botId]   Connect Feishu bot daemons. Interactive & idempotent: scanning
+                  a QR to create a bot and choosing the project dir are BOTH
+                  skippable. Omit botId to connect ALL registered bots at once.
+  dashboard       Show every bot's connection / process / workspace / task view.
+  stop [botId]    Stop a running bot daemon (all bots when botId omitted).
+
+Notes:
+  - Bots + credentials + workspace bindings persist under ~/.automind/channels/.
+  - Each bot is one process bound to one workspace; use pm2 for crash/boot resilience.
+EOF
+                exit 0
+                ;;
+        esac
+        if [[ ! -d "$BRIDGE_DIR" ]]; then
+            error "Lark bridge not found: $BRIDGE_DIR"
+            exit 1
+        fi
+        DO_BUILD="no"
+        FILTERED_ARGS=()
+        for arg in "$@"; do
+            case "$arg" in
+                --build) DO_BUILD="yes" ;;
+                *) FILTERED_ARGS+=("$arg") ;;
+            esac
+        done
+        BRIDGE_BUILD_ARGS=("$BRIDGE_DIR")
+        if [[ "$DO_BUILD" == "yes" ]]; then
+            BRIDGE_BUILD_ARGS+=("--force")
+        fi
+        "$SCRIPT_DIR/scripts/ensure_lark_bridge_build.sh" "${BRIDGE_BUILD_ARGS[@]}"
+        # The channel launcher owns its own project-directory prompt: it must ask
+        # the user which project to work on rather than silently adopting the
+        # directory the command happened to be launched from. So unless the user
+        # explicitly exported AUTOMIND_WORKSPACE_ROOT, do NOT leak the auto-
+        # defaulted CALLER_CWD into the daemon (which would make it look confirmed).
+        if [[ "$AUTOMIND_WORKSPACE_ROOT_EXPLICIT" != "yes" ]]; then
+            unset AUTOMIND_WORKSPACE_ROOT
+        fi
+        exec node "$BRIDGE_DIR/dist/main.js" "$SUBCMD" ${FILTERED_ARGS[@]+"${FILTERED_ARGS[@]}"}
+        ;;
+
     help|--help|-h|"")
         cat <<EOF
-CodeAutonomy - evidence-driven harness loop for coding agents
+CodeMind - evidence-driven harness loop for coding agents
 
 Usage:
   $CLI_NAME <command> [args]
 
 Entrypoints:
-  codeautonomy <command>                     # primary installed runtime
-  automind <command>                         # compatibility alias
+  codemind <command>                         # canonical installed runtime
+  automind <command>                         # legacy compatibility alias
   ./automind.sh <command>                    # source checkout
   $CLI_NAME shell                            # interactive command shell
 
@@ -851,6 +950,10 @@ Main task loop:
       Print the shared next-step instruction for the active task or code.
   message <code> --text TEXT [--resume agent]
       Record a natural-language user message for a running task/session.
+  converse <code> --text PROMPT --user-text TEXT [--agent agent]
+      Run a persistent read-only conversation-orchestrator turn.
+  observe <code> --json JSON
+      Record a validated external audit/metrics observation batch.
   answer <code> --text TEXT|--option ID|--json JSON
       Record a user answer for a pending ask_user gate.
 
@@ -897,7 +1000,7 @@ Reports, reuse, and memory:
   preloaded-check
       Validate preloaded pack metadata and Reuse.md discovery.
   knowledge check|search|show ...
-      Inspect local CodeAutonomy knowledge indexes and raw records.
+      Inspect local CodeMind knowledge indexes and raw records.
 
 Diagnostics and task operations:
   logs [code]
@@ -907,7 +1010,7 @@ Diagnostics and task operations:
   doctor <code> [--stale-seconds N]
       Diagnose heartbeat/progress/status for a task.
   tui <code>
-      Open CodeAutonomy TUI snapshot/watch/interactive view.
+      Open CodeMind TUI snapshot/watch/interactive view.
   event <code> [--type TYPE] [--message TEXT] [--phase PHASE]
       Append shared event timeline entry.
   checkpoint create|list|plan-restore|restore ...
@@ -977,18 +1080,18 @@ Android / Web / iOS helpers:
 
 Install / export:
   init
-      Check environment and create CodeAutonomy directories.
+      Check environment and create CodeMind directories.
   version
-      Show CodeAutonomy runtime version.
+      Show CodeMind runtime version.
   update
-      Update CodeAutonomy runtime, CLI wrappers, skill package, and /codeautonomy command.
+      Update CodeMind runtime, CLI wrappers, skill package, and slash commands.
   shell
-      Open the CodeAutonomy interactive command shell.
+      Open the CodeMind interactive command shell.
   export-skill [dir] [--install auto|claude|codex|trae|trae-cn]
-      Export the CodeAutonomy skill package. Default dir: ~/Downloads/codeautonomy-skill.
+      Export the CodeMind skill package. Default dir: ~/Downloads/codemind-skill.
       --install auto installs into the first detected supported local agent skill root.
   export-command [dir] [--install all|auto|claude|codex|trae|trae-cn]
-      Export the /codeautonomy slash command. The legacy /automind command remains supported.
+      Export /codemind and the legacy /automind alias. This is separate from the skill package.
   help
       Show this help.
 
@@ -1014,12 +1117,17 @@ Common workflows:
     $CLI_NAME record-check <task-code>
     $CLI_NAME report <task-code>
 
-  Update CodeAutonomy:
+  Update CodeMind:
     $CLI_NAME update
 
   Install agent integrations:
     $CLI_NAME export-skill --install auto
     $CLI_NAME export-command --install auto
+
+  Feishu channel (multi-bot; optional, does not affect TUI/skill modes):
+    $CLI_NAME channel start [botId]   # connect bot daemon(s); omit botId to connect all
+    $CLI_NAME channel dashboard       # live view of every bot's connection/tasks
+    $CLI_NAME channel stop [botId]    # stop a running bot daemon
 
 Examples:
   $CLI_NAME ask "Build a calculator with add/subtract/multiply/divide"

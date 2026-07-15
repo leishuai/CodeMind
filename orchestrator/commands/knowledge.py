@@ -542,7 +542,7 @@ def cmd_doctor(task_code: str, stale_seconds: int = 600):
         sys.exit(2)
 
 def cmd_workflow_check(task_code: str):
-    """Check CodeAutonomy workflow artifact continuity."""
+    """Check CodeMind workflow artifact continuity."""
     task_dir = get_task_dir(task_code)
     ok, report = check_workflow_consistency(task_code)
     if task_dir.exists():
@@ -686,7 +686,7 @@ def cmd_tick_iteration(task_code: str, phase: str = "generic") -> None:
             "phase": phase,
             "nextAction": "ask_user",
             "question": pending.get("question"),
-            "nextActionPrompt": "A pending CodeAutonomy question exists and has no recorded answer. Halt this agent turn and ask the user; record the answer with automind answer before continuing.",
+            "nextActionPrompt": "A pending CodeMind question exists and has no recorded answer. Halt this agent turn and ask the user; record the answer with automind answer before continuing.",
         }
         print(json.dumps(info, ensure_ascii=False, indent=2))
         sys.exit(2)

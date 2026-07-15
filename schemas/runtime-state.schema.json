@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://automind.local/schemas/runtime-state.schema.json",
-  "title": "CodeAutonomy Runtime State",
-  "description": "Mutable runtime/resume projection for one CodeAutonomy task. Macro phase routing lives in stateSummary.",
+  "title": "CodeMind Runtime State",
+  "description": "Mutable runtime/resume projection for one CodeMind task. Macro phase routing lives in stateSummary.",
   "type": "object",
   "additionalProperties": true,
   "required": [

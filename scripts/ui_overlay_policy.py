@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared safe auto-unblock overlay policy for CodeAutonomy UI runners.
+"""Shared safe auto-unblock overlay policy for CodeMind UI runners.
 
 The policy is high-automation by default. It identifies low-risk dismiss/close
 controls, app-internal first-run privacy/terms consent controls, and OS/app
@@ -388,7 +388,7 @@ def _looks_like_image_close_button(element: dict[str, Any], values: list[str]) -
 def _policy_rules(policy: dict[str, Any] | None = None) -> list[OverlayRule]:
     """Return rule list with task-local extensions.
 
-    `uiUnblock.rules[]` can add generic terms without editing CodeAutonomy code:
+    `uiUnblock.rules[]` can add generic terms without editing CodeMind code:
 
     ```json
     {"category": "safe_dismiss", "decision": "allow", "terms": ["Remind me later"]}

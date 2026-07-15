@@ -35,7 +35,7 @@ Record what Generator changed and how the change maps back to requirements, acce
 - Generator cannot bypass unresolved `ask_user`.
 - Generator cannot overwrite terminal `finished/finish` state.
 - Delivery must be sufficient for an independent Evaluator to verify.
-- If required runtime behavior exists but is not externally observable enough for verification, Generator may add scoped temporary diagnostic logs or test-only instrumentation. These must be minimal, non-secret, not change product semantics, use an identifiable marker such as `[CodeAutonomy][Verify]`, and be removed or explicitly promoted before finish.
+- If required runtime behavior exists but is not externally observable enough for verification, Generator may add scoped temporary diagnostic logs or test-only instrumentation. These must be minimal, non-secret, not change product semantics, use an identifiable marker such as `[CodeMind][Verify]`, and be removed or explicitly promoted before finish.
 
 ## Downstream contract
 Evaluator consumes `Delivery.md/json`, changed files, required TC list, runtime target, and evidence/log refs. When temporary diagnostic logs are used, Delivery must name the tag/keyword, expected signal, touched files, and whether the log is temporary or intended to remain.

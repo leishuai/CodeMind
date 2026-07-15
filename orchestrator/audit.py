@@ -1,4 +1,4 @@
-"""Audit logging for CodeAutonomy key decisions and operations.
+"""Audit logging for CodeMind key decisions and operations.
 
 Records:
 - decision_made: 关键决策（分类、原因、上下文）

@@ -84,7 +84,7 @@ schemas such as mandatory ids, SQL details, line ranges, AC copies, or long
 summaries; detailed proof belongs in the referenced artifact itself. Runner and
 script outputs should produce `evidenceIndex[]` automatically when they know the
 artifacts they created. Coding agents should only add entries for special
-project-native evidence that CodeAutonomy cannot infer.
+project-native evidence that CodeMind cannot infer.
 
 `signal` may use `missing:<name>` for negative evidence, for example a captured
 logcat window that did not contain an expected keyword. This records "collected
@@ -92,7 +92,7 @@ but not observed" instead of losing the attempt. Raw database dumps are not a
 primary verification path; treat database/file/state inspection as optional,
 project-specific evidence when it is already easy and safe to collect.
 
-Default evidence paths are: project-native test/report output; CodeAutonomy
+Default evidence paths are: project-native test/report output; CodeMind
 runner/probe-flow artifacts such as summaries, screenshots, hierarchy, traces,
 and command logs; runtime logs or scoped diagnostic logs; and mock/test sink or
 captured request/receipt evidence when the task is about side effects. Use
@@ -120,7 +120,7 @@ automind setup-automation-tools ios
 automind setup-automation-tools visual
 ```
 
-These commands create project-local `.venv-*` folders from the CodeAutonomy runtime `requirements/*.txt`. They must not silently install system SDKs, signing material, keychains, trust settings, OCR engines, browser drivers, or privileged services. If package installation fails for a transient network/DNS reason, setup may retry once with explicit retry logs; if it still fails, classify the blocker and route to runtime-helper fallback, lower-capability fallback, or `ask_user`. See [`references/installation-runtime.md`](references/installation-runtime.md) for runtime/workspace/helper path rules.
+These commands create project-local `.venv-*` folders from the CodeMind runtime `requirements/*.txt`. They must not silently install system SDKs, signing material, keychains, trust settings, OCR engines, browser drivers, or privileged services. If package installation fails for a transient network/DNS reason, setup may retry once with explicit retry logs; if it still fails, classify the blocker and route to runtime-helper fallback, lower-capability fallback, or `ask_user`. See [`references/installation-runtime.md`](references/installation-runtime.md) for runtime/workspace/helper path rules.
 
 For web/client/server target-project dependencies, use project-native setup and
 verification commands from `TestCases.md` / `Plan.md`. If those commands are
@@ -146,7 +146,7 @@ for platform-specific device flows.
 
 ## 5. Verification unblock rule
 
-If verification is blocked by an unrelated build/test/workspace issue, CodeAutonomy
+If verification is blocked by an unrelated build/test/workspace issue, CodeMind
 may use a minimal reversible verification unblock change only when it is safe and
 needed to run the selected verifier.
 
@@ -192,10 +192,10 @@ Preferred Evaluator order:
 4. Same conversation role switch - not acceptable for independent evaluation
 ```
 
-When the CodeAutonomy CLI is available, create the pack with:
+When the CodeMind CLI is available, create the pack with:
 
 ```bash
-<automind> context-pack <task-code> [iteration]
+<codemind> context-pack <task-code> [iteration]
 ```
 
 `workflow-check` validates recorded evaluator context when present and keeps
@@ -413,7 +413,7 @@ real device vs simulator/emulator.
 
 When a real device is already connected and authorized, operating the app for
 verification (play, skip/next, trigger error, interrupt/pause, navigate, then
-capture logcat/log) is CodeAutonomy's own job, not a question for the user. Drive the
+capture logcat/log) is CodeMind's own job, not a question for the user. Drive the
 device through probe-flow/XCUITest/instrumentation with selectors and post-action
 assertions. Do not emit `ask_user` like "I cannot operate your physical device,
 please confirm the verification approach" — that is a non-whitelisted soft pause
@@ -421,7 +421,7 @@ and the completion gate rewrites it back to `retry_generator`. Escalate to
 `ask_user(real_device_or_signing)` only for a real human/system gate: no device
 in `state=device`, an unresolved unlock/Developer-Mode/USB-debugging/trust
 prompt, missing signing/provisioning material, or denied UI Automation
-permission — and then state exactly what CodeAutonomy detected and which single
+permission — and then state exactly what CodeMind detected and which single
 physical action is needed.
 
 ## 13. Completion artifacts and exit condition
@@ -443,7 +443,7 @@ Requirements/TestCases/Validation prose. Use ids and `sourceRef` / evidence refs
 Before claiming Finish, run:
 
 ```bash
-<automind> completion-check <task-code>
+<codemind> completion-check <task-code>
 ```
 
 Completion requires:

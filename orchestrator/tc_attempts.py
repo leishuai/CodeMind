@@ -2,7 +2,7 @@
 
 The ledger is observational: it records which TC an iteration attempted and what
 evidence/result was produced. It does not prescribe which iteration must run a
-TC, preserving CodeAutonomy's dynamic repair loop.
+TC, preserving CodeMind's dynamic repair loop.
 """
 from __future__ import annotations
 

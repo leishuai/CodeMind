@@ -134,7 +134,7 @@ def normalize_pending_question(task_dir: Path, workflow: dict[str, Any] | None =
         "id": question_id,
         "fromPhase": from_phase,
         "source": "evaluation" if evaluation_next == "ask_user" else "runtime-state",
-        "question": question or "CodeAutonomy needs user input before continuing.",
+        "question": question or "CodeMind needs user input before continuing.",
         "options": options,
         "recommended": recommended,
         "resumeTo": pending.get("resumeAfter") or from_phase,

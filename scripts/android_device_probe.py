@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Android device validation probe for CodeAutonomy.
+"""Android device validation probe for CodeMind.
 
 This script validates the lightweight Android backend:
 - adbutils device discovery/info/current app/screenshot/logcat/hierarchy

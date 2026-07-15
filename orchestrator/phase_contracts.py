@@ -1,4 +1,4 @@
-"""Phase JSON sidecar contracts for CodeAutonomy.
+"""Phase JSON sidecar contracts for CodeMind.
 
 Markdown remains the human-facing authoring surface.  These sidecars are the
 minimum machine-readable inputs/outputs that let workflow.json orchestrate the

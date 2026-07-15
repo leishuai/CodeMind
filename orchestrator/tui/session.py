@@ -1,4 +1,4 @@
-"""TUI-owned session runner for CodeAutonomy ask/resume.
+"""TUI-owned session runner for CodeMind ask/resume.
 
 This module deliberately reuses the existing harness loop. It adds a small
 interactive supervisor around it: show TUI snapshots, let users answer pending
@@ -30,8 +30,8 @@ def render_tui_welcome() -> str:
     tip = 'say "全自动" or "full auto" to skip all ask_user gates.'
     return (
         f"{style(LOGO, BLUE, bold=True)}\n"
-        f"{style('CodeAutonomy TUI', CYAN, bold=True)} {automind_version_label()}\n"
-        f"{style('TUI-owned CodeAutonomy session', GRAY)}\n"
+        f"{style('CodeMind TUI', CYAN, bold=True)} {automind_version_label()}\n"
+        f"{style('TUI-owned CodeMind session', GRAY)}\n"
         f"{style('Tip: ' + tip, GRAY)}"
     )
 
@@ -71,10 +71,10 @@ def _tui_agent_can_use_bypass_policy(agent: str) -> bool:
 def _prompt_for_agent_execution_policy(task_code: str, task_dir: Path, agent: str) -> None:
     """Record default Planner/Generator bypass policy for new TUI tasks.
 
-    CodeAutonomy now defaults supported coding-agent Planner/Generator runs to the
+    CodeMind now defaults supported coding-agent Planner/Generator runs to the
     high-automation bypass path. Keep an auditable runtime-state policy record, but
     do not interrupt the user with an approval/sandbox prompt for this default.
-    High-risk actions must still route through CodeAutonomy ask_user gates.
+    High-risk actions must still route through CodeMind ask_user gates.
     """
     if not _tui_agent_can_use_bypass_policy(agent) or _has_agent_execution_policy_decision(task_dir):
         return
@@ -87,7 +87,7 @@ def _prompt_for_agent_execution_policy(task_code: str, task_dir: Path, agent: st
         "appliesTo": ["planner", "generator"],
         "evaluatorAlwaysBypass": True,
         "answeredAt": answered_at,
-        "question": "Default coding-agent approval/sandbox bypass for Planner/Generator on this CodeAutonomy task.",
+        "question": "Default coding-agent approval/sandbox bypass for Planner/Generator on this CodeMind task.",
         "source": "tui_default_bypass_no_prompt",
     }
     legacy = {
@@ -198,7 +198,7 @@ def run_tui_owned_loop(
     max_answer_cycles: int = 20,
     ask_execution_policy: bool = False,
 ) -> bool:
-    """Run a CodeAutonomy loop with TUI ask_user handling.
+    """Run a CodeMind loop with TUI ask_user handling.
 
     `run_loop` is usually a closure around `run_harness_loop(...)`. If the loop
     parks in `human_input_pending`, this supervisor prompts the user in the TUI,
@@ -263,8 +263,8 @@ def run_tui_owned_loop(
                     "clearedPrimaryAgentSession": cleared_primary,
                 },
             )
-            append_event(task_dir, "tui_user_interrupt", "User interrupted CodeAutonomy with Ctrl+C; task paused and can be resumed with a fresh primary agent session", level="warn", replace_key="tui:session", data={"clearedPrimaryAgentSession": cleared_primary})
-            print("\nCodeAutonomy paused by user. Resume with:")
+            append_event(task_dir, "tui_user_interrupt", "User interrupted CodeMind with Ctrl+C; task paused and can be resumed with a fresh primary agent session", level="warn", replace_key="tui:session", data={"clearedPrimaryAgentSession": cleared_primary})
+            print("\nCodeMind paused by user. Resume with:")
             print(f"  automind resume {task_code} {agent}")
             return False
         finally:
@@ -293,7 +293,7 @@ def run_tui_owned_loop(
         if _is_loop_continuation_state(state):
             # Stay inside the TUI container. For ask_user, the next cycle will
             # collect a human answer. For replan/retry/ready states, the next
-            # cycle invokes run_loop() again so CodeAutonomy can run Planner, then
+            # cycle invokes run_loop() again so CodeMind can run Planner, then
             # proceed to Generator/Evaluator without the detached shell exiting.
             continuation_key = (status, str(state.get("nextAction") or ""), str(state.get("currentOwner") or ""), int(state.get("iteration", 0) or 0))
             if continuation_key == last_continuation_key and not ok:

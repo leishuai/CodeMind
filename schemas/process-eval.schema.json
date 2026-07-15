@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://automind.local/schemas/process-eval.schema.json",
-  "title": "CodeAutonomy Process Eval",
+  "title": "CodeMind Process Eval",
   "type": "object",
   "required": ["schemaVersion", "taskCode", "generatedAt", "result", "issueCount", "warningCount", "passCount", "issues", "warnings", "passes"],
   "properties": {

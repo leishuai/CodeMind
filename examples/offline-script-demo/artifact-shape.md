@@ -6,7 +6,7 @@ After running:
 ./automind.sh smoke offline-demo
 ```
 
-CodeAutonomy creates this local evidence shape:
+CodeMind creates this local evidence shape:
 
 ```text
 .automind/tasks/offline_demo_smoke/

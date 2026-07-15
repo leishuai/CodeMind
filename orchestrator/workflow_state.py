@@ -1,4 +1,4 @@
-"""CodeAutonomy workflow control-state model.
+"""CodeMind workflow control-state model.
 
 This module owns the agent/runtime-facing workflow state files:
 
@@ -473,7 +473,7 @@ def reconcile_workflow_state(task_dir: Path, *, reason: str = "reconcile") -> di
 
     Reconciliation never asks the user and never treats state drift as a blocker.
     It marks the rebuilt state degraded/reconciling only as machine-readable
-    health, then lets the caller continue the CodeAutonomy loop.
+    health, then lets the caller continue the CodeMind loop.
 
     When falling back to runtime-state, we anchor on the most recent known-good
     canonical phase (existing workflow state -> runtime-state -> earlier events)

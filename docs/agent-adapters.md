@@ -1,6 +1,6 @@
 # Agent-specific Adapters
 
-CodeAutonomy is agent-agnostic at its core. Codex, Claude Code, Trae/Trae-CN, Cursor, or future agents should all consume the same CodeAutonomy task artifacts:
+CodeMind is agent-agnostic at its core. Codex, Claude Code, Trae/Trae-CN, Cursor, or future agents should all consume the same CodeMind task artifacts:
 
 ```text
 Requirements.md
@@ -16,14 +16,14 @@ summary.md
 logs/iter-N/
 ```
 
-An agent-specific adapter is only the thin boundary that translates CodeAutonomy's generic invocation contract into a concrete agent runtime command. Installation paths, runtime root, workspace root, helper virtualenvs, and user-level skill/command target folders are defined in [`references/installation-runtime.md`](references/installation-runtime.md); adapters must not hard-code developer-machine absolute paths from old logs.
+An agent-specific adapter is only the thin boundary that translates CodeMind's generic invocation contract into a concrete agent runtime command. Installation paths, runtime root, workspace root, helper virtualenvs, and user-level skill/command target folders are defined in [`references/installation-runtime.md`](references/installation-runtime.md); adapters must not hard-code developer-machine absolute paths from old logs.
 
 ```text
-CodeAutonomy loop
+CodeMind loop
   -> AgentAdapter.prepare(prompt, task_dir, role)
   -> concrete CLI/runtime
   -> AgentResult(exit_code, output, metadata)
-  -> CodeAutonomy evaluation / runtime-state
+  -> CodeMind evaluation / runtime-state
 ```
 
 ## What belongs in an adapter
@@ -44,7 +44,7 @@ Adapters should handle only runtime-specific differences:
 3. **Working directory policy**
    - Whether the agent needs a git repo.
    - Whether it supports an explicit cwd flag.
-   - CodeAutonomy must run agent/project subprocesses with the target workspace root as cwd. `AUTOMIND_ROOT` is only the installed runtime/scripts/templates root.
+   - CodeMind must run agent/project subprocesses with the target workspace root as cwd. `AUTOMIND_ROOT` is only the installed runtime/scripts/templates root.
 
 4. **Permission / sandbox flags**
    - Claude Code: `--print --permission-mode bypassPermissions`.
@@ -58,7 +58,7 @@ Adapters should handle only runtime-specific differences:
 
 ## What does not belong in an adapter
 
-Adapters should not own CodeAutonomy's product logic:
+Adapters should not own CodeMind's product logic:
 
 - runtime state machine;
 - `evaluation.json` schema;
@@ -68,7 +68,7 @@ Adapters should not own CodeAutonomy's product logic:
 - requirement or summary format;
 - sensitive-action policy.
 
-Those stay in CodeAutonomy core so every agent follows the same loop.
+Those stay in CodeMind core so every agent follows the same loop.
 
 ## Recommended interface
 
@@ -94,31 +94,31 @@ For the current codebase, a dictionary-based adapter registry is sufficient and 
 
 ## Current adapter registry
 
-CodeAutonomy currently supports these thin CLI adapters:
+CodeMind currently supports these thin CLI adapters:
 
 | Agent | Binary | Current command shape | Notes |
 |---|---|---|---|
-| `codex` | `codex` | Evaluator always: fresh `codex --dangerously-bypass-approvals-and-sandbox exec --skip-git-repo-check -C <AUTOMIND_WORKSPACE_ROOT> <prompt>`; Planner/Generator uses the task-level `agentExecutionPolicy`: bypass => dangerous bypass, normal => `codex --ask-for-approval on-request exec --sandbox workspace-write ...`. Primary Codex sessions are reused only when their execution mode matches the current task policy. | Evaluator is always fresh-isolated and bypassed for evidence collection, across all Coding Agents. Planner/Generator also default to bypass for supported coding-agent CLIs; new TUI tasks record this as `default_bypass` without prompting. |
-| `claude` | `claude` | Planner/Generator uses task-level `agentExecutionPolicy`: bypass => `claude --print --dangerously-skip-permissions --permission-mode bypassPermissions --session-id <uuid> <prompt>`, normal => `claude --print --session-id <uuid> <prompt>`; Evaluator: fresh `claude --print --dangerously-skip-permissions ... <prompt>` | Planner/Generator follows the shared task policy; Evaluator is always bypassed. |
-| `trae` / `trae-cn` | `traecli` | Planner/Generator: `traecli -p <prompt> --session-id/--resume <uuid> --allowed-tool ... --yolo --json`; Evaluator: fresh `traecli -p ... --yolo --json` | Both adapter names map to the same Trae CLI runtime. `trae-cn` is accepted as a detached CLI alias and also matches the Trae-CN skill/command install target. Detached/non-TTY command mode defaults to YOLO/tool auto-approval for high automation while CodeAutonomy prompt-level unsafe-action guards still require `ask_user`. |
+| `codex` | `codex` | Evaluator always: fresh dangerous-bypass invocation; Planner/Generator follows task `agentExecutionPolicy`; Channel conversation: persistent `codex exec` with `approval=never` and `sandbox=read-only`. | Conversation sessions cannot mutate the workspace directly; effects go through the Channel capability executor. |
+| `claude` | `claude` | Planner/Generator follows task policy; Evaluator is fresh bypassed; Channel conversation: persistent `--permission-mode plan --tools ""` session. | Conversation has no direct tool execution. |
+| `trae` / `trae-cn` | `traecli` | Planner/Generator uses allowed tools + YOLO; Evaluator is fresh YOLO; Channel conversation uses a persistent session with Bash/Edit/Replace/Write denied and no YOLO. | Both adapter names map to the same runtime. |
 
-`auto` is the default detached CLI selection mode for `ask`, `plan`, and `resume`. It tries `codex`, then `claude`, then `trae`/`trae-cn` (`traecli`); the first adapter whose binary and `--version` probe pass is used for the actual run. If none pass, CodeAutonomy returns a full preflight diagnostic and recommends installing/configuring a supported CLI or using current-session `scaffold`/`/codeautonomy` mode.
+`auto` is the default detached CLI selection mode for `ask`, `plan`, and `resume`. It tries `codex`, then `claude`, then `trae`/`trae-cn` (`traecli`); the first adapter whose binary and `--version` probe pass is used for the actual run. If none pass, CodeMind returns a full preflight diagnostic and recommends installing/configuring a supported CLI or using current-session `scaffold`/`/codemind` mode.
 
 ## Evaluator isolation across coding agents
 
-CodeAutonomy should not assume every tool has a native "subagent" primitive. The portable guarantee is stricter and simpler:
+CodeMind should not assume every tool has a native "subagent" primitive. The portable guarantee is stricter and simpler:
 
 1. **Primary implementation session**: Planner, Generator, and Generator repair may reuse one persistent primary agent session for the same task when the CLI supports it. This preserves the implementation narrative and lets repair prompts benefit from prior planning/build context.
 2. **Fresh bypassed Evaluator invocation**: Evaluator is never resumed from the Planner/Generator primary session. It must start as a fresh isolated process/session or a deterministic verifier, and Coding-Agent Evaluator invocations must always use the high-automation bypass mode for that agent (Codex dangerous bypass, Claude skip permissions, Trae/Trae-CN YOLO). The task-level Planner/Generator policy does not affect Evaluator.
 3. **Task-level Planner/Generator execution policy**: `runtime-state.json.agentExecutionPolicy` records Planner/Generator bypass across Codex/Claude/Trae/Trae-CN. Missing policy falls back to bypass so non-new tasks, detached scripts, resume/helper commands, or flows that cannot ask still keep high automation. New TUI tasks no longer ask about this default; they record `default_bypass` for audit. Detached scripts, resume, and helper commands do not prompt. If bypass state changes in older tasks, do not reuse a primary session created under the opposite execution mode. The legacy `codexDangerousBypass` field is compatibility-only.
 3. **Context-pack only for Evaluator**: Evaluator receives `logs/iter-N/evaluator-context.md/json` as the only orchestrator-provided task context.
-4. **Policy validation gate**: before launching an agent Evaluator, CodeAutonomy validates the pack:
+4. **Policy validation gate**: before launching an agent Evaluator, CodeMind validates the pack:
    - required files exist and are non-empty;
    - optional files are included only if present;
    - forbidden raw Generator context is not embedded.
 5. **Independent verification allowed**: Evaluator may inspect source/product files and run commands, but must not read raw Generator logs/transcripts or inherit the primary implementation session.
 
-The intended evaluator shape is **complete, audited, non-redundant context + no Generator reasoning pollution + full independent verification capability**. Context isolation must not weaken the Evaluator into a prose reviewer. When platform config exists, the Evaluator must use the same real app verification capabilities CodeAutonomy already provides: Android preflight/probe-flow, iOS preflight/probe-flow/XCUITest, script-command, unit tests, build/install/launch/log/screenshot evidence.
+The intended evaluator shape is **complete, audited, non-redundant context + no Generator reasoning pollution + full independent verification capability**. Context isolation must not weaken the Evaluator into a prose reviewer. When platform config exists, the Evaluator must use the same real app verification capabilities CodeMind already provides: Android preflight/probe-flow, iOS preflight/probe-flow/XCUITest, script-command, unit tests, build/install/launch/log/screenshot evidence.
 
 Native subagents are optional optimizations, not the baseline contract. If a future adapter supports native isolated sessions, it may use them, but it must still consume the same context pack and pass the same validation gate.
 
@@ -139,9 +139,16 @@ runtime-state.json.stateSummary  # obsolete fallback for older tasks only
 
 Do not depend on private chat memory to transfer results between Evaluator, deterministic verifiers, detached loops, or resumed work. Planner/Generator may reuse a primary implementation session, but the durable integration contract remains `automind-workflow-state.json` for workflow routing plus `evaluation.json`, `runtime-state.json`, `Delivery.md`, `Validation.md`, and evidence paths. Evaluator results must be written to those artifacts and then fed back to the primary Generator session as ordinary file/prompt context.
 
+Channel conversation sessions are a separate use of the primary-session
+mechanism. They live under a `status=chat` task shell, use `phase=conversation`,
+and must run with read-only/no-tool permissions. They persist visible turns in
+`conversation-turns.jsonl` and bounded recovery metadata in
+`conversation-state.json`. They must never be copied into a formal task or
+reused by Evaluator.
+
 ### Context budget and artifact handoff
 
-CodeAutonomy must keep raw evidence on disk, not in the coding-agent conversation. Context packs use a tiered policy: core contract files such as `Requirements.md`, `TestCases.md`, `Plan.md`, and `Brainstorm.md` get much larger/full excerpts so task intent is not lost; history/evidence files such as `Delivery.md` and `Validation.md` use structured excerpts (headings, key result/evidence lines, latest sections) when large; build logs, probe logs, screenshots, DB dumps, and raw agent transcripts remain authoritative artifacts under the task directory and are reached through `log-digest.md` plus targeted `grep`/`tail`/line-range reads. If an agent hits `agent_context_overflow`, CodeAutonomy should clear the saturated primary session and resume through a fresh session using durable task artifacts as the handoff.
+CodeMind must keep raw evidence on disk, not in the coding-agent conversation. Context packs use a tiered policy: core contract files such as `Requirements.md`, `TestCases.md`, `Plan.md`, and `Brainstorm.md` get much larger/full excerpts so task intent is not lost; history/evidence files such as `Delivery.md` and `Validation.md` use structured excerpts (headings, key result/evidence lines, latest sections) when large; build logs, probe logs, screenshots, DB dumps, and raw agent transcripts remain authoritative artifacts under the task directory and are reached through `log-digest.md` plus targeted `grep`/`tail`/line-range reads. If an agent hits `agent_context_overflow`, CodeMind should clear the saturated primary session and resume through a fresh session using durable task artifacts as the handoff.
 
 Current adapter interpretation:
 
@@ -156,12 +163,12 @@ A tool that can only continue the same conversation/session for Evaluator is **n
 
 ### Skill mode vs command mode
 
-In **detached command mode** (`./automind.sh ask/resume ...`), CodeAutonomy owns the loop. For Codex, Claude, and Trae/Trae-CN, CodeAutonomy keeps a task-local primary Planner/Generator session when possible, recorded in `runtime-state.json.agentSessions.primary`. Evaluator is always a fresh isolated and bypassed invocation that receives only the validated evaluator context pack. Detached mode still does not reuse the current slash-command conversation.
+In **detached command mode** (`./automind.sh ask/resume ...`), CodeMind owns the loop. For Codex, Claude, and Trae/Trae-CN, CodeMind keeps a task-local primary Planner/Generator session when possible, recorded in `runtime-state.json.agentSessions.primary`. Evaluator is always a fresh isolated and bypassed invocation that receives only the validated evaluator context pack. Detached mode still does not reuse the current slash-command conversation.
 
-In **skill/slash-command current-session mode** (the CodeAutonomy skill or `/codeautonomy` command is installed inside Claude Code, Trae/Trae-CN, Codex, etc.), the host coding agent is usually the Planner/Generator/main session. That main session may keep full project and conversation context. The CLI may still be used for deterministic helpers such as `scaffold`, `workflow-check` (refresh/validate `workflow.json`), `context-pack`, `script-command`, `completion-check`, `summary`, and `record-check`. But Evaluator isolation is not automatic. The host agent must choose one of these patterns:
+In **skill/slash-command current-session mode** (the CodeMind skill or `/codemind` command is installed inside Claude Code, Trae/Trae-CN, Codex, etc.), the host coding agent is usually the Planner/Generator/main session. That main session may keep full project and conversation context. The CLI may still be used for deterministic helpers such as `scaffold`, `workflow-check` (refresh/validate `workflow.json`), `context-pack`, `script-command`, `completion-check`, `summary`, and `record-check`. But Evaluator isolation is not automatic. The host agent must choose one of these patterns:
 
 1. **Default for slash commands: current session for Planner/Generator + CLI gates**
-   - Run `./automind.sh scaffold "<request>"` (or installed `automind scaffold "<request>"`) to create the task container without launching another agent.
+   - Run `./automind.sh scaffold "<request>"` (or installed `codemind scaffold "<request>"`) to create the task container without launching another agent.
    - Refine `Brainstorm.md`, `Requirements.md`, `TestCases.md`, and `Plan.md` in the current session, then run `workflow-check` to refresh/validate derived `workflow.json`.
    - Use JSON sidecars as the handoff spine, not just Markdown/chat memory: read `automind-workflow-state.json`, `workflow.json`, and upstream sidecars before choosing the next macro action; after phase edits, use `workflow-check`, `phase-gate`, and the returned `checklist[]`/`checkboxMarkdown[]` to refresh/schema-check sidecars and drive the native TODO plan; use `evaluation.json.nextAction` and `completion-report.json` as local resolver signals rather than prose confidence.
    - Before code changes, record the pre-implementation review decision in `Brainstorm.md` and `runtime-state.json.planner.preImplementationReview`. This is a mandatory gate. Brainstorm must proactively expand the request, compare approaches, recommend one, and normally ask the user to confirm the conclusion before non-trivial implementation. Continue only for `auto_proceed` or after a resolved user confirmation; pause for `ask_user` or `replan`. After the gate is resolved, keep the harness loop moving through Generator implement/repair -> Evaluator verify/re-verify -> completion gate until finish is proven or a real stop condition occurs.
@@ -181,7 +188,7 @@ In **skill/slash-command current-session mode** (the CodeAutonomy skill or `/cod
    - This avoids model-context contamination entirely.
 
 5. **Explicit detached CLI ownership**
-   - Run `./automind.sh ask ...` or `./automind.sh resume ...` only when the user wants CodeAutonomy to own a background/detached loop through an adapter.
+   - Run `./automind.sh ask ...` or `./automind.sh resume ...` only when the user wants CodeMind to own a background/detached loop through an adapter.
    - In Codex/Claude/Trae/Trae-CN this starts a new agent CLI process/session rather than reusing the slash-command conversation.
 
 If none of these is possible, the skill must not claim independent evaluation. It should write `evaluation.json` as `blocked`/`replan` with category `invalid_evaluation_output` or `needs_replan`.
@@ -203,29 +210,29 @@ Good adapter-specific additions:
 
 - "You are running under Claude Code print mode; write final status clearly to stdout."
 - "You are running under JSON-output Trae/Trae-CN mode; do not rely on interactive prompts."
-- "Codex may require a trusted git workspace; CodeAutonomy is passing `--skip-git-repo-check`."
+- "Codex may require a trusted git workspace; CodeMind is passing `--skip-git-repo-check`."
 
 Bad additions:
 
 - Duplicating the whole Generator/Evaluator prompt per agent.
-- Changing the CodeAutonomy task file protocol per agent.
+- Changing the CodeMind task file protocol per agent.
 - Letting one adapter silently skip evidence or structured evaluation.
 
 ## Failure mapping
 
-All adapter failures should normalize into CodeAutonomy categories:
+All adapter failures should normalize into CodeMind categories:
 
-| Adapter symptom | CodeAutonomy category | Typical nextAction |
+| Adapter symptom | CodeMind category | Typical nextAction |
 |---|---|---|
 | binary missing | `agent_unavailable` | safe auto-recovery: record `autoRecovery.selected=resume_after_recovery`, keep artifacts, and retry/resume without `ask_user`; ask only if the chosen fix installs software, changes system config, switches agent/account, or expands access |
 | `--version` fails | `agent_unavailable` | safe auto-recovery: retry/resume after auth/runtime recovers without `ask_user`; ask only for credentials, provider/account changes, installs, or system configuration changes |
 | auth/provider/model error | `agent_unavailable` | safe auto-recovery for transient provider/model/runtime outages; `ask_user` for credentials, account switching, model/provider policy decisions, or access expansion |
-| CLI process exceeds CodeAutonomy timeout | `agent_timeout` | safe auto-recovery: keep artifacts and retry/resume without `ask_user`; increasing timeout is also safe when bounded and local. Default detached agent timeout is 43200 seconds. |
+| CLI process exceeds CodeMind timeout | `agent_timeout` | safe auto-recovery: keep artifacts and retry/resume without `ask_user`; increasing timeout is also safe when bounded and local. Default detached agent timeout is 43200 seconds. |
 | CLI process produces no stdout/stderr for the idle watchdog window | `agent_stalled_no_output` | safe auto-recovery: keep artifacts and retry/resume without `ask_user`; this means agent progress is unobservable, not that product validation failed. Default idle-output timeout is 1800 seconds (`AUTOMIND_AGENT_IDLE_TIMEOUT_SECONDS`). |
 | CLI exits non-zero before code change | `agent_unavailable` or `unknown` | safe auto-recovery for known runtime categories; otherwise `retry_generator`, deterministic verifier, or `ask_user` only for unsafe/non-local decisions |
 | agent output lacks expected artifacts | `invalid_evaluation_output` | `retry_generator` or `replan` |
 
-CLI/TUI-owned loops also wrap `run_harness_loop` with a bounded safe auto-resume supervisor. When Generator/Evaluator writes `evaluation.autoRecovery` for `agent_unavailable`, `agent_timeout`, `agent_stalled_no_output`, or `agent_context_overflow`, CodeAutonomy re-enters the same task automatically instead of asking the user to run `resume`. For `agent_context_overflow`, it clears the saturated primary Planner/Generator session and retries from durable task artifacts in a fresh primary session. The default outer auto-resume limit is 3 (`AUTOMIND_SAFE_AUTO_RESUME_MAX`) to avoid infinite loops.
+CLI/TUI-owned loops also wrap `run_harness_loop` with a bounded safe auto-resume supervisor. When Generator/Evaluator writes `evaluation.autoRecovery` for `agent_unavailable`, `agent_timeout`, `agent_stalled_no_output`, or `agent_context_overflow`, CodeMind re-enters the same task automatically instead of asking the user to run `resume`. For `agent_context_overflow`, it clears the saturated primary Planner/Generator session and retries from durable task artifacts in a fresh primary session. The default outer auto-resume limit is 3 (`AUTOMIND_SAFE_AUTO_RESUME_MAX`) to avoid infinite loops.
 
 ## Implementation plan
 
@@ -271,21 +278,21 @@ Each overlay should mostly differ in entry instructions and invocation examples,
 
 ## Practical rule
 
-If an adapter needs more than ~100 lines or starts changing workflow semantics, it is probably not an adapter anymore. Move shared behavior back into CodeAutonomy core.
+If an adapter needs more than ~100 lines or starts changing workflow semantics, it is probably not an adapter anymore. Move shared behavior back into CodeMind core.
 
-## Using CodeAutonomy as a skill or command in coding agents
+## Using CodeMind as a skill or command in coding agents
 
-There are three integration modes. Prefer the skill package for agents that support reusable skills. Use slash-command export for agents that expose `/command` style entrypoints. Use repo-local command mode when the agent is working directly inside the CodeAutonomy repository or a project that vendors CodeAutonomy.
+There are three integration modes. Prefer the skill package for agents that support reusable skills. Use slash-command export for agents that expose `/command` style entrypoints. Use repo-local command mode when the agent is working directly inside the CodeMind repository or a project that vendors CodeMind.
 
 ```text
 Mode A: Skill package
-  CodeAutonomy repo -> ./automind.sh export-skill <skill-dir> -> install/import into agent skill system
+  CodeMind repo -> ./automind.sh export-skill <skill-dir> -> install/import into agent skill system
 
 Mode B: Slash-command package
-  CodeAutonomy repo -> ./automind.sh export-command <command-dir> -> install/import /codeautonomy command
+  CodeMind repo -> ./automind.sh export-command <command-dir> -> install/import /codemind command
 
 Mode C: Command/project tool
-  Agent works in a repo that has CodeAutonomy -> run ./automind.sh commands directly
+  Agent works in a repo that has CodeMind -> run ./automind.sh commands directly
 ```
 
 ### Mode A: exported skill package
@@ -294,7 +301,7 @@ Generate a public-safe skill bundle:
 
 ```bash
 cd /path/to/automind
-./automind.sh export-skill /tmp/codeautonomy-skill
+./automind.sh export-skill /tmp/codemind-skill
 ```
 
 Export only is the default. The installer installs public-safe skills for Claude/Codex/Trae/Trae-CN by default; to install manually:
@@ -308,13 +315,13 @@ Export only is the default. The installer installs public-safe skills for Claude
 ./automind.sh export-skill --install auto
 
 # Same, but keep/export a copy at a specific path too
-./automind.sh export-skill /tmp/codeautonomy-skill --install auto
+./automind.sh export-skill /tmp/codemind-skill --install auto
 
 # Install for Claude user-level skill folder
 ./automind.sh export-skill --install claude
 
 # Same, but keep/export a copy at a specific path too
-./automind.sh export-skill /tmp/codeautonomy-skill --install claude
+./automind.sh export-skill /tmp/codemind-skill --install claude
 
 # Install for Codex, verified with Codex CLI 0.125.0
 ./automind.sh export-skill --install codex
@@ -337,7 +344,7 @@ Current verified user-level install targets:
 | Trae | `~/.trae/skills/<name>` | path convention cross-checked against graphify |
 | Trae-CN | `~/.trae-cn/skills/<name>` | path convention cross-checked against graphify |
 
-CodeAutonomy does not silently modify agent configuration without `--install`. Trae does not support PreToolUse hooks; use the skill plus project `AGENTS.md` rules for always-on behavior.
+CodeMind does not silently modify agent configuration without `--install`. Trae does not support PreToolUse hooks; use the skill plus project `AGENTS.md` rules for always-on behavior.
 
 The exported package contains stable user-facing material:
 
@@ -361,7 +368,7 @@ Use the exported package as a project/user skill if Claude Code's skill mechanis
 Suggested first prompt after installing the skill:
 
 ```text
-Use the CodeAutonomy skill. For this task, first execute the mandatory startup read
+Use the CodeMind skill. For this task, first execute the mandatory startup read
 protocol: read SKILL.md, docs/workflow.md, docs/phase2-requirement.md,
 docs/phases/demand-definition.md, docs/phases/verification-execution-planning.md,
 templates/phase2_planner_prompt.md, docs/phase3-verification.md,
@@ -376,15 +383,15 @@ If the skill package is not formally installed, attach or copy the exported fold
 
 Codex may not have the same formal skill system in every environment. Use one of these options:
 
-1. Put the exported CodeAutonomy skill folder inside the working project, for example `.agent-skills/codeautonomy-skill/`.
-2. Add a short project instruction telling Codex to read `.agent-skills/codeautonomy-skill/SKILL.md` before long-running tasks.
-3. If CodeAutonomy itself is available as a command, tell Codex to use command mode below.
+1. Put the exported CodeMind skill folder inside the working project, for example `.agent-skills/codemind-skill/`.
+2. Add a short project instruction telling Codex to read `.agent-skills/codemind-skill/SKILL.md` before long-running tasks.
+3. If CodeMind itself is available as a command, tell Codex to use command mode below.
 
 Suggested prompt:
 
 ```text
-Use .agent-skills/codeautonomy-skill as the CodeAutonomy skill. Read SKILL.md and follow the
-CodeAutonomy harness loop: requirements, preflight, generator/evaluator evidence,
+Use .agent-skills/codemind-skill as the CodeMind skill. Read SKILL.md and follow the
+CodeMind harness loop: requirements, preflight, generator/evaluator evidence,
 evaluation.json, and summary.
 ```
 
@@ -394,25 +401,25 @@ Trae/Trae-CN skill installation follows the path convention used by graphify:
 
 ```bash
 ./automind.sh export-skill --install trae
-# -> ~/.trae/skills/codeautonomy-skill
+# -> ~/.trae/skills/codemind-skill
 
 ./automind.sh export-skill --install trae-cn
-# -> ~/.trae-cn/skills/codeautonomy-skill
+# -> ~/.trae-cn/skills/codemind-skill
 ```
 
-Trae does not support PreToolUse hooks. Use the exported skill plus project `AGENTS.md` rules as the always-on mechanism. Repo-local command mode is still useful when you want the agent to run CodeAutonomy directly from a checkout.
+Trae does not support PreToolUse hooks. Use the exported skill plus project `AGENTS.md` rules as the always-on mechanism. Repo-local command mode is still useful when you want the agent to run CodeMind directly from a checkout.
 
 Suggested prompt for repo-local use:
 
 ```text
-Use the CodeAutonomy skill in .agent-skills/codeautonomy-skill. Do not rely on interactive
-questions unless CodeAutonomy asks for a human decision. Produce structured evidence
+Use the CodeMind skill in .agent-skills/codemind-skill. Do not rely on interactive
+questions unless CodeMind asks for a human decision. Produce structured evidence
 and evaluation output.
 ```
 
 ### Mode B: exported slash-command package
 
-Some coding agents expose slash commands such as `/graphify`. CodeAutonomy supports the same style through `export-command`: `/codeautonomy` is a thin entrypoint that makes the host agent follow the CodeAutonomy skill/workflow protocol. When a CodeAutonomy CLI is available, the command uses it for deterministic helpers and gates; it does not start a detached agent loop unless the user explicitly asks for detached mode.
+Some coding agents expose slash commands such as `/graphify`. CodeMind supports the same style through `export-command`: `/codemind` is a thin entrypoint that makes the host agent follow the CodeMind skill/workflow protocol. When a CodeMind CLI is available, the command uses it for deterministic helpers and gates; it does not start a detached agent loop unless the user explicitly asks for detached mode.
 
 ```bash
 cd /path/to/automind
@@ -429,34 +436,34 @@ Current user-level command targets:
 
 | Agent | User-level command path | Notes |
 |---|---|---|
-| Claude | `~/.claude/commands/codeautonomy.md` | Claude-style markdown slash command. |
-| Codex | `~/.codex/commands/codeautonomy.md` | Codex-style markdown command entrypoint; pairs with CodeAutonomy skill at `~/.codex/skills/codeautonomy-skill`. |
-| Trae | `~/.trae/commands/codeautonomy.md` | Follows the same user-level convention as graphify-style Trae installs, using `commands/` for slash commands. |
-| Trae-CN | `~/.trae-cn/commands/codeautonomy.md` | Domestic Trae/Trae-CN variant. |
+| Claude | `~/.claude/commands/codemind.md` | Claude-style markdown slash command. |
+| Codex | `~/.codex/commands/codemind.md` | Codex-style markdown command entrypoint; pairs with CodeMind skill at `~/.codex/skills/codemind-skill`. |
+| Trae | `~/.trae/commands/codemind.md` | Follows the same user-level convention as graphify-style Trae installs, using `commands/` for slash commands. |
+| Trae-CN | `~/.trae-cn/commands/codemind.md` | Domestic Trae/Trae-CN variant. |
 
-The command file is intentionally small. It should not duplicate all CodeAutonomy docs; it routes the agent to the CodeAutonomy CLI, `SKILL.md`, and the workflow docs so the CLI, skill, and slash command keep one source of truth. The generated command resolves the CLI in this order: project-local `./automind.sh`, `$AUTOMIND_HOME/automind.sh`, then `automind.sh`/`automind` on `PATH`.
+The command file is intentionally small. It should not duplicate all CodeMind docs; it routes the agent to the CodeMind CLI, `SKILL.md`, and the workflow docs so the CLI, skill, and slash command keep one source of truth. The generated command resolves the CLI in this order: `codemind` on `PATH`, legacy `automind`, project-local `./automind.sh`, then the installed runtime path.
 
 Default slash-command semantics:
 
-- `/codeautonomy ask <request>` is equivalent to `/codeautonomy <request>`.
-- Both mean: use the current host-agent session as Planner/Generator and use CodeAutonomy CLI helpers/gates such as `scaffold`, `workflow-check` (refresh/validate `workflow.json`), `phase-gate` (refresh/read `automind-workflow-state.json`, checklist, and missing/stale generator/evaluator phase reuse at delivery/evaluation handoff), `context-pack`, and `completion-check`.
-- They do **not** call `automind ask "<request>" [auto|codex|claude|trae]` by default, because that command starts a CodeAutonomy-owned detached loop and launches a separate agent CLI process/session.
-- Use `/codeautonomy detached ask <request>` or `/codeautonomy cli-ask <request>` only when a separate background CLI loop is intended.
+- `/codemind ask <request>` is equivalent to `/codemind <request>`.
+- Both mean: use the current host-agent session as Planner/Generator and use CodeMind CLI helpers/gates such as `scaffold`, `workflow-check` (refresh/validate `workflow.json`), `phase-gate` (refresh/read `automind-workflow-state.json`, checklist, and missing/stale generator/evaluator phase reuse at delivery/evaluation handoff), `context-pack`, and `completion-check`.
+- They do **not** call `codemind ask "<request>" [auto|codex|claude|trae]` by default, because that command starts a CodeMind-owned detached loop and launches a separate agent CLI process/session.
+- Use `/codemind detached ask <request>` or `/codemind cli-ask <request>` only when a separate background CLI loop is intended.
 
 Example usage after install:
 
 ```text
-/codeautonomy ask Add login smoke validation for this app
-/codeautonomy Add login smoke validation for this app
-/codeautonomy resume login_smoke_05111530
-/codeautonomy status login_smoke_05111530
-/codeautonomy verify login_smoke_05111530
-/codeautonomy detached ask Add login smoke validation for this app
+/codemind ask Add login smoke validation for this app
+/codemind Add login smoke validation for this app
+/codemind resume login_smoke_05111530
+/codemind status login_smoke_05111530
+/codemind verify login_smoke_05111530
+/codemind detached ask Add login smoke validation for this app
 ```
 
 ### Mode C: command/project tool
 
-When the agent is operating inside the CodeAutonomy repo, or inside a project that has CodeAutonomy installed, use `./automind.sh` directly.
+When the agent is operating inside the CodeMind repo, or inside a project that has CodeMind installed, use `./automind.sh` directly.
 
 Useful commands:
 
@@ -476,16 +483,16 @@ Useful commands:
 
 Repo-local command mode is useful for local validation and demos. Skill export and slash-command export are the cleaner distribution units for other coding agents.
 
-## Should projects mention CodeAutonomy in AGENTS.md?
+## Should projects mention CodeMind in AGENTS.md?
 
-Yes. If CodeAutonomy is installed or vendored into a project, add a short `AGENTS.md` section so any coding agent knows when and how to use it.
+Yes. If CodeMind is installed or vendored into a project, add a short `AGENTS.md` section so any coding agent knows when and how to use it.
 
 Recommended snippet:
 
 ````markdown
-## CodeAutonomy
+## CodeMind
 
-Use CodeAutonomy for non-trivial coding tasks that need explicit requirements,
+Use CodeMind for non-trivial coding tasks that need explicit requirements,
 preflight, verification evidence, retry/replan decisions, or reusable summaries.
 
 Before claiming completion:
@@ -495,7 +502,7 @@ Before claiming completion:
 3. Record evidence and next action.
 4. Do not silently perform destructive or sensitive actions.
 
-If CodeAutonomy is available as a command, use:
+If CodeMind is available as a command, use:
 
 ```bash
 ./automind.sh help
@@ -504,18 +511,18 @@ If CodeAutonomy is available as a command, use:
 ./automind.sh status <task-code>
 ```
 
-If CodeAutonomy is installed as a skill, execute its mandatory startup read protocol
+If CodeMind is installed as a skill, execute its mandatory startup read protocol
 before starting the task: `SKILL.md`, `docs/workflow.md`, phase2/test-planner
 docs, phase3/evaluator docs, command catalog, and adapter docs when applicable.
 ````
 
-Keep the project `AGENTS.md` short. It should point agents to CodeAutonomy, not duplicate all CodeAutonomy docs.
+Keep the project `AGENTS.md` short. It should point agents to CodeMind, not duplicate all CodeMind docs.
 
 
 ## Shared session, TUI, and observability
 
 Adapters should treat session/TUI/trace/process-eval behavior as a shared
-CodeAutonomy protocol, not adapter-specific state. See
+CodeMind protocol, not adapter-specific state. See
 [`tui-session-observability.md`](tui-session-observability.md) for the durable
 artifacts (`events.jsonl`, `user-answers.json`, `user-messages.json`,
 `trace.json`, `process-eval.json`), TUI behavior, natural-language session

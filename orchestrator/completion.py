@@ -1,4 +1,4 @@
-"""Completion gate and verification-unblock validation for CodeAutonomy.
+"""Completion gate and verification-unblock validation for CodeMind.
 
 This module owns the final acceptance ledger logic: declared TestCases, AC
 coverage, evidence existence, and temporary verification unblock rules.
@@ -265,7 +265,7 @@ _ASK_USER_ALLOWED_CATEGORIES = {
 }
 
 # Long-running work (full builds, compiles, long test/install runs) is NEVER a
-# valid reason to interrupt the autonomous loop with ask_user. CodeAutonomy's design
+# valid reason to interrupt the autonomous loop with ask_user. CodeMind's design
 # goal is maximum automation; any duration/scope authorization must be settled
 # once during pre-implementation, not re-asked before each expensive step. These
 # markers detect an ask_user whose intent is merely "this will take a while /
@@ -320,12 +320,12 @@ def _ask_user_is_long_running_authorization(question: dict) -> str | None:
 
 
 # Making a minimal, reversible verification-unblock edit to code/scripts/build
-# config/generated wrappers (then re-running the verification once) is CodeAutonomy's
+# config/generated wrappers (then re-running the verification once) is CodeMind's
 # OWN job, not a human decision. AGENTS.md already authorizes "minimal reversible
 # verification unblock changes ... after checkpointing or recording a diff" and
 # tracks them in `verificationUnblockChanges`. An ask_user whose intent is merely
 # "may I make a temporary patch / tweak the script / wrapper / build config and
-# retry?" is therefore a non-whitelisted soft pause: CodeAutonomy should just attempt
+# retry?" is therefore a non-whitelisted soft pause: CodeMind should just attempt
 # it (record + restore/promote) instead of interrupting the autonomous loop.
 #
 # This also covers runtime-proof verification unblock work: when runtime proof is
@@ -341,7 +341,7 @@ def _ask_user_is_long_running_authorization(question: dict) -> str | None:
 # (delete/reset, login, external upload, payment, privilege escalation) carry
 # their own destructive/sensitive markers and are NOT matched here, so they
 # still pause the loop. Signing/certificate/keychain-for-signing is intentionally
-# NOT treated as sensitive: CodeAutonomy is allowed to re-sign with the user's own
+# NOT treated as sensitive: CodeMind is allowed to re-sign with the user's own
 # certificates / automatic signing as part of unblocking verification.
 _TEMP_UNBLOCK_ASK_MARKERS = (
     "temporary patch",
@@ -478,7 +478,7 @@ def _ask_user_is_temporary_unblock_authorization(question: dict) -> str | None:
     make a temporary verification-unblock code/script/build/wrapper patch and
     retry, else None.
 
-    Such a question must not pause the loop: CodeAutonomy should just make the
+    Such a question must not pause the loop: CodeMind should just make the
     minimal reversible change (recording it in verificationUnblockChanges and
     restoring/promoting before finish). Genuinely destructive/sensitive intents
     are detected via the sensitive guards and are not suppressed here.
@@ -495,10 +495,10 @@ def _ask_user_is_temporary_unblock_authorization(question: dict) -> str | None:
 
 
 # Operating a connected, authorized device for verification (play, skip/next,
-# trigger error, interrupt/pause, navigate, capture logcat/log) is CodeAutonomy's own
+# trigger error, interrupt/pause, navigate, capture logcat/log) is CodeMind's own
 # job via probe-flow/XCUITest. A `real_device_or_signing` ask that merely says "I
 # cannot operate your physical device, please confirm the verification approach"
-# is a non-whitelisted soft pause: it delegates CodeAutonomy's own UI-driving work
+# is a non-whitelisted soft pause: it delegates CodeMind's own UI-driving work
 # back to the human even though the device is reachable. These markers detect that
 # delegation so the gate can rewrite it back to retry_generator.
 _DEVICE_OPERATION_DELEGATION_MARKERS = (
@@ -566,7 +566,7 @@ _REAL_DEVICE_HARD_GATE_MARKERS = (
 
 def _ask_user_delegates_device_operation(question: dict) -> str | None:
     """Return a marker when a `real_device_or_signing` ask is really delegating
-    CodeAutonomy's own device-driving work back to the human, else None.
+    CodeMind's own device-driving work back to the human, else None.
 
     Returns None when a genuine hard-gate signal is present, so real device/
     signing/permission gates still pause the loop.
@@ -584,13 +584,13 @@ def _ask_user_delegates_device_operation(question: dict) -> str | None:
 
 # Model-trust self-assessment (asymmetric design).
 #
-# CodeAutonomy biases hard toward automation: for non-enterprise users, over-cautious
+# CodeMind biases hard toward automation: for non-enterprise users, over-cautious
 # pauses cost far more than the rare false self-service. So the Evaluator's own
 # structured self-assessment is the PRIMARY judge of whether an ask_user is a
 # self-serviceable soft pause or a genuine hard gate:
 #
 #   askUserQuestion.riskTier:
-#     - "safe_self_service": CodeAutonomy can resolve it itself (long build, minimal
+#     - "safe_self_service": CodeMind can resolve it itself (long build, minimal
 #       reversible verification-unblock patch, in-app device driving, retryable
 #       env tweak). The gate trusts the model and rewrites the ask_user back to
 #       retry_generator -- UNLESS the text contains a strong irreversible/account
@@ -613,7 +613,7 @@ _RISK_TIER_VALUES = {_RISK_TIER_SAFE, _RISK_TIER_SENSITIVE}
 # contradiction we must not auto-trust). Deliberately narrow per product owner:
 # `production` is NOT here (treating "production" as a blanket safety keyword
 # over-pauses automation), and signing/certificate/keychain-for-signing is NOT
-# here either (CodeAutonomy may re-sign with the user's own certificates / automatic
+# here either (CodeMind may re-sign with the user's own certificates / automatic
 # signing); only genuinely irreversible/account-security verbs are.
 _STRONG_IRREVERSIBLE_SIGNALS = (
     "delete",
@@ -779,7 +779,7 @@ def validate_ask_user_category(evaluation: dict, user_intent: dict | None = None
     if intent.get("fullAuto") is True:
         issues.append(
             "ask_user rejected: the user explicitly requested full-auto/no-confirmation "
-            "mode (preImplementationReview.fullAuto=true), so CodeAutonomy must not interrupt "
+            "mode (preImplementationReview.fullAuto=true), so CodeMind must not interrupt "
             "the loop. Proceed autonomously and record the decision in the run log."
         )
         return issues, warnings
@@ -792,7 +792,7 @@ def validate_ask_user_category(evaluation: dict, user_intent: dict | None = None
         return issues, warnings
 
     # Asymmetric model-trust path. When the Evaluator declared a structured
-    # `riskTier`, that self-assessment is the PRIMARY judge -- CodeAutonomy biases
+    # `riskTier`, that self-assessment is the PRIMARY judge -- CodeMind biases
     # toward automation and trusts the model rather than re-guessing intent from
     # brittle keyword lists.
     risk_tier = _ask_user_risk_tier(question)
@@ -806,7 +806,7 @@ def validate_ask_user_category(evaluation: dict, user_intent: dict | None = None
             if not options:
                 warnings.append("askUserQuestion.options should list at least one explicit choice")
             return issues, warnings
-        # risk_tier == safe_self_service: the model itself says CodeAutonomy can
+        # risk_tier == safe_self_service: the model itself says CodeMind can
         # resolve this without a human. Trust it and rewrite the ask_user back to
         # retry_generator so the loop keeps running -- UNLESS a strong
         # irreversible/account-security signal contradicts the safe label (anti
@@ -820,7 +820,7 @@ def validate_ask_user_category(evaluation: dict, user_intent: dict | None = None
             )
             return issues, warnings
         issues.append(
-            "ask_user rejected: askUserQuestion.riskTier=safe_self_service means CodeAutonomy "
+            "ask_user rejected: askUserQuestion.riskTier=safe_self_service means CodeMind "
             "can resolve this itself (long build, minimal reversible verification-unblock "
             "patch, re-signing with the user's own certificates / automatic signing, in-app "
             "device driving, retryable env tweak). Just attempt it and continue the "
@@ -837,7 +837,7 @@ def validate_ask_user_category(evaluation: dict, user_intent: dict | None = None
         issues.append(
             "ask_user rejected: long-running/compile-duration authorization "
             f"(matched '{long_running_marker}') is not a valid hard-interrupt reason. "
-            "CodeAutonomy should just run the long build/test; settle any scope/duration "
+            "CodeMind should just run the long build/test; settle any scope/duration "
             "authorization once during pre-implementation, not before each expensive step."
         )
         return issues, warnings
@@ -847,7 +847,7 @@ def validate_ask_user_category(evaluation: dict, user_intent: dict | None = None
             "ask_user rejected: authorizing a temporary verification-unblock "
             f"code/script/build/wrapper patch (matched '{temp_unblock_marker}') is not a "
             "valid hard-interrupt reason. Making a minimal reversible unblock change and "
-            "re-running the verification once is CodeAutonomy's own job: just attempt it, "
+            "re-running the verification once is CodeMind's own job: just attempt it, "
             "record it in verificationUnblockChanges, and restore/promote before finish. "
             "Only escalate to ask_user when the change is genuinely destructive/sensitive "
             "(delete/reset/uninstall, login/account, external upload, payment, or privilege "
@@ -861,7 +861,7 @@ def validate_ask_user_category(evaluation: dict, user_intent: dict | None = None
                 "ask_user rejected: delegating device operation back to the human "
                 f"(matched '{delegation_marker}') is not a valid hard-interrupt reason "
                 "when the device is reachable. Driving in-app actions (play/skip/error/"
-                "interrupt/navigate) and capturing logcat/.xcresult is CodeAutonomy's own job "
+                "interrupt/navigate) and capturing logcat/.xcresult is CodeMind's own job "
                 "via probe-flow/XCUITest. Encode and run the actions; only ask_user for a "
                 "genuine device/signing/permission gate (no device in state=device, "
                 "unlock/Developer-Mode/USB-debugging/trust unresolved, missing signing, or "
@@ -1052,7 +1052,7 @@ def _as_list(value) -> list:
 def normalize_evidence_assessment(item: dict) -> dict:
     """Normalize evaluator/model judgement about whether evidence proves a TC.
 
-    CodeAutonomy intentionally does not parse arbitrary build/runtime logs with
+    CodeMind intentionally does not parse arbitrary build/runtime logs with
     fixed success strings. The Evaluator owns semantic judgement and records it
     here; completion-check only validates structure, evidence paths, and that a
     required TC was not passed from a blocker classification.
@@ -1202,7 +1202,7 @@ def evidence_assessment_metric_evidence_missing(task_dir: Path, item: dict) -> t
 
 # Markers that mean a piece of evidence text was cut off, so a value that
 # appears near such a marker may be incomplete and must not be trusted as a
-# precise runtime assertion anchor. Covers CodeAutonomy's own digest/tail markers.
+# precise runtime assertion anchor. Covers CodeMind's own digest/tail markers.
 _TRUNCATION_MARKERS = (
     "[truncated",
     "truncated for",
@@ -2070,7 +2070,7 @@ def build_completion_next_action_prompt(report: dict, task_code: str) -> str:
 def write_completion_ledger(task_dir: Path, report: dict) -> Path:
     """Write final completion artifacts from one authoritative report.
 
-    Historically CodeAutonomy wrote ``VerificationLedger.json`` while leaving
+    Historically CodeMind wrote ``VerificationLedger.json`` while leaving
     ``completion-report.json`` stale/not_run in some paths. That let
     runtime-state says completionCheck=pass while the phase sidecar still claimed
     completion had not run. Keep both artifacts in sync here: the ledger is the

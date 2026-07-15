@@ -1,16 +1,16 @@
-# CodeAutonomy TUI, Session, Trace, and Process Evals
+# CodeMind TUI, Session, Trace, and Process Evals
 
 This reference keeps the interactive/session/observability details out of the
 canonical workflow guide.
 
 ## Shared session core
 
-CodeAutonomy has one shared workflow core and two user-facing shells:
+CodeMind has one shared workflow core and two user-facing shells:
 
-- **CLI/TUI mode**: CodeAutonomy owns the command-line session, calls Codex/Claude/Trae
+- **CLI/TUI mode**: CodeMind owns the command-line session, calls Codex/Claude/Trae
   CLIs as subprocesses, streams output into a timeline, and receives user answers
   inside the terminal.
-- **Skill mode**: a host coding agent follows CodeAutonomy instructions, but uses the
+- **Skill mode**: a host coding agent follows CodeMind instructions, but uses the
   same artifacts, gates, answers, messages, trace, and next-instruction commands.
 
 Shared task/session artifacts:
@@ -54,7 +54,7 @@ timeline line for every check.
 
 Agent CLI stdout/stderr is streamed into `events.jsonl` as `agent_output` events
 while preserving the captured-output contract used for planner/session parsing.
-If an agent process stays quiet, CodeAutonomy emits a replaceable
+If an agent process stays quiet, CodeMind emits a replaceable
 `agent_still_running` event once per minute with elapsed/quiet duration. The TUI
 may show visible agent progress, tool summaries, runtime banners, and errors,
 but it must not depend on or expose hidden model chain-of-thought.
@@ -62,7 +62,7 @@ but it must not depend on or expose hidden model chain-of-thought.
 ## Natural-language TUI/session messages
 
 Inside bare `automind` or `automind tui <task> --interactive`, command-shaped
-input runs CodeAutonomy commands. Non-command natural language uses session affinity:
+input runs CodeMind commands. Non-command natural language uses session affinity:
 
 - when `.automind/current-task` exists, it is recorded as a pending task-local user message and can resume the current task;
 - when no current task exists, bare `automind` creates a per-TUI-process hidden chat task (`AUTOMIND_TUI_CHAT_TASK=__tui_chat_<pid>_<id>`) so exploratory questions such as `where am i?` reuse one coding-agent session within that terminal window;
@@ -71,7 +71,7 @@ input runs CodeAutonomy commands. Non-command natural language uses session affi
 Example current-task message:
 
 ```text
-automind> prefer the project's existing verification scripts for this task; do not invent commands
+codemind> prefer the project's existing verification scripts for this task; do not invent commands
 ```
 
 Equivalent command when a current task exists:
@@ -97,18 +97,18 @@ Inside the interactive shell, task-oriented commands can omit the task code when
 `.automind/current-task` exists:
 
 ```text
-automind> status
-automind> trace --json
-automind> process-check --soft
-automind> tui --interactive
-automind> resume
+codemind> status
+codemind> trace --json
+codemind> process-check --soft
+codemind> tui --interactive
+codemind> resume
 ```
 
 Explicit task codes still win.
 
 ## Formal traces
 
-CodeAutonomy projects task-local events/state into an OpenTelemetry-friendly trace
+CodeMind projects task-local events/state into an OpenTelemetry-friendly trace
 shape without requiring a backend:
 
 - `traceId` / `runId`: identify the task run.
@@ -163,7 +163,7 @@ TUI version constants.
 ## User interrupt / pause
 
 In a TUI-owned loop, `Ctrl+C` is treated as a recoverable user pause instead of a
-hard task abort. CodeAutonomy records:
+hard task abort. CodeMind records:
 
 ```json
 {
@@ -184,14 +184,14 @@ running loop but the task artifacts remain valid and resume is allowed.
 
 ### Human-facing chat output
 
-For the hidden per-process TUI chat task, CodeAutonomy formats the coding-agent reply
+For the hidden per-process TUI chat task, CodeMind formats the coding-agent reply
 as a compact chat turn instead of printing raw CLI output tuples. Runtime banners,
 hook traces, token counters, and Codex session metadata are stripped when possible:
 
 ```text
-automind> where am i
-[CodeAutonomy] User message recorded: user-message-003
-[CodeAutonomy] coding-agent chat (codex)...
+codemind> where am i
+[CodeMind] User message recorded: user-message-003
+[CodeMind] coding-agent chat (codex)...
 
 codex> You are in:
 `/path/to/project`

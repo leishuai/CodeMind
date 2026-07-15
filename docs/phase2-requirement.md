@@ -159,20 +159,20 @@ device, simulator/emulator, or both. Ask before implementation because this
 choice changes setup, evidence strength, runtime cost, and failure
 classification. First run read-only physical-device discovery. If device(s) are
 connected, present the detected device(s), recommend real-device verification,
-and ask whether CodeAutonomy may use them, use both real device and
+and ask whether CodeMind may use them, use both real device and
 simulator/emulator, or intentionally keep simulator/emulator only.
 If no physical device is connected, say so, explain the connect/unlock/trust,
 Developer Mode/USB debugging, signing, and permission-prompt requirements.
 Screenshot capture is default allowed verification evidence and must not trigger a separate ask_user.
-When exactly one connected real device is available, state in the review bundle that CodeAutonomy will use that device by default for development, debugging, verification, and screenshots.
+When exactly one connected real device is available, state in the review bundle that CodeMind will use that device by default for development, debugging, verification, and screenshots.
 When multiple connected real devices are available, ask_user to choose the target device.
-When no authorized real device is available, CodeAutonomy should try simulator/emulator verification by default; ask_user only if no runnable simulator/emulator path exists and the remaining fallback would be static-only or otherwise sensitive.
+When no authorized real device is available, CodeMind should try simulator/emulator verification by default; ask_user only if no runnable simulator/emulator path exists and the remaining fallback would be static-only or otherwise sensitive.
 
 ### Real-device-default verification policy
 
-For client/app behavior tasks CodeAutonomy defaults to real-device verification.
+For client/app behavior tasks CodeMind defaults to real-device verification.
 iOS/Android screenshot capture is normal verification evidence and is always default-allowed; it must not by itself trigger `ask_user`.
-If one real device is connected, CodeAutonomy should announce that it will use that device by default. If multiple real devices are connected, CodeAutonomy must ask the user to choose the device. If no real device is connected or the real device is unavailable, CodeAutonomy should try simulator/emulator verification by default; ask_user only if no runnable simulator/emulator path exists and the remaining fallback would be static-only or otherwise sensitive.
+If one real device is connected, CodeMind should announce that it will use that device by default. If multiple real devices are connected, CodeMind must ask the user to choose the device. If no real device is connected or the real device is unavailable, CodeMind should try simulator/emulator verification by default; ask_user only if no runnable simulator/emulator path exists and the remaining fallback would be static-only or otherwise sensitive.
 The Brainstorm decision bundle MUST set
 `decisionBundle.runtimeProofRequired = "yes"` and `decisionBundle.taskType` to
 the matching client platform (`ios`, `android`, or `dual`). The
@@ -211,7 +211,7 @@ a finish without runtime/device-level evidence and without an approved downgrade
 
 When the user literally says `真机不可用`, `没真机`, `无可用真机`, "real device
 unavailable", "no real device", or equivalent, treat it as a real-device
-unavailable signal, not as a task hard-stop by itself. CodeAutonomy should try
+unavailable signal, not as a task hard-stop by itself. CodeMind should try
 simulator/emulator verification by default and record the fallback reason in the
 pre-implementation review / decision bundle. Do not mark runtime-required cases
 as optional or `not_run` and still claim pass. Route to `ask_user` only when no
@@ -270,7 +270,7 @@ Required functional cases must be concrete runbooks. Each required functional
 row must specify:
 
 1. preparation/preflight/preconditions;
-2. command, CodeAutonomy helper, or action sequence;
+2. command, CodeMind helper, or action sequence;
 3. expected assertion/result;
 4. evidence path or evidence type;
 5. dependency and required flag.
@@ -289,7 +289,7 @@ managers, lockfiles, and candidate commands. TestCases should prefer
 lockfile-first setup such as `npm ci`, `pnpm install --frozen-lockfile`, `yarn
 install --immutable`, `uv sync --frozen`, `poetry install --sync`, Gradle/Maven
 wrapper commands, or the repo's documented command. Do not turn target project
-dependencies into CodeAutonomy helper venvs; only Android/iOS/visual helper packages
+dependencies into CodeMind helper venvs; only Android/iOS/visual helper packages
 use `setup-automation-tools`.
 
 For App/UI/client-facing work, include build/install/deploy/start, launch/open,
@@ -323,7 +323,7 @@ clean-build testcase with attached project-native build evidence and a positive
 Evaluator/model `evidenceAssessment`. Build blocker classification may route to
 retry/replan/ask_user, but it must not satisfy the required clean-build testcase.
 
-For mobile App/UI tasks, do not say CodeAutonomy cannot operate the app merely
+For mobile App/UI tasks, do not say CodeMind cannot operate the app merely
 because a click, input, scroll, page transition, or popup close is needed. Plan a
 reviewable automation path first: Android `android-probe-flow` for
 `tap`/`tap_if_present`/`input`/`swipe`/assertions; iOS XCUITest or
@@ -419,7 +419,7 @@ Platform unification rule:
 Run:
 
 ```bash
-<automind> workflow-check <task-code>
+<codemind> workflow-check <task-code>
 ```
 
 before Build when the CLI is available. The gate checks:

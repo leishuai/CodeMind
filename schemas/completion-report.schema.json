@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://automind.local/schemas/completion-report.schema.json",
-  "title": "CodeAutonomy completion-report.json",
+  "title": "CodeMind completion-report.json",
   "type": "object",
   "required": ["version", "phase", "result", "issues", "requiredTestcases", "acceptanceCriteriaCoverage", "runtimeProof", "evidenceCheck"],
   "properties": {

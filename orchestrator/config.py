@@ -1,4 +1,4 @@
-"""Configuration constants for the CodeAutonomy orchestrator.
+"""Configuration constants for the CodeMind orchestrator.
 
 This module is intentionally small and side-effect free. Keep user-facing CLI
 behavior in ``main.py`` / future ``cli.py``; keep runtime state helpers in
@@ -9,7 +9,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-# Runtime root is the CodeAutonomy installation/checkout. It owns scripts,
+# Runtime root is the CodeMind installation/checkout. It owns scripts,
 # templates, schemas, requirements, and bundled examples.
 AUTOMIND_RUNTIME_ROOT = Path(__file__).parent.parent.resolve()
 # Backward-compatible alias for runtime assets.
@@ -19,9 +19,9 @@ AUTOMIND_ROOT = AUTOMIND_RUNTIME_ROOT
 def _resolve_workspace_root() -> Path:
     """Return the project/workspace root for task artifacts.
 
-    Installed CodeAutonomy runs from the CodeAutonomy checkout, but users invoke it from
+    Installed CodeMind runs from the CodeMind checkout, but users invoke it from
     their own project. Task files must therefore live under the caller's project
-    by default, not under the CodeAutonomy runtime checkout.
+    by default, not under the CodeMind runtime checkout.
     """
     raw = os.environ.get("AUTOMIND_WORKSPACE_ROOT") or os.environ.get("AUTOMIND_PROJECT_ROOT")
     if raw:
@@ -36,7 +36,7 @@ TASKS_DIR = AUTOMIND_WORKSPACE_ROOT / ".automind" / "tasks"
 SUMMARY_DIR = AUTOMIND_WORKSPACE_ROOT / ".automind" / "summary"
 PROMPTS_DIR = AUTOMIND_RUNTIME_ROOT / "templates"
 # Low-risk Python helper packages are installed into the user workspace, not the
-# CodeAutonomy runtime checkout. This keeps installed CodeAutonomy immutable and lets
+# CodeMind runtime checkout. This keeps installed CodeMind immutable and lets
 # each project carry its own verification helper environment.
 ANDROID_TOOLS_VENV = AUTOMIND_WORKSPACE_ROOT / ".venv-android-tools"
 IOS_TOOLS_VENV = AUTOMIND_WORKSPACE_ROOT / ".venv-ios-tools"
@@ -45,7 +45,7 @@ AUTOMATION_SETUP_DIR = AUTOMIND_WORKSPACE_ROOT / ".automind" / "setup" / "automa
 SUMMARY_LESSONS_PATH = SUMMARY_DIR / "lessons-learned.md"
 LOCAL_REUSE_INDEX_PATH = SUMMARY_DIR / "local-reuse-index.md"
 
-# Machine-global accumulated summaries live in the CodeAutonomy runtime install,
+# Machine-global accumulated summaries live in the CodeMind runtime install,
 # not in any single project workspace. This directory is install-exclude
 # protected (see install.sh `--exclude='summaries/accumulated/'`), so lessons
 # sunk here survive runtime re-installs. Two destinations only:
@@ -85,7 +85,7 @@ PRELOADED_OVERVIEW_MAX_CHARS_PER_PACK = int(os.environ.get("AUTOMIND_PRELOADED_O
 
 
 # Agent-specific adapters stay deliberately thin: they only describe how to
-# discover and invoke a concrete coding-agent runtime. CodeAutonomy's task files,
+# discover and invoke a concrete coding-agent runtime. CodeMind's task files,
 # evaluation schema, retry policy, and evidence rules remain agent-agnostic.
 TRAE_ALLOWED_TOOLS = "Read,Write,Edit,ApplyPatch,Glob,LS,Grep,Bash,BashOutput,KillShell,Task,Skill,TodoWrite"
 
@@ -134,11 +134,11 @@ def _task_agent_execution_policy(task_dir) -> dict:
 
 
 def _agent_bypass_approvals_enabled(task_dir) -> bool:
-    """CodeAutonomy runs supported coding agents in bypass mode by default.
+    """CodeMind runs supported coding agents in bypass mode by default.
 
     Task-level policy is still persisted for audit/history, but execution now
     consistently prefers the high-automation bypass path for Codex/Claude/Trae.
-    High-risk actions are still expected to surface through CodeAutonomy ask_user
+    High-risk actions are still expected to surface through CodeMind ask_user
     / completion gates rather than the underlying agent sandbox/approval mode.
     """
     _task_agent_execution_policy(task_dir)  # keep compatibility/audit reads warm
@@ -229,7 +229,7 @@ AGENT_ADAPTERS = {
 
 MAX_ITERATIONS = int(os.environ.get("AUTOMIND_MAX_ITERATIONS", "1000"))
 MAX_REFLECTIONS_PER_TC = int(os.environ.get("AUTOMIND_MAX_REFLECTIONS_PER_TC", "10"))
-# When the per-TC reflection budget is exhausted, CodeAutonomy first tries this many
+# When the per-TC reflection budget is exhausted, CodeMind first tries this many
 # autonomous replan rounds (reuse the existing autonomous `replan` path) before
 # escalating to a human `ask_user`. Set to 0 to keep the legacy behavior of
 # escalating to ask_user immediately on budget exhaustion.

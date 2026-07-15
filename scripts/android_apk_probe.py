@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Minimal Android APK install/launch probe for CodeAutonomy.
+"""Minimal Android APK install/launch probe for CodeMind.
 
 Scope is intentionally small: parse APK badging, optionally uninstall existing
 package, install APK, launch activity, capture current app/screenshot/hierarchy,
@@ -111,7 +111,7 @@ def capture_with_python(out: Path, expected_pkg: str, expected_act: str) -> dict
         return {
             "result": "blocked",
             "category": "tool_missing",
-            "error": reason + "; CodeAutonomy tried project-local setup from requirements/android-tools.txt but capture helpers are still unavailable.",
+            "error": reason + "; CodeMind tried project-local setup from requirements/android-tools.txt but capture helpers are still unavailable.",
             "python": str(py),
             "autoSetup": auto_setup,
             "setupCommand": "automind setup-automation-tools android",
@@ -256,14 +256,14 @@ def main() -> int:
         evaluation.setdefault("warnings", []).append({
             "name": "android_apk_probe_capture_tools",
             "category": "tool_missing" if capture.get("category") == "tool_missing" else "info",
-            "reason": "CodeAutonomy attempted project-local Android helper setup for APK capture.",
+            "reason": "CodeMind attempted project-local Android helper setup for APK capture.",
             "setupCommand": "automind setup-automation-tools android",
             "setup": capture.get("autoSetup"),
         })
         evaluation["evidence"].append({"type": "log", "note": "android-tools-auto-setup", "path": str(out / "android-tools-auto-setup.log")})
     if capture.get("category") == "tool_missing":
         evaluation["askUserQuestion"] = {
-            "question": "Android APK capture helper tools are still unavailable after CodeAutonomy tried local setup. What should happen next?",
+            "question": "Android APK capture helper tools are still unavailable after CodeMind tried local setup. What should happen next?",
             "reason": capture.get("error", "adbutils/uiautomator2 unavailable"),
             "options": [
                 {"id": "A", "label": "Fix Python/pip/network and retry.", "impact": "Keeps screenshot/UI hierarchy capture for APK verification.", "requiresConfirmation": False},

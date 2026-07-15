@@ -1,7 +1,8 @@
-"""Low-risk session/report command handlers for the CodeAutonomy CLI."""
+"""Low-risk session/report command handlers for the CodeMind CLI."""
 from __future__ import annotations
 
 import json
+import os
 import sys
 from datetime import datetime
 from typing import Any
@@ -9,14 +10,27 @@ from typing import Any
 from orchestrator.console import error, success, warn
 from orchestrator.hooks import run_before_phase_hooks
 from orchestrator.reports import build_critical_artifacts, generate_html_report
-from orchestrator.agents import extract_agent_reply, run_agent
+from orchestrator.agents import extract_agent_reply, resolve_agent, run_agent
 from orchestrator.session.answers import apply_user_answer, resolve_selected_option
 from orchestrator.session.events import append_event
 from orchestrator.session.instructions import build_next_instruction
 from orchestrator.workflow_state import ensure_workflow_state, read_stage_state
 from orchestrator.session.messages import append_user_message
+from orchestrator.session.conversation import (
+    append_conversation_turn,
+    append_internal_result,
+    build_recovery_prompt,
+    is_context_overflow,
+    read_conversation_state,
+    should_rotate,
+    start_generation,
+)
 from orchestrator.session.trace import build_trace, render_trace_text, write_trace
-from orchestrator.state import clear_current_task, ensure_dir, get_task_dir, get_tui_chat_task_code, read_current_task, read_runtime_state, rel_to_root, write_runtime_state
+from orchestrator.observability import (
+    ObservationValidationError,
+    ingest_observation,
+)
+from orchestrator.state import clear_current_task, clear_task_primary_session, ensure_dir, get_task_dir, get_tui_chat_task_code, read_current_task, read_runtime_state, rel_to_root, update_runtime_state, write_runtime_state
 from orchestrator.tui.app import run_tui
 
 
@@ -71,7 +85,7 @@ def cmd_answer(task_code: str, args: list[str]) -> None:
 
 
 def cmd_event(task_code: str, args: list[str]) -> None:
-    """Append a shared CodeAutonomy event for skill/TUI timelines."""
+    """Append a shared CodeMind event for skill/TUI timelines."""
     task_dir = get_task_dir(task_code)
     if not task_dir.exists():
         error(f"Task does not exist: {task_code}")
@@ -108,6 +122,36 @@ def cmd_event(task_code: str, args: list[str]) -> None:
     print(json.dumps({"result": "ok", "task": task_code, "event": event}, ensure_ascii=False, indent=2))
 
 
+def cmd_observe(task_code: str, args: list[str]) -> None:
+    """Ingest one validated external audit/metrics observation batch."""
+    if task_code in {"-h", "--help"} or any(arg in {"-h", "--help"} for arg in args):
+        print("Usage: observe <chat-or-task-code> --json JSON")
+        return
+    task_dir = get_task_dir(task_code)
+    if not task_dir.exists():
+        error(f"Task does not exist: {task_code}")
+        sys.exit(1)
+    raw_json = ""
+    if "--json" in args:
+        idx = args.index("--json")
+        if idx + 1 < len(args):
+            raw_json = args[idx + 1]
+    if not raw_json:
+        error("Usage: observe <chat-or-task-code> --json JSON")
+        sys.exit(1)
+    try:
+        payload = json.loads(raw_json)
+    except json.JSONDecodeError as exc:
+        error(f"Invalid observation JSON: {exc}")
+        sys.exit(1)
+    try:
+        result = ingest_observation(task_dir, payload)
+    except ObservationValidationError as exc:
+        error(f"Invalid observation: {exc}")
+        sys.exit(1)
+    print(json.dumps({"task": task_code, **result}, ensure_ascii=False, indent=2))
+
+
 def cmd_trace(task_code: str, args: list[str]) -> None:
     task_dir = get_task_dir(task_code)
     if not task_dir.exists():
@@ -125,7 +169,7 @@ def cmd_trace(task_code: str, args: list[str]) -> None:
 
 
 def cmd_tui(task_code: str, args: list[str]) -> None:
-    """Open the shared CodeAutonomy TUI snapshot/watch/interactive view."""
+    """Open the shared CodeMind TUI snapshot/watch/interactive view."""
     task_dir = get_task_dir(task_code)
     if not task_dir.exists():
         error(f"Task does not exist: {task_code}")
@@ -527,7 +571,7 @@ def cmd_message(task_code: str, args: list[str], *, resume_callback=None) -> Non
         if task_code == tui_chat_code or str(state.get("status") or "") == "chat":
             primary = state.get("agentSessions", {}).get("primary", {}) if isinstance(state.get("agentSessions"), dict) else {}
             chat_agent = primary.get("agent") if resume_agent == "auto" and primary.get("agent") else resume_agent
-            print(f"\033[2m[CodeAutonomy] coding-agent chat ({chat_agent})...\033[0m")
+            print(f"\033[2m[CodeMind] coding-agent chat ({chat_agent})...\033[0m")
             code, output = run_agent("cli", chat_agent, text, task_dir, phase="generator", quiet=True)
             reply = extract_agent_reply(chat_agent, output)
             if code == 0:
@@ -538,6 +582,199 @@ def cmd_message(task_code: str, args: list[str], *, resume_callback=None) -> Non
         if resume_callback is None:
             from orchestrator.main import cmd_resume as resume_callback  # lazy fallback
         resume_callback(task_code, resume_agent, tui=True)
+
+
+def cmd_classify(task_code: str, args: list[str]) -> None:
+    """Stateless one-shot classification call that never pollutes S_chat.
+
+    Front-ends (e.g. the Lark bridge) need to ask the coding agent for an intent
+    verdict without contaminating the resident chat session. Unlike ``message``,
+    this command:
+
+    - does NOT ``append_user_message`` (the classification prompt/JSON/retries
+      never enter the persistent chat message history), and
+    - runs the agent with ``phase="classify"`` which resolves to a *fresh*
+      session role, so it never resumes or records the persistent ``primary``
+      session used for real Planner/Generator/chat turns.
+
+    It only reads the agent's reply and prints it; the harness loop, state
+    machine, and gates are never touched. The task dir is only used as a scratch
+    working directory for the agent subprocess (events/logs), not as a place to
+    store chat turns.
+    """
+    if task_code in {"-h", "--help"} or any(arg in {"-h", "--help"} for arg in args):
+        print("Usage: classify <task-code> --text TEXT [--agent AGENT]")
+        return
+    task_dir = get_task_dir(task_code)
+    if not task_dir.exists():
+        error(f"Task does not exist: {task_code}")
+        sys.exit(1)
+    text = ""
+    agent = "auto"
+    idx = 0
+    while idx < len(args):
+        item = args[idx]
+        if item == "--text" and idx + 1 < len(args):
+            text = args[idx + 1]
+            idx += 2
+        elif item == "--agent" and idx + 1 < len(args):
+            agent = args[idx + 1].strip() or "auto"
+            idx += 2
+        else:
+            idx += 1
+    if not text:
+        error("Usage: classify <task-code> --text TEXT [--agent AGENT]")
+        sys.exit(1)
+    code, output = run_agent("cli", agent, text, task_dir, phase="classify", quiet=True)
+    reply = extract_agent_reply(agent, output)
+    if code == 0:
+        print(reply)
+    else:
+        print(reply or output)
+        sys.exit(1)
+
+
+def cmd_converse(task_code: str, args: list[str]) -> None:
+    """Run one persistent front-end conversation turn without task-message pollution."""
+    if task_code in {"-h", "--help"} or any(arg in {"-h", "--help"} for arg in args):
+        print("Usage: converse <task-code> --text PROMPT --user-text TEXT [--agent AGENT]")
+        return
+    task_dir = get_task_dir(task_code)
+    if not task_dir.exists():
+        error(f"Task does not exist: {task_code}")
+        sys.exit(1)
+
+    prompt = ""
+    user_text = ""
+    agent = "auto"
+    internal = "--internal" in args
+    record_only = "--record-only" in args
+    idx = 0
+    while idx < len(args):
+        item = args[idx]
+        if item == "--text" and idx + 1 < len(args):
+            prompt = args[idx + 1]
+            idx += 2
+        elif item == "--user-text" and idx + 1 < len(args):
+            user_text = args[idx + 1]
+            idx += 2
+        elif item == "--agent" and idx + 1 < len(args):
+            agent = args[idx + 1].strip() or "auto"
+            idx += 2
+        else:
+            idx += 1
+    if not prompt or not user_text:
+        error("Usage: converse <task-code> --text PROMPT --user-text TEXT [--agent AGENT]")
+        sys.exit(1)
+
+    if record_only:
+        state = read_conversation_state(task_dir)
+        updated = append_conversation_turn(
+            task_dir,
+            state,
+            user_text=user_text,
+            assistant_output="",
+            status="pending_result",
+        )
+        update_runtime_state(
+            task_dir,
+            conversationState={
+                "path": rel_to_root(task_dir / "conversation-state.json"),
+                "turnsPath": rel_to_root(task_dir / "conversation-turns.jsonl"),
+                "turnCount": updated.get("turnCount", 0),
+                "generation": updated.get("generation", 0),
+                "syncedThroughTurnId": updated.get("syncedThroughTurnId"),
+                "summaryVersion": updated.get("summaryVersion", 0),
+            },
+        )
+        print(json.dumps({"result": "recorded"}, ensure_ascii=False))
+        return
+
+    runtime = read_runtime_state(task_dir) or {}
+    sessions = runtime.get("agentSessions") if isinstance(runtime.get("agentSessions"), dict) else {}
+    primary = sessions.get("primary") if isinstance(sessions.get("primary"), dict) else {}
+    if primary and primary.get("executionMode") != "conversation_read_only":
+        clear_task_primary_session(task_dir, reason="conversation_requires_read_only_session")
+        primary = {}
+    if primary and agent != "auto" and primary.get("agent") != agent:
+        clear_task_primary_session(task_dir, reason="conversation_agent_changed")
+        primary = {}
+    chat_agent = str(primary.get("agent") or "") if agent == "auto" else agent
+    chat_agent = chat_agent or agent
+    if chat_agent == "auto":
+        resolved, _ = resolve_agent("auto")
+        chat_agent = resolved or chat_agent
+
+    state = read_conversation_state(task_dir)
+    try:
+        threshold = int(os.environ.get("AUTOMIND_CONVERSATION_SESSION_TURN_THRESHOLD", "40"))
+    except ValueError:
+        threshold = 40
+    if primary and should_rotate(state, threshold):
+        clear_task_primary_session(task_dir, reason=f"conversation_turn_threshold_{threshold}")
+        primary = {}
+
+    if not primary:
+        state = start_generation(task_dir, state, "initial_or_rotated_session")
+        invocation_prompt = build_recovery_prompt(prompt, state)
+    else:
+        invocation_prompt = prompt
+
+    code, output = run_agent(
+        "cli",
+        chat_agent,
+        invocation_prompt,
+        task_dir,
+        phase="conversation",
+        quiet=True,
+    )
+    reply = extract_agent_reply(chat_agent, output)
+
+    if code != 0 and is_context_overflow(output):
+        clear_task_primary_session(task_dir, reason="conversation_context_overflow")
+        state = start_generation(task_dir, state, "context_overflow")
+        invocation_prompt = build_recovery_prompt(prompt, state)
+        code, output = run_agent(
+            "cli",
+            chat_agent,
+            invocation_prompt,
+            task_dir,
+            phase="conversation",
+            quiet=True,
+        )
+        reply = extract_agent_reply(chat_agent, output)
+
+    if internal:
+        updated = append_internal_result(
+            task_dir,
+            state,
+            assistant_output=reply or output,
+            status="ok" if code == 0 else "failed",
+        )
+    else:
+        updated = append_conversation_turn(
+            task_dir,
+            state,
+            user_text=user_text,
+            assistant_output=reply or output,
+            status="ok" if code == 0 else "failed",
+        )
+    update_runtime_state(
+        task_dir,
+        conversationState={
+            "path": rel_to_root(task_dir / "conversation-state.json"),
+            "turnsPath": rel_to_root(task_dir / "conversation-turns.jsonl"),
+            "turnCount": updated.get("turnCount", 0),
+            "generation": updated.get("generation", 0),
+            "syncedThroughTurnId": updated.get("syncedThroughTurnId"),
+            "summaryVersion": updated.get("summaryVersion", 0),
+        },
+    )
+    if code == 0:
+        print(reply)
+        return
+    print(reply or output)
+    sys.exit(1)
 
 
 def cmd_chat_create(task_code: str, args: list[str]) -> None:

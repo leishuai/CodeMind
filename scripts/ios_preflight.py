@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""iOS physical-device preflight evaluator for CodeAutonomy."""
+"""iOS physical-device preflight evaluator for CodeMind."""
 
 from __future__ import annotations
 

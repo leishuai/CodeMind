@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 #
-# CodeAutonomy installer
+# CodeMind installer
 #
 # Local checkout development usage:
 #   ./install.sh
 #
 # For public curl installation, host install-curl.sh at a public URL and use:
-#   curl -fsSL https://raw.githubusercontent.com/leishuai/CodeAutonomy/main/install-curl.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash
 #
 
 set -euo pipefail
@@ -17,16 +17,16 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-log() { echo -e "${BLUE}[CodeAutonomy]${NC} $*"; }
-warn() { echo -e "${YELLOW}[CodeAutonomy]${NC} $*"; }
-error() { echo -e "${RED}[CodeAutonomy]${NC} $*" >&2; }
-success() { echo -e "${GREEN}[CodeAutonomy]${NC} $*"; }
+log() { echo -e "${BLUE}[CodeMind]${NC} $*"; }
+warn() { echo -e "${YELLOW}[CodeMind]${NC} $*"; }
+error() { echo -e "${RED}[CodeMind]${NC} $*" >&2; }
+success() { echo -e "${GREEN}[CodeMind]${NC} $*"; }
 
 write_git_guard() {
     local dir="$1"
     rm -rf "$dir/.git"
     cat > "$dir/.git" <<'GIT_GUARD_EOF'
-CodeAutonomy runtime install is intentionally not a Git checkout.
+CodeMind runtime install is intentionally not a Git checkout.
 This guard file prevents Git from discovering a parent repository.
 Use the installer cache or source project checkout for updates.
 GIT_GUARD_EOF
@@ -39,7 +39,7 @@ disable_cache_push_url() {
     fi
 }
 
-AUTOMIND_REPO="${AUTOMIND_REPO:-https://github.com/leishuai/CodeAutonomy.git}"
+AUTOMIND_REPO="${AUTOMIND_REPO:-https://github.com/leishuai/CodeMind.git}"
 AUTOMIND_BRANCH="${AUTOMIND_BRANCH:-main}"
 AUTOMIND_HOME_WAS_SET=0
 if [[ -n "${AUTOMIND_HOME+x}" ]]; then
@@ -56,12 +56,13 @@ if [[ -f "$SCRIPT_DIR/automind.sh" && -d "$SCRIPT_DIR/orchestrator" ]]; then
 fi
 AUTOMIND_BIN_DIR="${AUTOMIND_BIN_DIR:-$HOME/.local/bin}"
 AUTOMIND_INSTALL_AGENT="${AUTOMIND_INSTALL_AGENT:-all}" # none|all|auto|claude|codex|trae|trae-cn
-AUTOMIND_INSTALL_COMMAND="${AUTOMIND_INSTALL_COMMAND:-1}" # default public install installs /codeautonomy and legacy /automind
+AUTOMIND_INSTALL_COMMAND="${AUTOMIND_INSTALL_COMMAND:-1}" # installs /codemind plus the legacy /automind alias
 AUTOMIND_UPDATE="${AUTOMIND_UPDATE:-1}"
+RUNTIME_SYNCED=0
 
 usage() {
     cat <<EOF
-CodeAutonomy installer
+CodeMind installer
 
 Environment variables:
   AUTOMIND_REPO            Git repository URL. Default: $AUTOMIND_REPO
@@ -69,12 +70,12 @@ Environment variables:
   AUTOMIND_HOME            Git-free runtime install directory. Default: $AUTOMIND_HOME
   AUTOMIND_BIN_DIR         Wrapper directory. Default: $AUTOMIND_BIN_DIR
   AUTOMIND_INSTALL_AGENT   Advanced override for skill target: none|all|auto|claude|codex|trae|trae-cn. Default: $AUTOMIND_INSTALL_AGENT
-  AUTOMIND_INSTALL_COMMAND Advanced override; default 1 installs /codeautonomy and legacy /automind commands.
+  AUTOMIND_INSTALL_COMMAND Advanced override; default 1 installs /codemind and the legacy /automind alias.
   AUTOMIND_UPDATE          Advanced override; set to 0 to skip git pull when directory already exists.
 
 Examples:
   ./install.sh
-  curl -fsSL https://raw.githubusercontent.com/leishuai/CodeAutonomy/main/install-curl.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash
 EOF
 }
 
@@ -85,13 +86,13 @@ fi
 
 echo ""
 log "========================================"
-log "  CodeAutonomy Installer"
+log "  CodeMind Installer"
 log "========================================"
 echo ""
 
 if [[ "$AUTOMIND_REPO" == *"<"* && "$AUTOMIND_REPO" == *">"* && -z "$LOCAL_SOURCE" ]]; then
     error "AUTOMIND_REPO is not configured."
-    echo "The public installer default should point to the CodeAutonomy repository before publishing."
+    echo "The public installer default should point to the CodeMind repository before publishing."
     exit 2
 fi
 
@@ -101,7 +102,7 @@ case "$OS" in
         success "Operating system: $OS"
         ;;
     *)
-        warn "Untested operating system: $OS. CodeAutonomy is primarily tested on macOS and Linux."
+        warn "Untested operating system: $OS. CodeMind is primarily tested on macOS and Linux."
         ;;
 esac
 
@@ -120,13 +121,13 @@ success "python3: $(python3 --version 2>&1)"
 mkdir -p "$(dirname "$AUTOMIND_HOME")"
 
 if [[ -n "$LOCAL_SOURCE" && "$AUTOMIND_HOME" == "$LOCAL_SOURCE" ]]; then
-    log "Using local CodeAutonomy checkout: $AUTOMIND_HOME"
+    log "Using local CodeMind checkout: $AUTOMIND_HOME"
 elif [[ -n "$LOCAL_SOURCE" && "$AUTOMIND_HOME_WAS_SET" == "1" ]]; then
     if [[ -e "$AUTOMIND_HOME" && ! -d "$AUTOMIND_HOME" ]]; then
         error "Install path exists but is not a directory: $AUTOMIND_HOME"
         exit 1
     fi
-    log "Syncing git-free CodeAutonomy runtime to: $AUTOMIND_HOME"
+    log "Syncing git-free CodeMind runtime to: $AUTOMIND_HOME"
     mkdir -p "$AUTOMIND_HOME"
     if command -v rsync >/dev/null 2>&1; then
         rsync -a --delete \
@@ -134,17 +135,19 @@ elif [[ -n "$LOCAL_SOURCE" && "$AUTOMIND_HOME_WAS_SET" == "1" ]]; then
             --exclude='.automind/tasks/' \
             --exclude='.automind/summary/' \
             --exclude='dist/' \
+            --exclude='lark-bridge/node_modules/' \
             --exclude='.venv-*/' \
             --exclude='summaries/accumulated/' \
             "$LOCAL_SOURCE/" "$AUTOMIND_HOME/"
     else
         warn "rsync not found; falling back to tar copy without deleting stale runtime files."
-        (cd "$LOCAL_SOURCE" && tar --exclude='.git' --exclude='.automind/tasks' --exclude='.automind/summary' --exclude='dist' --exclude='.venv-*' --exclude='summaries/accumulated' -cf - .) | (cd "$AUTOMIND_HOME" && tar -xf -)
+        (cd "$LOCAL_SOURCE" && tar --exclude='.git' --exclude='.automind/tasks' --exclude='.automind/summary' --exclude='dist' --exclude='lark-bridge/node_modules' --exclude='.venv-*' --exclude='summaries/accumulated' -cf - .) | (cd "$AUTOMIND_HOME" && tar -xf -)
     fi
     if [[ -d "$AUTOMIND_HOME/.git" ]]; then
         warn "Removing legacy .git directory from runtime install: $AUTOMIND_HOME/.git"
     fi
     write_git_guard "$AUTOMIND_HOME"
+    RUNTIME_SYNCED=1
 elif [[ -d "$AUTOMIND_HOME/.git" ]]; then
     warn "Existing git checkout install detected. Migrating to a git-free runtime copy."
     staging="${AUTOMIND_CACHE_DIR:-$HOME/.automind/cache}/automind-git"
@@ -162,11 +165,12 @@ elif [[ -d "$AUTOMIND_HOME/.git" ]]; then
         disable_cache_push_url "$staging"
     fi
     if command -v rsync >/dev/null 2>&1; then
-        rsync -a --delete --exclude='.git/' --exclude='.automind/tasks/' --exclude='.automind/summary/' --exclude='dist/' --exclude='.venv-*/' --exclude='summaries/accumulated/' "$staging/" "$AUTOMIND_HOME/"
+        rsync -a --delete --exclude='.git/' --exclude='.automind/tasks/' --exclude='.automind/summary/' --exclude='dist/' --exclude='lark-bridge/node_modules/' --exclude='.venv-*/' --exclude='summaries/accumulated/' "$staging/" "$AUTOMIND_HOME/"
     else
-        (cd "$staging" && tar --exclude='.git' --exclude='.automind/tasks' --exclude='.automind/summary' --exclude='dist' --exclude='.venv-*' --exclude='summaries/accumulated' -cf - .) | (cd "$AUTOMIND_HOME" && tar -xf -)
+        (cd "$staging" && tar --exclude='.git' --exclude='.automind/tasks' --exclude='.automind/summary' --exclude='dist' --exclude='lark-bridge/node_modules' --exclude='.venv-*' --exclude='summaries/accumulated' -cf - .) | (cd "$AUTOMIND_HOME" && tar -xf -)
     fi
     write_git_guard "$AUTOMIND_HOME"
+    RUNTIME_SYNCED=1
 else
     if [[ -e "$AUTOMIND_HOME" && ! -d "$AUTOMIND_HOME" ]]; then
         error "Install path exists but is not a directory: $AUTOMIND_HOME"
@@ -176,7 +180,7 @@ else
     staging="${AUTOMIND_CACHE_DIR:-$HOME/.automind/cache}/automind-git"
     mkdir -p "$(dirname "$staging")"
     if [[ ! -d "$staging/.git" ]]; then
-        log "Cloning CodeAutonomy into installer cache..."
+        log "Cloning CodeMind into installer cache..."
         git clone --depth 1 --branch "$AUTOMIND_BRANCH" "$AUTOMIND_REPO" "$staging"
         disable_cache_push_url "$staging"
     elif [[ "$AUTOMIND_UPDATE" == "1" ]]; then
@@ -189,41 +193,52 @@ else
     else
         disable_cache_push_url "$staging"
     fi
-    log "Syncing git-free CodeAutonomy runtime to: $AUTOMIND_HOME"
+    log "Syncing git-free CodeMind runtime to: $AUTOMIND_HOME"
     mkdir -p "$AUTOMIND_HOME"
     if command -v rsync >/dev/null 2>&1; then
-        rsync -a --delete --exclude='.git/' --exclude='.automind/tasks/' --exclude='.automind/summary/' --exclude='dist/' --exclude='.venv-*/' --exclude='summaries/accumulated/' "$staging/" "$AUTOMIND_HOME/"
+        rsync -a --delete --exclude='.git/' --exclude='.automind/tasks/' --exclude='.automind/summary/' --exclude='dist/' --exclude='lark-bridge/node_modules/' --exclude='.venv-*/' --exclude='summaries/accumulated/' "$staging/" "$AUTOMIND_HOME/"
     else
-        (cd "$staging" && tar --exclude='.git' --exclude='.automind/tasks' --exclude='.automind/summary' --exclude='dist' --exclude='.venv-*' --exclude='summaries/accumulated' -cf - .) | (cd "$AUTOMIND_HOME" && tar -xf -)
+        (cd "$staging" && tar --exclude='.git' --exclude='.automind/tasks' --exclude='.automind/summary' --exclude='dist' --exclude='lark-bridge/node_modules' --exclude='.venv-*' --exclude='summaries/accumulated' -cf - .) | (cd "$AUTOMIND_HOME" && tar -xf -)
     fi
     write_git_guard "$AUTOMIND_HOME"
+    RUNTIME_SYNCED=1
+fi
+
+# A copied/updated runtime must not retain JavaScript output or dependencies from
+# an older Lark Bridge version. Keep Node/npm optional and rebuild lazily when
+# the user first runs `automind channel start`.
+if [[ "$RUNTIME_SYNCED" == "1" && -d "$AUTOMIND_HOME/lark-bridge" ]]; then
+    log "Invalidating optional Lark Bridge build cache..."
+    rm -rf "$AUTOMIND_HOME/lark-bridge/dist" "$AUTOMIND_HOME/lark-bridge/node_modules"
 fi
 
 chmod +x "$AUTOMIND_HOME/automind.sh" || true
 chmod +x "$AUTOMIND_HOME/install.sh" || true
+chmod +x "$AUTOMIND_HOME/scripts/ensure_lark_bridge_build.sh" || true
 
-log "Running CodeAutonomy initialization..."
+log "Running CodeMind initialization..."
 "$AUTOMIND_HOME/automind.sh" init
 
 mkdir -p "$AUTOMIND_BIN_DIR"
-PRIMARY_WRAPPER="$AUTOMIND_BIN_DIR/codeautonomy"
+
+write_wrapper() {
+    local name="$1"
+    local wrapper="$AUTOMIND_BIN_DIR/$name"
+    cat > "$wrapper" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+export AUTOMIND_HOME="$AUTOMIND_HOME"
+export AUTOMIND_CLI_DISPLAY="$name"
+exec "$AUTOMIND_HOME/automind.sh" "\$@"
+EOF
+    chmod +x "$wrapper"
+    success "CLI wrapper installed: $wrapper"
+}
+
+CODEMIND_WRAPPER="$AUTOMIND_BIN_DIR/codemind"
 LEGACY_WRAPPER="$AUTOMIND_BIN_DIR/automind"
-cat > "$PRIMARY_WRAPPER" <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-export AUTOMIND_HOME="$AUTOMIND_HOME"
-export AUTOMIND_CLI_DISPLAY="codeautonomy"
-exec "$AUTOMIND_HOME/automind.sh" "\$@"
-EOF
-cat > "$LEGACY_WRAPPER" <<EOF
-#!/usr/bin/env bash
-set -euo pipefail
-export AUTOMIND_HOME="$AUTOMIND_HOME"
-export AUTOMIND_CLI_DISPLAY="automind"
-exec "$AUTOMIND_HOME/automind.sh" "\$@"
-EOF
-chmod +x "$PRIMARY_WRAPPER" "$LEGACY_WRAPPER"
-success "CLI wrappers installed: $PRIMARY_WRAPPER (primary), $LEGACY_WRAPPER (compatibility)"
+write_wrapper "codemind"
+write_wrapper "automind"
 
 if [[ ":$PATH:" != *":$AUTOMIND_BIN_DIR:"* ]]; then
     warn "$AUTOMIND_BIN_DIR is not on PATH. Add this to your shell profile:"
@@ -231,31 +246,30 @@ if [[ ":$PATH:" != *":$AUTOMIND_BIN_DIR:"* ]]; then
 fi
 
 if [[ "$AUTOMIND_INSTALL_AGENT" != "none" ]]; then
-    log "Installing CodeAutonomy skill for agent target: $AUTOMIND_INSTALL_AGENT"
-    "$AUTOMIND_HOME/automind.sh" export-skill --install "$AUTOMIND_INSTALL_AGENT" --install-name codeautonomy-skill
-    "$AUTOMIND_HOME/automind.sh" export-skill --install "$AUTOMIND_INSTALL_AGENT" --install-name automind-skill
+    log "Installing CodeMind skill for agent target: $AUTOMIND_INSTALL_AGENT"
+    "$AUTOMIND_HOME/automind.sh" export-skill --install "$AUTOMIND_INSTALL_AGENT"
     if [[ "$AUTOMIND_INSTALL_COMMAND" == "1" ]]; then
-        log "Installing CodeAutonomy slash command for agent target: $AUTOMIND_INSTALL_AGENT"
-        "$AUTOMIND_HOME/automind.sh" export-command --install "$AUTOMIND_INSTALL_AGENT" --command-name codeautonomy
-        "$AUTOMIND_HOME/automind.sh" export-command --install "$AUTOMIND_INSTALL_AGENT" --command-name automind
+        log "Installing CodeMind slash command for agent target: $AUTOMIND_INSTALL_AGENT"
+        "$AUTOMIND_HOME/automind.sh" export-command --install "$AUTOMIND_INSTALL_AGENT"
     fi
 else
     log "Skipping agent skill/command install because AUTOMIND_INSTALL_AGENT=none."
 fi
 
 echo ""
-success "CodeAutonomy installation complete."
+success "CodeMind installation complete."
 echo ""
 echo "Next steps:"
 echo "  1. Restart your shell or add the wrapper directory to PATH:"
 echo "     export PATH=\"$AUTOMIND_BIN_DIR:\$PATH\""
 echo "  2. Try the no-device smoke test:"
-echo "     codeautonomy smoke offline-demo"
-echo "  3. CodeAutonomy skill and /codeautonomy command were installed; automind remains available as a compatibility alias."
-echo "     If an agent root was not detected yet, rerun: automind export-skill --install auto after opening that agent."
+echo "     codemind smoke offline-demo"
+echo "  3. CodeMind attempted to install the skill and /codemind command for Claude/Codex/Trae/Trae-CN."
+echo "     The legacy automind CLI and /automind command remain available."
+echo "     If an agent root was not detected yet, rerun: codemind export-skill --install auto after opening that agent."
 echo "  4. In the coding agent after restart/reload, try:"
-echo "     /codeautonomy help"
+echo "     /codemind help"
 echo ""
 echo "Installed checkout: $AUTOMIND_HOME"
-echo "Primary CLI:        $PRIMARY_WRAPPER"
-echo "Compatibility CLI:  $LEGACY_WRAPPER"
+echo "CLI wrapper:        $CODEMIND_WRAPPER"
+echo "Legacy alias:       $LEGACY_WRAPPER"

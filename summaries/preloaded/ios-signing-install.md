@@ -72,7 +72,7 @@ not confirmed, matching old-Team signing material. Do you authorize uninstalling
 the old device app and installing the current build? This deletes its local data.
 ```
 
-## CodeAutonomy preflight commands
+## CodeMind preflight commands
 
 ```bash
 # read-only check before installing over an existing app when Teams may differ

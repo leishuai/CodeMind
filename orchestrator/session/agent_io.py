@@ -45,7 +45,7 @@ def task_requires_human_input(task_dir: Path) -> bool:
     """Return True when durable task artifacts request ask_user.
 
     Agent CLIs can write runtime-state/evaluation files before their own final
-    analysis is complete. CodeAutonomy should notice that a human-input gate exists,
+    analysis is complete. CodeMind should notice that a human-input gate exists,
     but by default it waits for the current agent turn to finish so the full
     reasoning/output chain is preserved.
     """

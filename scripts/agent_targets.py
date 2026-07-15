@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared user-level agent integration targets for CodeAutonomy exports."""
+"""Shared user-level agent integration targets for CodeMind exports."""
 from __future__ import annotations
 
 import pathlib
@@ -44,7 +44,7 @@ def skill_target_entries(agent: str, install_name: str = "automind") -> list[dic
 
     Default install policy is conservative: never create an agent root directory.
     If the agent root/marker exists, installing may create the child `skills/`
-    directory and overwrite CodeAutonomy's skill folder there.
+    directory and overwrite CodeMind's skill folder there.
     """
     specs = _skill_specs(install_name)
     entries: list[dict[str, object]] = []

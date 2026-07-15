@@ -87,7 +87,7 @@ def build_improve_suggestions(limit: int = 80) -> list[dict]:
         suggestions.append({
             "area": "reuse",
             "priority": "medium",
-            "suggestion": "Recent runs contain high-confidence successful paths; consider promoting repeated project-local commands/patterns into Reuse.md, phase docs, or a CodeAutonomy skill note after review.",
+            "suggestion": "Recent runs contain high-confidence successful paths; consider promoting repeated project-local commands/patterns into Reuse.md, phase docs, or a CodeMind skill note after review.",
             "evidence": [c.get("taskCode") for c in high_conf_paths[-5:]],
         })
     return suggestions
@@ -95,7 +95,7 @@ def build_improve_suggestions(limit: int = 80) -> list[dict]:
 
 def render_improve_suggestions(limit: int = 80) -> str:
     suggestions = build_improve_suggestions(limit=limit)
-    lines = ["# CodeAutonomy Improve Suggestions", ""]
+    lines = ["# CodeMind Improve Suggestions", ""]
     if not suggestions:
         lines.append("- No suggestions yet. Finish more tasks and run `automind summary <task>` to populate run cards.")
         return "\n".join(lines)
@@ -612,7 +612,7 @@ def apply_ai_knowledge_actions(task_dir: Path, ai_refinement: Optional[dict]) ->
             ensure_dir(raw_path.parent)
             header = f"\
 \
-<!-- CodeAutonomy summary refiner: {datetime.now().isoformat(timespec='seconds')} task={task_dir.name} action={action} -->\
+<!-- CodeMind summary refiner: {datetime.now().isoformat(timespec='seconds')} task={task_dir.name} action={action} -->\
 "
             content = str(item.get("content") or "").rstrip() + "\
 "
@@ -773,7 +773,7 @@ def run_ai_summary_refiner(task_code: str, task_dir: Path, reason: str, seed: di
     seed_md_path = summary_dir / "summary-refiner-seed.md"
     seed_json_path.write_text(json.dumps(seed, ensure_ascii=False, indent=2))
     seed_md_path.write_text(
-        "# CodeAutonomy Summary Refiner Seed\n\n"
+        "# CodeMind Summary Refiner Seed\n\n"
         "This seed is deterministically filtered before AI refinement.\n\n"
         "```json\n"
         + json.dumps(seed, ensure_ascii=False, indent=2)[:60_000]
@@ -1242,7 +1242,7 @@ def generate_summary(task_code: str, reason: str = "manual", ai_agent: Optional[
         warn(f"Global summary compaction skipped: {exc}")
 
     # Sink durable, cross-task lessons into the machine-global accumulated store
-    # (CodeAutonomy runtime install). Project-bound lessons route to
+    # (CodeMind runtime install). Project-bound lessons route to
     # business/<slug>/, business-agnostic ones to technical/. Best-effort.
     try:
         evidence_ref = rel(iter_dirs[-1]) + "/" if iter_dirs else "-"
@@ -1444,7 +1444,7 @@ def ensure_summary_generated(task_code: str, reason: str = "loop_terminal", ai_a
     resolved_ai_agent = _resolve_summary_ai_agent(task_dir) if ai_agent == "__resolve__" else ai_agent
     try:
         path = generate_summary(task_code, reason=reason, ai_agent=resolved_ai_agent)
-        print_report_manifest(task_code, heading="CodeAutonomy reports for user review")
+        print_report_manifest(task_code, heading="CodeMind reports for user review")
         return path
     except Exception as exc:
         warn(f"Summary generation failed for {task_code}: {exc}")
@@ -1457,5 +1457,5 @@ def ensure_summary_generated(task_code: str, reason: str = "loop_terminal", ai_a
                 "failedAt": datetime.now().isoformat(timespec="seconds"),
             }
         )
-        print_report_manifest(task_code, heading="Available CodeAutonomy reports for user review")
+        print_report_manifest(task_code, heading="Available CodeMind reports for user review")
         return None

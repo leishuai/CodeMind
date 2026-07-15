@@ -112,7 +112,7 @@ def classify(text: str) -> tuple[str, str, list[str]]:
     """Legacy 3-tuple wrapper kept for external callers.
 
     Returns (result, category, matchedKeywords). New callers inside
-    CodeAutonomy should use `classify_detail` instead and honor the
+    CodeMind should use `classify_detail` instead and honor the
     triageSource / needsModelReview fields before treating a screen as
     "ready" or "blocked".
     """
@@ -161,7 +161,7 @@ def main() -> int:
             pass
 
     if category == "privacy_consent_blocked":
-        summary = "Readiness blocked by app-internal privacy/terms consent screen; CodeAutonomy may tap the positive Agree/Allow/Continue control as a verification unblock step."
+        summary = "Readiness blocked by app-internal privacy/terms consent screen; CodeMind may tap the positive Agree/Allow/Continue control as a verification unblock step."
         ask = None
         auto_unblock = {
             "allowed": True,

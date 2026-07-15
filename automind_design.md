@@ -1,10 +1,10 @@
-# CodeAutonomy Design
+# CodeMind Design
 
-CodeAutonomy is designed around one product belief:
+CodeMind is designed around one product belief:
 
 > Coding agents should not only write code. They should keep working through an evidence-driven engineering loop until the requested outcome is verified or a real blocker is exposed.
 
-CodeAutonomy is the harness layer for that loop.
+CodeMind is the harness layer for that loop.
 
 ---
 
@@ -21,13 +21,13 @@ Modern coding agents can generate useful code quickly, but real project completi
 - an evaluator shares the generator's assumptions and misses failures;
 - lessons from a completed task are lost after the session ends.
 
-CodeAutonomy treats these as system problems. The answer is not a bigger prompt; the answer is a recoverable loop with explicit artifacts, gates, evidence, and reuse memory. Prompts guide the agent's judgement, but the loop owns execution quality: keep moving, collect proof, recover safely, and refuse unsupported finish claims.
+CodeMind treats these as system problems. The answer is not a bigger prompt; the answer is a recoverable loop with explicit artifacts, gates, evidence, and reuse memory. Prompts guide the agent's judgement, but the loop owns execution quality: keep moving, collect proof, recover safely, and refuse unsupported finish claims.
 
 ---
 
 ## 2. Product goal
 
-CodeAutonomy turns a user request into a controlled loop:
+CodeMind turns a user request into a controlled loop:
 
 ```text
 understand -> plan -> implement -> verify -> diagnose -> repair/replan -> verify again -> summarize
@@ -42,18 +42,30 @@ The target behavior is end-to-end automation by default:
 
 The loop should be usable in two ways:
 
-1. **Skill/slash-command mode** — the current coding-agent session remains the Planner and Generator, while CodeAutonomy provides the workflow, task files, CLI helper gates, and evaluator protocol.
-2. **Detached CLI mode** — CodeAutonomy starts separate non-interactive agent CLI invocations through adapters for background or scripted operation.
+1. **Skill/slash-command mode** — the current coding-agent session remains the Planner and Generator, while CodeMind provides the workflow, task files, CLI helper gates, and evaluator protocol.
+2. **Detached CLI mode** — CodeMind starts separate non-interactive agent CLI invocations through adapters for background or scripted operation.
 
 Both modes share the same task directory, session artifacts, trace/process-eval records, and evidence contract.
 
-A third user-facing surface sits on top of those two modes: the interactive CodeAutonomy shell/TUI (`automind`, `automind tui <task> --interactive`). It does not create a separate protocol. Commands, user answers, natural-language messages, traces, and process evals are persisted back into the same task/run session so CLI, TUI, skill mode, and adapter invocations see the same state.
+Two user-facing surfaces sit on top of those execution modes:
+
+3. **Interactive shell/TUI** — `codemind` and
+   `codemind tui <task> --interactive` provide a live view and control surface
+   for one formal task at a time.
+4. **Lark/Feishu conversation** — one conversation can chat naturally and
+   manage multiple independent CodeMind tasks. Ordinary chat stays in a
+   conversation session; explicit, validated actions create, select, inspect,
+   modify, resume, or answer formal tasks.
+
+These surfaces do not create separate task protocols. Once a formal task exists,
+skill, CLI, TUI, Lark, adapters, and evaluators share the same task artifacts,
+state, evidence, and completion gates.
 
 ---
 
 ## 3. Non-goals
 
-CodeAutonomy intentionally does not try to become:
+CodeMind intentionally does not try to become:
 
 - a replacement for Codex, Claude Code, Trae, or other coding agents;
 - a replacement for project-native test frameworks;
@@ -61,7 +73,7 @@ CodeAutonomy intentionally does not try to become:
 - a tool that silently changes signing, devices, privileged services, or user data;
 - a system that guarantees correctness without evidence.
 
-CodeAutonomy's job is to orchestrate and discipline the engineering loop around existing agents and tools.
+CodeMind's job is to orchestrate and discipline the engineering loop around existing agents and tools.
 
 ---
 
@@ -84,7 +96,7 @@ Evidence may include:
 
 ### 4.2 The file protocol is the shared memory
 
-CodeAutonomy does not rely on hidden chat memory to connect roles, sessions, or processes. The shared state is the task directory:
+CodeMind does not rely on hidden chat memory to connect roles, sessions, or processes. The shared state is the task directory:
 
 ```text
 .automind/tasks/<task-code>/
@@ -95,6 +107,9 @@ CodeAutonomy does not rely on hidden chat memory to connect roles, sessions, or 
   user-messages.json
   trace.json
   process-eval.json
+  metrics.json
+  audit.jsonl
+  audit.json
   evaluation.json
   Validation.md
   Delivery.md
@@ -104,6 +119,11 @@ CodeAutonomy does not rely on hidden chat memory to connect roles, sessions, or 
 ```
 
 A current host session, an isolated subagent, a deterministic verifier, or a detached CLI process should all exchange results through these files.
+
+Conversation sessions follow the same principle. Provider chat history is a
+cache for continuity, not the only memory source. Visible turns and recovery
+summaries are persisted separately, while each formal coding task keeps its own
+Planner/Generator session and fresh isolated Evaluator.
 
 ### 4.3 Requirements and tests are first-class artifacts
 
@@ -137,9 +157,35 @@ technology stack from README, CI, lockfiles, and source files. A helper such as
 when that path is unclear or a tooling failure needs classification. It is not a
 required gate and it does not install target project dependencies.
 
-### 4.5 High automation with evidence-driven self-correction
+### 4.5 Open language, controlled actions
 
-CodeAutonomy's default goal is not “run one command.” The default goal is to continue the harness loop and self-correct from evidence until one of these is true:
+Users should be able to speak naturally without being constrained by a
+hard-coded intent enum. The model may reply directly or propose a structured,
+high-level capability such as inspecting a workspace, inspecting a task, or
+creating a task.
+
+The model does not execute that action directly:
+
+```text
+natural language
+  -> model proposes a capability
+  -> schema, ownership, and policy validation
+  -> deterministic executor
+  -> structured result
+  -> user-facing reply grounded in the real result
+```
+
+Capabilities are user-goal interfaces, not a mirror of every internal function.
+Read-only inspection can be aggregated; state-changing actions remain narrow,
+task-bound, idempotent, and confirmed when necessary. There is no arbitrary
+shell or file-operation fallback.
+
+This design trades a small protocol-maintenance cost for safer, auditable,
+model-driven control of local engineering work.
+
+### 4.6 High automation with evidence-driven self-correction
+
+CodeMind's default goal is not “run one command.” The default goal is to continue the harness loop and self-correct from evidence until one of these is true:
 
 - required verification passes and `completion-check` passes;
 - human confirmation is required;
@@ -147,9 +193,9 @@ CodeAutonomy's default goal is not “run one command.” The default goal is to
 - repeated attempts show no progress and the loop needs replan or human strategy confirmation;
 - the user explicitly requested a single-stage operation.
 
-For Coding-Agent execution, CodeAutonomy intentionally separates execution power from safety policy. Planner/Generator bypass is a task-level decision stored in `runtime-state.json.agentExecutionPolicy`, shared across Codex/Claude/Trae instead of being encoded as an agent-specific field. Missing policy falls back to bypass so non-new tasks, detached scripts, resume, helper commands, or flows that cannot ask still keep the high-automation default. The TUI asks for this decision only when creating a new task, and only once; detached scripts, resume, and helper commands do not create fresh bypass grants and must follow the recorded task policy or the missing-policy bypass fallback. If the recorded bypass state changes, CodeAutonomy must not reuse an older primary Planner/Generator session created under the opposite execution mode. Model Evaluator is different: Evaluator is always fresh-isolated and bypassed for every supported Coding Agent (Codex dangerous bypass, Claude skip permissions, Trae/Coco YOLO). Evaluator runs the broadest set of runtime/device/build/browser commands and should not deadlock on agent approval prompts while collecting evidence. This does not authorize unsafe work: money movement, destructive changes, credential exposure, signing/keychain/device-trust changes, system/network/security configuration, uploads/exfiltration, and similar high-risk actions still route through CodeAutonomy's `ask_user` contract with exact scope and risk.
+For Coding-Agent execution, CodeMind intentionally separates execution power from safety policy. Planner/Generator bypass is a task-level decision stored in `runtime-state.json.agentExecutionPolicy`, shared across Codex/Claude/Trae instead of being encoded as an agent-specific field. Missing policy falls back to bypass so non-new tasks, detached scripts, resume, helper commands, or flows that cannot ask still keep the high-automation default. The TUI asks for this decision only when creating a new task, and only once; detached scripts, resume, and helper commands do not create fresh bypass grants and must follow the recorded task policy or the missing-policy bypass fallback. If the recorded bypass state changes, CodeMind must not reuse an older primary Planner/Generator session created under the opposite execution mode. Model Evaluator is different: Evaluator is always fresh-isolated and bypassed for every supported Coding Agent (Codex dangerous bypass, Claude skip permissions, Trae/Coco YOLO). Evaluator runs the broadest set of runtime/device/build/browser commands and should not deadlock on agent approval prompts while collecting evidence. This does not authorize unsafe work: money movement, destructive changes, credential exposure, signing/keychain/device-trust changes, system/network/security configuration, uploads/exfiltration, and similar high-risk actions still route through CodeMind's `ask_user` contract with exact scope and risk.
 
-Coding-agent runs also have an idle-output watchdog. If the subprocess produces no stdout/stderr for `AUTOMIND_AGENT_IDLE_TIMEOUT_SECONDS` seconds (default 1800), CodeAutonomy kills the stale process and records `agent_stalled_no_output`. This is a recoverable agent/runtime interruption, not a product validation failure. Periodic CodeAutonomy heartbeat events do not reset this watchdog; only real agent output does.
+Coding-agent runs also have an idle-output watchdog. If the subprocess produces no stdout/stderr for `AUTOMIND_AGENT_IDLE_TIMEOUT_SECONDS` seconds (default 1800), CodeMind kills the stale process and records `agent_stalled_no_output`. This is a recoverable agent/runtime interruption, not a product validation failure. Periodic CodeMind heartbeat events do not reset this watchdog; only real agent output does.
 
 This is automation with brakes, not blind automation. Evaluator evidence should flow back to Generator as actionable repair input. The repair path is explicit:
 
@@ -157,15 +203,19 @@ This is automation with brakes, not blind automation. Evaluator evidence should 
 failed TC-* -> covered AC-* -> related Rxx -> evidence -> cause category -> next action
 ```
 
-If the implementation is wrong, CodeAutonomy retries Generator with the failure evidence. If the plan or test target is wrong, it replans. If the next step depends on a human/system choice, it asks the user. If the same failure repeats without progress, iteration/reflection budgets turn churn into a human strategy decision.
+If the implementation is wrong, CodeMind retries Generator with the failure evidence. If the plan or test target is wrong, it replans. If the next step depends on a human/system choice, it asks the user. If the same failure repeats without progress, iteration/reflection budgets turn churn into a human strategy decision.
 
-### 4.6 Observability, TUI, and human handoff
+### 4.7 Observability, TUI, and human handoff
 
-CodeAutonomy should be inspectable while it runs and understandable when it hands work back to a human. The base records are:
+CodeMind should be inspectable while it runs and understandable when it hands work back to a human. The base records are:
 
 - `events.jsonl`: append-only timeline for TUI/skill mode.
 - `trace.json`: formal task/phase/event trace for debugging, evals, and summary.
 - `process-eval.json`: checks whether the harness followed required gates and session handoffs.
+- `audit.jsonl` and `audit.json`: explain important decisions, branches,
+  policies, actions, gates, and recoveries.
+- `metrics.json`: measures duration, retries, agent calls, resource use,
+  capability behavior, and other bounded quantitative signals.
 - `Summary.md`, `run-card.json`, and `.automind/summary/run-cards.jsonl`: human-readable and structured learning for future tasks.
 
 The interactive shell/TUI is the live control surface for long-running tasks. It should let a user inspect state, see events, continue work, answer pending questions, and understand progress without relying on hidden chat history.
@@ -180,15 +230,44 @@ not dominate the row. Runtime/UI TCs should capture screenshots by default or
 explicitly state why no screenshot is linked.
 
 The final user-facing response is part of the product handoff, not just chat
-polish. After completion passes, CodeAutonomy should say in natural language what
+polish. After completion passes, CodeMind should say in natural language what
 was completed, what was generated, ask the user to open `Report.html` first,
 and call out the key runtime proof / log / ledger files.
 
 This keeps traces, evals, TUI observability, reports, and improve-across-runs inside the existing file protocol instead of creating a separate memory system.
 
-### 4.7 Phase hooks make learning and policy attachable
+Audit and metrics have different jobs. Audit answers *why CodeMind chose or did
+something*. Metrics answer *whether the behavior is reliable, efficient, and
+better than before*. Neither replaces verification evidence or completion
+gates, and neither should contain raw prompts, chain-of-thought, credentials,
+or unbounded user/document content.
 
-CodeAutonomy is phase-based, so lightweight deterministic hooks can run before and after phase nodes without changing the core loop semantics.
+### 4.8 Adaptive orchestration without process inflation
+
+CodeMind should spend orchestration effort in proportion to task uncertainty,
+risk, scope, and verification cost:
+
+- **Compact** tasks are clear, local, low-risk, and directly verifiable. They
+  use the existing artifact loop with minimal planning overhead.
+- **Deep** tasks need material discovery before implementation. CodeMind may
+  run independent read-only research over code, requirements, historical
+  decisions, experiments, and verification paths, then synthesize cited
+  evidence into Brainstorm before Requirements are frozen.
+
+Deep does not mean “always use many agents.” Optional WorkItems and Workers are
+introduced only when independent scheduling or node-level recovery adds real
+value. Coding remains serial until write independence, workspace isolation,
+integration, and resource safety can be demonstrated.
+
+This is a target direction, not fully shipped behavior. The current product
+already has the core loop, Lark Conversation Orchestrator, controlled
+capabilities, persistent sessions, audit, and metrics. Compact/Deep policy,
+deep research Workers, WorkItems, and workspace/device locks are incremental
+future work.
+
+### 4.9 Phase hooks make learning and policy attachable
+
+CodeMind is phase-based, so lightweight deterministic hooks can run before and after phase nodes without changing the core loop semantics.
 
 Current hook uses include:
 
@@ -201,6 +280,17 @@ Hooks are intentionally bounded. They should enrich the phase with relevant fact
 ---
 
 ## 5. Canonical flow
+
+Natural conversation does not automatically become a coding task:
+
+```text
+Conversation
+  -> direct reply, read-only inspection, or clarification
+  -> confirmed task creation only when real engineering work is requested
+```
+
+Every confirmed formal task then enters the same loop, regardless of whether it
+came from Lark, TUI, `ask`, or a coding-agent skill:
 
 ```text
 User request
@@ -243,15 +333,15 @@ Before Generator changes code, `Brainstorm.md` and `runtime-state.json.planner.p
 - `ask_user`: a human decision is required before implementation;
 - `replan`: Phase 2 artifacts need more refinement.
 
-This preserves CodeAutonomy's automation goal while preventing the system from silently implementing a wrong plan when assumptions are material. `workflow-check` treats unresolved pre-implementation review, unresolved one-shot decision bundles, or missing required planning fields as hard failures rather than soft warnings.
+This preserves CodeMind's automation goal while preventing the system from silently implementing a wrong plan when assumptions are material. `workflow-check` treats unresolved pre-implementation review, unresolved one-shot decision bundles, or missing required planning fields as hard failures rather than soft warnings.
 
-Brainstorm is an active design phase, not a passive question list. The agent should explore project context, think of edge cases and constraints the user may not have mentioned, compare plausible approaches, recommend one, and usually ask the user to confirm that conclusion before non-trivial code changes. That confirmation should include not only the implementation direction but also must-pass acceptance criteria, required TestCases, and the evidence strategy; otherwise CodeAutonomy might automate against the wrong test target.
+Brainstorm is an active design phase, not a passive question list. The agent should explore project context, think of edge cases and constraints the user may not have mentioned, compare plausible approaches, recommend one, and usually ask the user to confirm that conclusion before non-trivial code changes. That confirmation should include not only the implementation direction but also must-pass acceptance criteria, required TestCases, and the evidence strategy; otherwise CodeMind might automate against the wrong test target.
 
 ---
 
 ## 6. How user intent becomes executable work
 
-CodeAutonomy has a demand-digestion phase. It does not treat the user's first sentence as the final implementation contract. The Planner expands the request, explores ambiguity, records decisions, and then distills the result into a verifiable requirement and test contract.
+CodeMind has a demand-digestion phase. It does not treat the user's first sentence as the final implementation contract. The Planner expands the request, explores ambiguity, records decisions, and then distills the result into a verifiable requirement and test contract.
 
 ```text
 Raw user request
@@ -341,7 +431,7 @@ evidence, and status summarizes them so the agent does not rely on chat memory.
 
 ## 7. The AI Planner / Refiner role
 
-CodeAutonomy intentionally uses model capability for Phase 2 planning and refinement.
+CodeMind intentionally uses model capability for Phase 2 planning and refinement.
 
 The deterministic scaffold only creates a starting structure. The model should improve it by:
 
@@ -354,7 +444,7 @@ The deterministic scaffold only creates a starting structure. The model should i
 - identifying cases that require user confirmation;
 - making sure the resulting semantics can be materialized into a stable `workflow.json` contract.
 
-This is important because a purely script-template planner cannot understand enough product context. CodeAutonomy wants scripts to enforce the loop, while the model contributes judgment.
+This is important because a purely script-template planner cannot understand enough product context. CodeMind wants scripts to enforce the loop, while the model contributes judgment.
 
 ---
 
@@ -394,7 +484,7 @@ Preferred evaluator order:
 4. Same-conversation role switch: not accepted as independent evaluation
 ```
 
-Before a model Evaluator runs, CodeAutonomy can generate:
+Before a model Evaluator runs, CodeMind can generate:
 
 ```bash
 automind context-pack <task-code> <iteration>
@@ -417,7 +507,7 @@ It excludes raw Generator transcripts and hidden reasoning. This gives Evaluator
 
 ## 10. Deterministic verifiers and platform adapters
 
-CodeAutonomy favors deterministic evidence whenever possible.
+CodeMind favors deterministic evidence whenever possible.
 
 Generic projects can use:
 
@@ -440,7 +530,7 @@ Android and iOS projects can use platform-aware checks when local tooling is ava
 UI interaction is a first-class verification capability when the runner exists.
 Android probe-flow can encode tap/input/swipe/optional-popup/assertion steps.
 iOS can use project/native XCUITest or materialize `probe-flow.ios.json` /
-`action-plan.ios.json` into reviewable Swift test intent. CodeAutonomy should not
+`action-plan.ios.json` into reviewable Swift test intent. CodeMind should not
 fall back to “cannot click the app” by default; it should encode the action,
 selector confidence, risk, authorization, post-action assertion, and evidence,
 or route to `ask_user` / `replan` if the required runner, device, signing, or
@@ -452,7 +542,7 @@ go-ios runner, with the IDE-dependent custom-runner host as the known dead end);
 the platform specifics live in `docs/references/verification-flow-ios.md` /
 `verification-flow-android.md`, split out of the cross-platform
 `verification-flow.md`. When every UI-automation tier is exhausted and a page
-still cannot be reached through the normal flow, CodeAutonomy may, as a low-fidelity
+still cannot be reached through the normal flow, CodeMind may, as a low-fidelity
 last resort, temporarily run route/navigation code to load the target page
 directly. This is treated as a high-risk verification-unblock change (checkpoint,
 record in `verificationUnblockChanges[]`, restore/promote), produces weaker
@@ -463,7 +553,7 @@ Visual/image checks follow the same evidence principle: prefer measurable proof
 from logs, DOM/UI hierarchy, bounds, screenshots, diffs, hashes, OCR, or
 project-native snapshot/layout tests. AI visual review is a supplementary layer
 when screenshots exist and the host model supports image understanding. If no
-deterministic or AI-assisted proof can settle a required visual claim, CodeAutonomy
+deterministic or AI-assisted proof can settle a required visual claim, CodeMind
 should capture evidence and ask the user to confirm rather than silently pass.
 
 Platform adapters must not invent product goals. They execute the verification intent described in `TestCases.md`, `Plan.md`, and optional probe-flow files.
@@ -494,7 +584,7 @@ Evaluator writes `evaluation.json` as the machine-readable loop control signal. 
 }
 ```
 
-CodeAutonomy uses this to decide the next step:
+CodeMind uses this to decide the next step:
 
 - `finish` enters `completion-check` before final success is accepted;
 - `retry_generator` feeds evidence back into another Generator round;
@@ -543,7 +633,7 @@ In skill/slash-command current-session mode, the host coding agent runs `phase-g
 - returns `checklist[]` plus `checkboxMarkdown[]`, so the host agent can copy the active phase checklist into its native TODO/checkbox plan before continuing;
 - when the handoff is about to enter `delivery` or `evaluation`, deterministically refreshes missing/stale `phase-reuse/generator.md` or `phase-reuse/evaluator.md` without resetting fresh, already-acknowledged reuse.
 
-The checklist is intentionally lightweight and ordered. It covers the key flow inside each phase: read routing/reuse inputs, read required JSON/Markdown artifacts, perform the phase work, write/update the phase artifact and compact sidecar when applicable, capture evidence/logs when applicable, then rerun the relevant gate. `command` is optional and appears only when an item needs a CodeAutonomy helper such as `workflow-check`, `phase-gate`, `context-pack`, `completion-check`, `summary`, or `report`; ordinary read/edit/test/write work stays with the host coding agent.
+The checklist is intentionally lightweight and ordered. It covers the key flow inside each phase: read routing/reuse inputs, read required JSON/Markdown artifacts, perform the phase work, write/update the phase artifact and compact sidecar when applicable, capture evidence/logs when applicable, then rerun the relevant gate. `command` is optional and appears only when an item needs a CodeMind helper such as `workflow-check`, `phase-gate`, `context-pack`, `completion-check`, `summary`, or `report`; ordinary read/edit/test/write work stays with the host coding agent.
 
 ### record-check
 
@@ -551,9 +641,9 @@ The checklist is intentionally lightweight and ordered. It covers the key flow i
 
 ---
 
-## 13. How CodeAutonomy keeps looping safely
+## 13. How CodeMind keeps looping safely
 
-CodeAutonomy combines multiple safeguards to keep the loop moving without becoming reckless.
+CodeMind combines multiple safeguards to keep the loop moving without becoming reckless.
 
 ```text
 Explicit requirements
@@ -589,7 +679,7 @@ This lets the agent repair the affected area instead of rewriting the entire tas
 Not every loop interruption is a real failure. CLI/TUI-owned loops automatically retry safe coding-agent/runtime interruptions so the run is not abandoned over a transient hiccup:
 
 - single agent CLI calls already retry transient timeout/network/process failures with short backoff;
-- if a Generator/Evaluator turn still fails with `agent_unavailable`, `agent_timeout`, `agent_stalled_no_output`, or `agent_context_overflow`, CodeAutonomy writes `evaluation.autoRecovery` and re-enters the same task up to `AUTOMIND_SAFE_AUTO_RESUME_MAX` times (default 3);
+- if a Generator/Evaluator turn still fails with `agent_unavailable`, `agent_timeout`, `agent_stalled_no_output`, or `agent_context_overflow`, CodeMind writes `evaluation.autoRecovery` and re-enters the same task up to `AUTOMIND_SAFE_AUTO_RESUME_MAX` times (default 3);
 - a context-window overflow clears the saturated primary session and resumes from the durable task artifacts in a fresh session.
 
 This recovery is intentionally scoped to no-loss runtime conditions; it never auto-retries a real product/test failure or a sensitive `ask_user` gate.
@@ -600,10 +690,10 @@ This recovery is intentionally scoped to no-loss runtime conditions; it never au
 
 ### Current-session skill/slash-command mode
 
-`/automind <request>` and `/automind ask <request>` mean:
+`/codemind <request>` and `/codemind ask <request>` mean:
 
 - use the current coding agent as Planner and Generator;
-- use CodeAutonomy task artifacts and CLI helper gates;
+- use CodeMind task artifacts and CLI helper gates;
 - keep the loop running end-to-end;
 - do not start another agent by default.
 
@@ -614,11 +704,11 @@ This mode best matches how users expect slash commands to behave inside coding a
 Detached mode is explicit:
 
 ```text
-/automind detached ask <request>
-automind ask "<request>" <agent>
+/codemind detached ask <request>
+codemind ask "<request>" <agent>
 ```
 
-It starts non-interactive agent CLI invocations through adapters. For Codex, Claude, and Trae/Coco, CodeAutonomy keeps one task-local primary Planner/Generator session when possible, so implementation and repair can reuse accumulated context. Evaluator remains a fresh isolated invocation and never resumes the Planner/Generator session.
+It starts non-interactive agent CLI invocations through adapters. For Codex, Claude, and Trae/Coco, CodeMind keeps one task-local primary Planner/Generator session when possible, so implementation and repair can reuse accumulated context. Evaluator remains a fresh isolated invocation and never resumes the Planner/Generator session.
 
 Detached mode still does not reuse the active slash-command chat session. Both modes integrate through the same `.automind/tasks/<task-code>/` artifacts.
 
@@ -626,7 +716,7 @@ Detached mode still does not reuse the active slash-command chat session. Both m
 
 ## 15. Safety and human decisions
 
-CodeAutonomy should continue automatically for low-risk actions, but it must ask before actions with meaningful side effects.
+CodeMind should continue automatically for low-risk actions, but it must ask before actions with meaningful side effects.
 
 Examples that require user approval:
 
@@ -642,11 +732,11 @@ Low-risk Python helper setup for Android/iOS/visual verification may be created
 in local virtualenvs, but system SDKs and sensitive environment changes are not
 silently installed.
 
-For mobile/client behavior tasks, real-device verification is the default when feasible. If CodeAutonomy cannot obtain required runtime/device evidence and still wants to finish, the user must explicitly approve a `runtimeDowngradeApproval` object with `approvedBy`, `approvedAt`, and `reason`. Code keeps backward compatibility for legacy `signedBy`/`signedAt`, but documentation and prompts should use the `approved*` fields consistently.
+For mobile/client behavior tasks, real-device verification is the default when feasible. If CodeMind cannot obtain required runtime/device evidence and still wants to finish, the user must explicitly approve a `runtimeDowngradeApproval` object with `approvedBy`, `approvedAt`, and `reason`. Code keeps backward compatibility for legacy `signedBy`/`signedAt`, but documentation and prompts should use the `approved*` fields consistently.
 
-Target project dependencies are separate from CodeAutonomy helper dependencies.
+Target project dependencies are separate from CodeMind helper dependencies.
 Web/client/server projects should use their own package manager, lockfiles, and
-documented commands. CodeAutonomy may suggest or record commands such as `npm ci`,
+documented commands. CodeMind may suggest or record commands such as `npm ci`,
 `pnpm install --frozen-lockfile`, `yarn install --immutable`, `uv sync --frozen`,
 `poetry install --sync`, Gradle/Maven wrappers, or Docker config/build, but it
 must not silently change package managers, rewrite lockfiles, install browser
@@ -657,9 +747,9 @@ credentials.
 
 ## 16. Summary, reuse, and knowledge deposition
 
-CodeAutonomy should get better with use, but not by dumping old chat history into every new task. The goal of summary/reuse is to preserve evidence-backed lessons and route only the relevant ones into future phases.
+CodeMind should get better with use, but not by dumping old chat history into every new task. The goal of summary/reuse is to preserve evidence-backed lessons and route only the relevant ones into future phases.
 
-At terminal or paused states, CodeAutonomy preserves a task-level summary:
+At terminal or paused states, CodeMind preserves a task-level summary:
 
 ```text
 .automind/tasks/<task-code>/summary.md
@@ -679,17 +769,17 @@ logs/phase-learnings/<phase>.json
 
 `Reuse.md` is a compact task-level manifest. It should point to relevant knowledge-index entries, important reminders, and phase-specific reuse files. Long knowledge belongs in indexed raw files, not inline in every new task.
 
-Phase hooks make reuse timely: before a phase, CodeAutonomy can prepare `phase-reuse/<phase>.md` with matched successful paths, avoid paths, known environment traps, reliable selectors, stable verification commands, or evidence locations. After a phase, it can write phase-learning cards for summary refinement.
+Phase hooks make reuse timely: before a phase, CodeMind can prepare `phase-reuse/<phase>.md` with matched successful paths, avoid paths, known environment traps, reliable selectors, stable verification commands, or evidence locations. After a phase, it can write phase-learning cards for summary refinement.
 
 AI summary refinement and guarded knowledge actions may promote high-value lessons into the local knowledge index, but only when the lesson is concrete and evidence-backed. Generic advice, stale assumptions, or unproved claims should not become durable reuse.
 
-Reuse is advisory, not absolute. Current `Requirements.md`, `TestCases.md`, `Plan.md`, user decisions, and fresh evidence always win. This is how CodeAutonomy becomes more useful over time: it turns repeated project experience into local, reviewable, phase-targeted memory.
+Reuse is advisory, not absolute. Current `Requirements.md`, `TestCases.md`, `Plan.md`, user decisions, and fresh evidence always win. This is how CodeMind becomes more useful over time: it turns repeated project experience into local, reviewable, phase-targeted memory.
 
 ---
 
 ## 17. Why this is different
 
-CodeAutonomy is not just a prompt template and not just a script runner.
+CodeMind is not just a prompt template and not just a script runner.
 
 Its differentiators are the combination of:
 
@@ -701,7 +791,10 @@ Its differentiators are the combination of:
 6. completion gating through testcase/acceptance/evidence coverage;
 7. safety rules for sensitive actions;
 8. local summary memory for future tasks;
-9. consistent behavior across Codex, Claude Code, Trae, and CLI usage.
+9. controlled capabilities between natural language and local side effects;
+10. audit trails that explain why actions and branches were chosen;
+11. metrics that show reliability, cost, and whether orchestration improves the product;
+12. consistent task behavior across Lark, TUI, Codex, Claude Code, Trae, and CLI usage.
 
 The core product is the loop: a coding agent keeps working, with evidence, until it can prove the task is complete or explain why it cannot proceed.
 
@@ -709,7 +802,7 @@ The core product is the loop: a coding agent keeps working, with evidence, until
 
 ## 18. Practical limitations
 
-CodeAutonomy improves agent reliability, but it does not remove all uncertainty.
+CodeMind improves agent reliability, but it does not remove all uncertainty.
 
 Known boundaries:
 
@@ -718,6 +811,11 @@ Known boundaries:
 - mobile/device verification requires correctly configured local platform environments;
 - context isolation depends on the host agent or external runtime capabilities;
 - summaries help future work but must be curated to avoid stale or overly specific lessons.
+- conversation models can still select the wrong capability or ask an unnecessary
+  clarification; schema, ownership, confirmation, and executor policies limit
+  the effect but do not make semantic judgment perfect;
+- Compact/Deep adaptive orchestration, deep research Workers, WorkItems, and
+  workspace/device locks are target directions and are not fully shipped yet.
 
 The design response is to make those limitations visible through artifacts, evidence, status guidance, and explicit stop conditions.
 
@@ -725,13 +823,16 @@ The design response is to make those limitations visible through artifacts, evid
 
 ## 19. Mental model
 
-A simple way to understand CodeAutonomy:
+A simple way to understand CodeMind:
 
 ```text
 Coding agent = intelligence that can plan, code, and diagnose
-CodeAutonomy = harness that keeps that intelligence on track
+CodeMind = harness that keeps that intelligence on track
+Conversation Orchestrator = natural-language entrypoint with controlled actions
 Project tools = source of real evidence
 Task artifacts = shared memory and contract
+Audit = why decisions and actions happened
+Metrics = whether behavior is reliable, efficient, and improving
 Completion gates = protection against false finish
 Summaries = accumulated local learning
 ```

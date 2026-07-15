@@ -4,10 +4,10 @@
 
 By default, generate `.automind/tasks/{task}/summary.md` only for final handoff:
 terminal `finish`, explicit `stop`, max-iteration stop, or a durable paused
-handoff where CodeAutonomy will not continue automatically without the user. Normal
+handoff where CodeMind will not continue automatically without the user. Normal
 Generator/Evaluator iterations must not refresh `summary.md` or `Report.html`.
 
-Command mode generates the summary automatically at loop end. In skill/current-session mode, after `completion-check` passes, prefer AI-refined summary before final handoff; `completion-check` and `status` warn when completion is proven but summary/reuse memory is still missing. AI refinement is safe to prefer because CodeAutonomy first builds a deterministic seed and falls back to deterministic summary when the agent is unavailable or returns invalid JSON. It is also safe to regenerate manually:
+Command mode generates the summary automatically at loop end. In skill/current-session mode, after `completion-check` passes, prefer AI-refined summary before final handoff; `completion-check` and `status` warn when completion is proven but summary/reuse memory is still missing. AI refinement is safe to prefer because CodeMind first builds a deterministic seed and falls back to deterministic summary when the agent is unavailable or returns invalid JSON. It is also safe to regenerate manually:
 
 ```bash
 ./automind.sh summary <task-code> --ai codex      # preferred when an agent is available; falls back to deterministic summary
@@ -16,7 +16,7 @@ Command mode generates the summary automatically at loop end. In skill/current-s
 ./automind.sh record-check <task-code>
 ```
 
-The summary is not just a final report. It is a Critic-Refiner pass: review the task history, identify causes, filter lessons, and convert useful experience into methods future agents can reuse. CodeAutonomy always starts with a deterministic script-filtered seed. Optional AI refinement may then classify and condense that seed, but validated scripts still control what is written to reuse memory.
+The summary is not just a final report. It is a Critic-Refiner pass: review the task history, identify causes, filter lessons, and convert useful experience into methods future agents can reuse. CodeMind always starts with a deterministic script-filtered seed. Optional AI refinement may then classify and condense that seed, but validated scripts still control what is written to reuse memory.
 
 When Phase 4 runs, surface the reports to the user. The user-facing handoff
 should use natural language to say what is done, which reports were generated,
@@ -123,7 +123,7 @@ When generating the summary, filter experience deliberately:
 
 This is the automatic extraction/refinement step. It happens inside `automind summary <task-code>` after the task is terminal or paused. The command reads `Validation.md`, `Delivery.md`, `evaluation.json`, `VerificationLedger.json`, and `logs/iter-N/commands.md`, then preserves only evidence-backed lessons and structured known successful/failed paths. It does not copy raw logs wholesale.
 
-If `--ai <agent>` or `summary-refine <task-code> <agent>` is used, CodeAutonomy first writes a bounded deterministic seed under `logs/summary-refiner/`, asks the selected agent to produce strict JSON, then validates and normalizes that JSON before merging it into `summary.md` and `.automind/summary/*`. Invalid or unavailable AI output falls back to the deterministic summary.
+If `--ai <agent>` or `summary-refine <task-code> <agent>` is used, CodeMind first writes a bounded deterministic seed under `logs/summary-refiner/`, asks the selected agent to produce strict JSON, then validates and normalizes that JSON before merging it into `summary.md` and `.automind/summary/*`. Invalid or unavailable AI output falls back to the deterministic summary.
 
 Append only cause-analyzed and filtered lessons to the local machine lesson base:
 
@@ -148,7 +148,7 @@ Do not mechanically copy every log line or failure symptom.
 
 ### Step 4: Reuse in the next task
 
-When a new task is created, CodeAutonomy writes:
+When a new task is created, CodeMind writes:
 
 ```text
 .automind/tasks/{new-task}/Reuse.md
@@ -173,7 +173,7 @@ Before choosing commands in a new task, agents should inspect `Reuse.md` matched
 
 ## Phase hooks and knowledge index
 
-CodeAutonomy runs lightweight phase hooks around key phases. Hooks are generic and can later support checks beyond summary/reuse. The current MVP handlers are:
+CodeMind runs lightweight phase hooks around key phases. Hooks are generic and can later support checks beyond summary/reuse. The current MVP handlers are:
 
 - `before:<phase>` -> write `phase-reuse/<phase>.md` from knowledge indexes.
 - `after:<phase>` -> write a small `logs/phase-learnings/<phase>.json` card for later summary/refinement.
@@ -240,12 +240,12 @@ Raw knowledge files should be single-responsibility: for example, keep iOS build
 
 ## After completion
 
-After the summary is generated, the task ends. CodeAutonomy returns to idle and waits for the next request.
+After the summary is generated, the task ends. CodeMind returns to idle and waits for the next request.
 
 ## Run Card / Learning Card and improve suggestions
 
 Phase 4 owns cross-run learning. In addition to `Summary.md`, `lessons-learned.md`,
-and `local-reuse-index.md`, CodeAutonomy writes structured learning data:
+and `local-reuse-index.md`, CodeMind writes structured learning data:
 
 - `trace.json` — formal task/phase/event trace.
 - `run-card.json` — task-local Run Card / Learning Card with result, trace

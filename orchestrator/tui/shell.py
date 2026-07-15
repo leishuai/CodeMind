@@ -1,4 +1,4 @@
-"""Interactive CodeAutonomy command shell.
+"""Interactive CodeMind command shell.
 
 Bare `automind` in an interactive terminal opens this shell. Users can type the
 same subcommands without repeating the `automind` prefix, e.g.:
@@ -29,7 +29,7 @@ COMMANDS = {
     "ask", "resume", "status", "trace", "process-check", "workflow-check", "version", "update",
     "workflow-contract", "completion-check", "record-check", "summary",
     "summary-refine", "improve-suggestions", "tui", "answer", "message",
-    "event", "continue", "logs", "list", "reuse", "preloaded-check", "help",
+    "event", "observe", "continue", "logs", "list", "reuse", "preloaded-check", "help",
     "shell", "plan", "scaffold", "context-pack", "smoke",
 }
 CURRENT_TASK_COMMANDS = {
@@ -107,11 +107,11 @@ def run_command_shell() -> int:
     child_env = {**os.environ, "AUTOMIND_TUI_CHAT_TASK": tui_chat_code}
     print(style(LOGO, CYAN, bold=True))
     print(style(automind_version_label(), BLUE, bold=True))
-    print("Type commands without the `automind` prefix. Examples:")
+    print("Type commands without the `codemind` prefix. Examples:")
     print("  ask 添加一个埋点")
     print("  resume <task-code> codex")
     print("  status [task-code]   # current task is used when omitted")
-    print("  update               # update CodeAutonomy runtime + skill/command integrations")
+    print("  update               # update CodeMind runtime + skill/command integrations")
     print("  也可以直接输入自然语言；有 current task 时会转给该 task/session 的 coding agent，没有 current task 时会转给当前 TUI 进程自己的默认 coding-agent session")
     print("  exit")
     print(style("Tip: say \"全自动\" or \"full auto\" to skip all ask_user gates.", GRAY))
@@ -119,12 +119,12 @@ def run_command_shell() -> int:
     print(style("─" * 56, GRAY))
     while True:
         try:
-            line = tui_input(style("automind> ", BLUE, bold=True))
+            line = tui_input(style("codemind> ", BLUE, bold=True))
         except EOFError:
             print("")
             return 0
         except KeyboardInterrupt:
-            print("\nUse `exit` to leave CodeAutonomy shell.")
+            print("\nUse `exit` to leave CodeMind shell.")
             continue
         stripped = line.strip()
         if not stripped:
@@ -135,7 +135,11 @@ def run_command_shell() -> int:
             print("\033[2J\033[H", end="")
             continue
         first_word = stripped.split(None, 1)[0]
-        natural_language = first_word not in COMMANDS and not stripped.startswith("automind ")
+        natural_language = (
+            first_word not in COMMANDS
+            and not stripped.startswith("codemind ")
+            and not stripped.startswith("automind ")
+        )
         if natural_language:
             argv = _natural_language_argv(stripped)
         else:
@@ -152,7 +156,7 @@ def run_command_shell() -> int:
         try:
             return_code = proc.wait()
         except KeyboardInterrupt:
-            print("\n[CodeAutonomy shell] Ctrl+C received; interrupting current command and returning to shell.", file=sys.stderr)
+            print("\n[CodeMind shell] Ctrl+C received; interrupting current command and returning to shell.", file=sys.stderr)
             try:
                 proc.send_signal(signal.SIGINT)
             except ProcessLookupError:
@@ -160,14 +164,14 @@ def run_command_shell() -> int:
             try:
                 return_code = proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                print("[CodeAutonomy shell] command did not stop after SIGINT; terminating it.", file=sys.stderr)
+                print("[CodeMind shell] command did not stop after SIGINT; terminating it.", file=sys.stderr)
                 proc.terminate()
                 try:
                     return_code = proc.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     proc.kill()
                     return_code = proc.wait()
-            print("[CodeAutonomy shell] If a CodeAutonomy task was paused, resume it with `automind resume <task-code> <agent>`.", file=sys.stderr)
+            print("[CodeMind shell] If a CodeMind task was paused, resume it with `codemind resume <task-code> <agent>`.", file=sys.stderr)
         if return_code != 0:
-            print(f"[CodeAutonomy shell] command exited with code {return_code}", file=sys.stderr)
+            print(f"[CodeMind shell] command exited with code {return_code}", file=sys.stderr)
     return 0

@@ -1,6 +1,6 @@
-# CodeAutonomy Workflow
+# CodeMind Workflow
 
-CodeAutonomy is a recoverable, evidence-driven harness loop for coding agents. It
+CodeMind is a recoverable, evidence-driven harness loop for coding agents. It
 keeps requirements, implementation, verification, completion, and reusable
 lessons connected through files under `.automind/tasks/<task>/`.
 
@@ -47,15 +47,15 @@ platform adapters. The full contract mechanics are described later in
 
 ## 1.1 Per-TestCase reflection budget
 
-An CodeAutonomy `iteration` is one complete Generator -> Evaluator attempt, not one testcase and not one shell command. A single iteration may run a selected batch of multiple TestCases and then write `evaluation.json`, `Validation.md`, and `logs/iter-N/*`.
+An CodeMind `iteration` is one complete Generator -> Evaluator attempt, not one testcase and not one shell command. A single iteration may run a selected batch of multiple TestCases and then write `evaluation.json`, `Validation.md`, and `logs/iter-N/*`.
 
-The total task loop is bounded by `AUTOMIND_MAX_ITERATIONS` (default `1000`). Individual TestCases are bounded by `AUTOMIND_MAX_REFLECTIONS_PER_TC` (default `10`): when a failing/blocked evaluation references a `TC-*` id in `testResults[]` or `failedChecks[]`, CodeAutonomy increments that TC's reflection count once for that iteration. Attempt-level command retries inside one evaluator run do not count as new iterations or new TC reflections.
+The total task loop is bounded by `AUTOMIND_MAX_ITERATIONS` (default `1000`). Individual TestCases are bounded by `AUTOMIND_MAX_REFLECTIONS_PER_TC` (default `10`): when a failing/blocked evaluation references a `TC-*` id in `testResults[]` or `failedChecks[]`, CodeMind increments that TC's reflection count once for that iteration. Attempt-level command retries inside one evaluator run do not count as new iterations or new TC reflections.
 
-When a TC reaches the per-TC reflection limit, CodeAutonomy stops normal `retry_generator`/`replan` churn and asks for a human strategy decision using `askUserQuestion.category=repeated_same_failure`. The model should still judge whether to retry, repair, replan, or ask earlier; the budget is only a hard safety backstop.
+When a TC reaches the per-TC reflection limit, CodeMind stops normal `retry_generator`/`replan` churn and asks for a human strategy decision using `askUserQuestion.category=repeated_same_failure`. The model should still judge whether to retry, repair, replan, or ask earlier; the budget is only a hard safety backstop.
 
 ## 2. Phase chain and route-back contract
 
-CodeAutonomy is a repair loop, not a one-way pipeline:
+CodeMind is a repair loop, not a one-way pipeline:
 
 ```text
 Plan / workflow-check
@@ -81,12 +81,12 @@ may override a false finish when required TC/AC/evidence coverage is not proven.
 | Plan | Planner/Refiner | request, reuse, project discovery | `Brainstorm.md`, `Requirements.md`, `TestCases.md`, `Plan.md`, sidecars | pre-implementation review + `workflow-check` |
 | Build | Generator | `workflow.json`, Plan/TestCases/Requirements, latest evaluation if retry | product/runtime changes, `Delivery.md`, `delivery.json`, implementation checklist | hand off to Evaluator |
 | Verify | Evaluator / verifier | Delivery, required TC list, runtime target | `Validation.md`, `evaluation.json`, evidence logs, verification checklist | `finish`, `retry_generator`, `replan`, `ask_user`, or `stop` |
-| Completion | CodeAutonomy | `evaluation.json`, TestCases/Requirements, evidence | `completion-report.json`, `VerificationLedger.json` | pass -> `finished/finish`; fail -> route by gaps/evaluation |
-| Finish | CodeAutonomy / current agent | terminal or durable paused state | `summary.md`, reuse memory, `record-check`, `Report.html` | final handoff only |
+| Completion | CodeMind | `evaluation.json`, TestCases/Requirements, evidence | `completion-report.json`, `VerificationLedger.json` | pass -> `finished/finish`; fail -> route by gaps/evaluation |
+| Finish | CodeMind / current agent | terminal or durable paused state | `summary.md`, reuse memory, `record-check`, `Report.html` | final handoff only |
 
 ## 3. Hard gates
 
-CodeAutonomy has three hard gates:
+CodeMind has three hard gates:
 
 1. **`workflow-check` before Build**: requirements, AC, testcases, plan,
    the derived `workflow.json` executable contract, review decision, reuse,
@@ -143,7 +143,7 @@ loop, so the host agent itself must keep the harness moving. The protocol is:
 
 ## 4. Mandatory startup read order
 
-At the start of every CodeAutonomy task, read and apply:
+At the start of every CodeMind task, read and apply:
 
 1. `SKILL.md` in the exported skill package (if running as a skill), then
    `docs/workflow.md` itself for the canonical loop, gate definitions, and
@@ -171,9 +171,9 @@ consulted before choosing commands or verification strategy.
 
 ## 5. Workspace and runtime rule
 
-CodeAutonomy runtime and user workspace are separate.
+CodeMind runtime and user workspace are separate.
 
-- Run CodeAutonomy helpers from the target project root.
+- Run CodeMind helpers from the target project root.
 - If shell cwd is not the target project root, set
   `AUTOMIND_WORKSPACE_ROOT=/path/to/project`.
 - `TASK_DIR` must be under the target workspace:
@@ -195,11 +195,11 @@ this workflow manually and use project-native verification.
 
 During Plan/Verify, dependency setup is split by ownership:
 
-- CodeAutonomy may auto-create only its own low-risk helper venvs for
+- CodeMind may auto-create only its own low-risk helper venvs for
   Android/iOS/visual verification.
 - Web/client/server project dependencies must use the target project's
   package manager, lockfiles, and documented scripts. When the dependency path
-  is unclear, use `<automind> dependency-check [task-code] [iteration]` as an
+  is unclear, use `<codemind> dependency-check [task-code] [iteration]` as an
   optional read-only discovery aid; it is not a workflow gate.
 - System SDKs, signing, device trust, Docker/databases, browser drivers,
   private registry credentials, and privileged services require `ask_user`
@@ -265,7 +265,7 @@ privilege escalation, external upload, payment, or production-impacting actions.
 Only client/app development or verification tasks need a real-device vs
 simulator/emulator decision. For Android/iOS/mobile client tasks, follow the
 user's stated verification target as the source of truth: if the request
-already names real device, simulator/emulator, or both, CodeAutonomy respects that
+already names real device, simulator/emulator, or both, CodeMind respects that
 choice and does not re-ask, even when read-only physical-device discovery
 detects a connected device. Only ask when the request leaves the verification
 target unclear; in that case, perform read-only physical-device discovery and
@@ -277,15 +277,15 @@ and explain that real-device verification requires connect/unlock/trust plus
 Developer Mode/USB debugging and possible signing/permission prompts. Screenshot
 capture is default allowed verification evidence and must not trigger a separate
 ask_user. When exactly one connected real device is available, state in the
-review bundle that CodeAutonomy will use that device by default for development,
+review bundle that CodeMind will use that device by default for development,
 debugging, verification, and screenshots. When multiple connected real devices
 are available, ask_user to choose the target device. When no authorized real
-device is available or the real device is unavailable, CodeAutonomy should try
+device is available or the real device is unavailable, CodeMind should try
 simulator/emulator verification by default; ask_user only if no runnable
 simulator/emulator path exists and the remaining fallback would be static-only
 or otherwise sensitive.
 
-For App/UI/client-facing tasks that require in-app behavior, CodeAutonomy must treat
+For App/UI/client-facing tasks that require in-app behavior, CodeMind must treat
 UI interaction as an available verification capability, not as impossible by
 default. The Planner should encode app actions as reviewable TestCases and, when
 needed, task-local `probe-flow.android.json` / `probe-flow.ios.json` (legacy
@@ -374,7 +374,7 @@ Preferred Evaluator order:
 When a model Evaluator is used, create and validate a context pack:
 
 ```bash
-<automind> context-pack <task-code> [iteration]
+<codemind> context-pack <task-code> [iteration]
 ```
 
 Evaluator must consume the context pack and must not read raw Generator logs or
@@ -387,7 +387,7 @@ visual, external sink, and unblock guidance is in
 
 ## 10. Verification unblock rule
 
-If verification is blocked by unrelated build/test/workspace issues, CodeAutonomy may
+If verification is blocked by unrelated build/test/workspace issues, CodeMind may
 create minimal reversible verification-unblock changes only after checkpointing
 or recording a diff. These are not product fixes; they are temporary changes
 made only to make the verifier runnable, for example adjusting a local test
@@ -409,7 +409,7 @@ promoted before finish. Active temporary unblock changes block completion.
 | Device/signing/sensitive action/human visual confirmation is required | `ask_user` |
 | Build/test/runtime fails but can plausibly be repaired or unblocked | keep trying via `retry_generator` or `replan`; do not accept it as pass |
 | Environment/device/tool blocker prevents the selected required verification | `ask_user` only when human/system choice is needed; otherwise replan/repair and continue |
-| External dependency (real device, signing material, third-party service) is unavailable and CodeAutonomy cannot resolve it autonomously | `pause_for_external` (parks the task as `human_input_pending` so it can resume later when the blocker clears) |
+| External dependency (real device, signing material, third-party service) is unavailable and CodeMind cannot resolve it autonomously | `pause_for_external` (parks the task as `human_input_pending` so it can resume later when the blocker clears) |
 | Destructive/policy/signing/non-recoverable failure that should NOT be retried | `stop_blocked` (legacy `stop` is treated as a synonym) |
 | Max iterations are reached | `ask_user` for replan/fix/stop choice |
 | Required TC/AC/evidence coverage passes | `finish` |
@@ -450,7 +450,7 @@ Generator unless new evidence requires repair.
 Before claiming Finish:
 
 ```bash
-<automind> completion-check <task-code>
+<codemind> completion-check <task-code>
 ```
 
 The gate must prove:
@@ -464,9 +464,9 @@ The gate must prove:
 After completion passes:
 
 ```bash
-<automind> summary <task-code> --ai <agent>   # preferred when available
-<automind> summary <task-code>                # deterministic fallback
-<automind> record-check <task-code>
+<codemind> summary <task-code> --ai <agent>   # preferred when available
+<codemind> summary <task-code>                # deterministic fallback
+<codemind> record-check <task-code>
 ```
 
 Surface the generated report paths to the user: `Delivery.md`, `Validation.md`,
@@ -475,7 +475,7 @@ and latest `logs/iter-N/`.
 
 ## 14. Workflow control state
 
-CodeAutonomy separates **workflow control state** from artifact contracts.
+CodeMind separates **workflow control state** from artifact contracts.
 The agent/runtime-facing control files are:
 
 ```text
@@ -495,7 +495,7 @@ or human-facing display summaries.
 
 `automind-workflow-events.jsonl` is the append-only transition log. State changes
 must be recorded as events first, then applied to the active stage state and the
-workflow state. If the stage state and workflow state drift, CodeAutonomy reconciles
+workflow state. If the stage state and workflow state drift, CodeMind reconciles
 from the latest valid workflow event and continues; state drift is not an
 `ask_user` reason. When no usable event exists, reconciliation rebuilds from the
 last known good phase (`workflow_state._last_known_good_phase`, which scans
@@ -503,7 +503,7 @@ workflow state -> runtime state -> events for the first non-`task_setup`
 canonical phase) instead of falling back to `task_setup`; falling back to
 `task_setup` would otherwise reset the iteration counter and lose loop progress.
 
-Stages map to the existing CodeAutonomy macro docs:
+Stages map to the existing CodeMind macro docs:
 
 | stage | macro guide | phases |
 |---|---|---|
@@ -524,7 +524,7 @@ linked through `PHASE_REGISTRY[currentPhase].checklistRefs`; checklist text is
 not copied into workflow state JSON.
 
 Phase names have one internal vocabulary and one display vocabulary. Internally
-CodeAutonomy reasons in canonical phase names (`plan`, `completion`,
+CodeMind reasons in canonical phase names (`plan`, `completion`,
 `pre_implementation_review`, ...). Every human/CLI/skill-facing label is
 converted through the single helper `workflow_state.display_phase`, which maps
 canonical names to the legacy display words (`planning`, `terminal`,
@@ -557,7 +557,7 @@ needed.
 
 ### 14.3 State/action quick reference
 
-CodeAutonomy uses action values in different control layers. Keep them separate:
+CodeMind uses action values in different control layers. Keep them separate:
 
 - Pre-implementation review decisions: `auto_proceed`, `ask_user`, `replan`.
 - Evaluation/loop `nextAction` values: `finish`, `retry_generator`, `replan`,
@@ -573,7 +573,7 @@ boundaries, and common route mappings, see
 
 ## 15. `workflow.json` as orchestration contract
 
-CodeAutonomy's main workflow is driven by `workflow.json`. Markdown remains the
+CodeMind's main workflow is driven by `workflow.json`. Markdown remains the
 human/agent authoring surface, but every phase also has a minimum JSON sidecar.
 `workflow.json` indexes those sidecars and tells deterministic gates what each
 phase consumes, produces, and whether it can advance.
@@ -602,7 +602,7 @@ synthesized before the Evaluator runs.
 
 ### 15.1 Skill-mode JSON handoff rule
 
-In CLI-owned mode, CodeAutonomy refreshes these sidecars automatically. In Skill or
+In CLI-owned mode, CodeMind refreshes these sidecars automatically. In Skill or
 slash-command current-session mode, the host agent must still use the same JSON
 contracts as the handoff spine:
 
@@ -696,7 +696,7 @@ Example phase node:
 
 ### 15.3 Phase hooks
 
-CodeAutonomy may run deterministic hooks before and after phase nodes. The hook mechanism is generic: it can prepare reuse context, write phase-learning cards, run future policy checks, or attach project preflight hints. The current MVP writes `phase-reuse/<phase>.md` before key phases and `logs/phase-learnings/<phase>.json` after phases.
+CodeMind may run deterministic hooks before and after phase nodes. The hook mechanism is generic: it can prepare reuse context, write phase-learning cards, run future policy checks, or attach project preflight hints. The current MVP writes `phase-reuse/<phase>.md` before key phases and `logs/phase-learnings/<phase>.json` after phases.
 
 `Reuse.md` remains as a compact task-level manifest: whole-task policy plus index pointers only. It points to relevant knowledge-index entries and `phase-reuse/<phase>.md` files; the actual phase-specific detail (matched values, successful/avoid paths, important reminders) lives in `phase-reuse/<phase>.md`, not duplicated here. Long knowledge lives in `index.jsonl + raw/**`; agents should not receive large historical dumps by default.
 
@@ -713,12 +713,12 @@ The documentation is intentionally layered from broad to specific:
 1. `docs/workflow.md` and `workflow.json` define the global workflow contract
    and gate surface; `automind-workflow-state.json` resolves live control state; `stages/*-stage-state.json` carries stage-local control payloads; `runtime-state.json.stateSummary` is obsolete fallback only.
 2. `docs/phase1-initialization.md` through `docs/phase4-summary.md` define
-   macro phase clusters. They group related concrete nodes by CodeAutonomy's big
+   macro phase clusters. They group related concrete nodes by CodeMind's big
    process stages and should stay as macro guidance.
 3. `docs/phases/*.md` files define concrete phase-node guides. When entering a
    node, the agent should read the macro guide plus that node's concrete guide.
 
-This keeps CodeAutonomy readable from top to bottom without forcing every phase rule
+This keeps CodeMind readable from top to bottom without forcing every phase rule
 into the global workflow document.
 
 ### 15.5 Gate policy for the workflow contract
@@ -822,4 +822,4 @@ step.
 
 ## Human-readable HTML report
 
-CodeAutonomy should generate `.automind/tasks/<task-code>/Report.html` only at final or durable handoff points, or when explicitly requested via `automind report <task-code>`. Normal Generator/Evaluator iterations must not refresh it. The report is for humans and uses the title `<task-code> CodeAutonomy Report`. It summarizes the completed target requirements/AC, generated/changed artifacts, verification/test results, failed checks, and quality checks. In the Test Results table, the `Key Evidence` column should summarize the few signals/files humans should inspect first: screenshots, TC-level `evidenceAssessment.machineAnchor`, hardMetrics anchors, `music-events.txt`, full logcat, `runtime-evidence.md`, and `VerificationLedger.json` when relevant. The final `Evidence / Screenshots / Logs` column may keep the complete artifact list for traceability, preferably behind a collapsible details block so noisy files such as evaluator/env/summary-refiner logs do not dominate the row. Runtime/UI TC rows should include screenshot evidence by default or explicitly say why no screenshot is linked. The report also includes a Summary / Knowledge Deposition section for `summary.md`, workspace reuse files, knowledge index/raw promotion status, and phase-learning hook cards. A raw artifact appendix may remain for navigation, but the primary evidence should be visible from Test Results. `Report.html` is not an authoritative state source, does not participate in routing, and must not reopen Planner, Generator, or Evaluator after terminal finish.
+CodeMind should generate `.automind/tasks/<task-code>/Report.html` only at final or durable handoff points, or when explicitly requested via `codemind report <task-code>` (legacy `automind` also works). Normal Generator/Evaluator iterations must not refresh it. The report is for humans and uses the title `<task-code> CodeMind Report`. It summarizes the completed target requirements/AC, generated/changed artifacts, verification/test results, failed checks, and quality checks. In the Test Results table, the `Key Evidence` column should summarize the few signals/files humans should inspect first: screenshots, TC-level `evidenceAssessment.machineAnchor`, hardMetrics anchors, `music-events.txt`, full logcat, `runtime-evidence.md`, and `VerificationLedger.json` when relevant. The final `Evidence / Screenshots / Logs` column may keep the complete artifact list for traceability, preferably behind a collapsible details block so noisy files such as evaluator/env/summary-refiner logs do not dominate the row. Runtime/UI TC rows should include screenshot evidence by default or explicitly say why no screenshot is linked. The report also includes a Summary / Knowledge Deposition section for `summary.md`, workspace reuse files, knowledge index/raw promotion status, and phase-learning hook cards. A raw artifact appendix may remain for navigation, but the primary evidence should be visible from Test Results. `Report.html` is not an authoritative state source, does not participate in routing, and must not reopen Planner, Generator, or Evaluator after terminal finish.

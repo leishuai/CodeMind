@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://automind.local/schemas/testcases.schema.json",
-  "title": "CodeAutonomy testcases.json",
+  "title": "CodeMind testcases.json",
   "type": "object",
   "required": ["version", "phase", "sourceRefs", "runtimePolicy", "testcases"],
   "properties": {

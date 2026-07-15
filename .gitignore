@@ -35,7 +35,6 @@ DerivedData/
 *.pem
 
 # Local/private notes not included in public user release
-internal/
 project-summaries/
 summaries/accumulated/business/
 summaries/accumulated/technical/*.md

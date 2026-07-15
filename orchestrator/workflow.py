@@ -1,4 +1,4 @@
-"""Workflow-check and Phase 2 gate validation helpers for CodeAutonomy.
+"""Workflow-check and Phase 2 gate validation helpers for CodeMind.
 
 This module owns cross-artifact continuity checks such as Rxx -> AC -> TC,
 planner pre-implementation review gates, evaluator-context wiring, and the
@@ -137,7 +137,7 @@ def validate_planner_artifacts(task_dir: Path) -> tuple[bool, list[str]]:
     if "runtime level" not in testcases_lower and "runtime" not in testcases_lower and "运行" not in testcases:
         issues.append("TestCases.md missing runtime level for testcases")
     if "command" not in testcases_lower and "automind" not in testcases_lower and "命令" not in testcases:
-        issues.append("TestCases.md missing executable command or CodeAutonomy command")
+        issues.append("TestCases.md missing executable command or CodeMind command")
     if "precondition" not in testcases_lower and "tools" not in testcases_lower and "tool" not in testcases_lower and "前置" not in testcases and "工具" not in testcases:
         issues.append("TestCases.md missing tool/precondition requirements")
     has_dynamic_signal = any(token in testcases_lower for token in [
@@ -644,7 +644,7 @@ def check_workflow_consistency(task_code: str) -> tuple[bool, dict]:
 
     This intentionally differs from record-check: record-check validates final
     reusable records/logs; workflow-check validates that the task can move
-    through CodeAutonomy phases without requirement/test drift.
+    through CodeMind phases without requirement/test drift.
     """
     task_dir = get_task_dir(task_code)
     issues: list[str] = []
@@ -773,7 +773,7 @@ def check_workflow_consistency(task_code: str) -> tuple[bool, dict]:
 
         # Runtime-proof gate (real-device-first policy).
         # When the planner classifies the task as a client/app behavior task
-        # (runtimeProofRequired == "yes"), CodeAutonomy requires either:
+        # (runtimeProofRequired == "yes"), CodeMind requires either:
         #   1) verificationTarget ∈ {real_device, simulator_emulator, both}
         #      (a runtime-capable target is locked in), OR
         #   2) runtimeDowngradeApproval is an approved object recording that
@@ -798,7 +798,7 @@ def check_workflow_consistency(task_code: str) -> tuple[bool, dict]:
             elif downgrade_approved:
                 warnings.append(
                     "decisionBundle.runtimeDowngradeApproval is approved; "
-                    "CodeAutonomy will accept a non-runtime verificationTarget but completion-check still requires evidence."
+                    "CodeMind will accept a non-runtime verificationTarget but completion-check still requires evidence."
                 )
             else:
                 issues.append(

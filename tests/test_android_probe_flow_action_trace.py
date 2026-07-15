@@ -92,7 +92,7 @@ def test_android_probe_summary_partial_maps_to_retry_generator(tmp_path: Path) -
     (task_dir / "TestCases.md").write_text("""
 # TestCases
 
-| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |
+| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |
 |----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|
 | TC-F04 | R01 / AC-001 | Functional | device | adb | android-probe-flow | play/pause proof | music_audio_finish + stop_reason | - | yes |
 """)
@@ -183,7 +183,7 @@ def test_probe_summary_to_evaluation_includes_ui_exploration(tmp_path: Path) -> 
     (task_dir / "TestCases.md").write_text("""
 # TestCases
 
-| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |
+| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |
 |----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|
 | TC-F01 | R01 / AC-001 | Functional App/UI | device | adb | android-probe-flow | open audio detail and extract intro tags | action trace + tags | - | yes |
 """)

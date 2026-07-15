@@ -18,7 +18,7 @@ def test_completion_report_separates_raw_evaluation_claim_from_final_verdict(tmp
     (task_dir / "TestCases.md").write_text("""
 # Test Cases
 
-| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |
+| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |
 |----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|
 | TC-F04 | R01 / AC-001 | Functional | runtime | Android device | android-probe-flow | Execute music stop proof flow. | music_audio_finish with stop_reason | - | yes |
 """)

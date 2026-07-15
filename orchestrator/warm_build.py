@@ -1,4 +1,4 @@
-"""Warm build and incremental compilation cache for CodeAutonomy tasks.
+"""Warm build and incremental compilation cache for CodeMind tasks.
 
 This module handles:
 1. Warm build trigger conditions (native apps requiring runtime verification)

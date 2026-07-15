@@ -1,4 +1,4 @@
-"""Agent CLI adapter dispatch for CodeAutonomy."""
+"""Agent CLI adapter dispatch for CodeMind."""
 from __future__ import annotations
 
 import json
@@ -18,7 +18,7 @@ from orchestrator.session.agent_io import stream_agent_command
 from orchestrator.session.events import append_event
 from orchestrator.state import clear_task_primary_session, read_runtime_state, update_runtime_state
 
-PRIMARY_SESSION_PHASES = {"planner", "generator"}
+PRIMARY_SESSION_PHASES = {"planner", "generator", "conversation"}
 FRESH_SESSION_PHASES = {"evaluator"}
 
 # Agent CLI retry policy (R01).
@@ -244,7 +244,7 @@ def _maybe_clear_stale_codex_primary_session(task_dir: Path, primary: dict) -> b
 
     Codex stores the approval policy in the persistent session. If an older
     primary session was created with approval=never, `codex exec resume <id>`
-    keeps that policy even after CodeAutonomy's adapter default changes to
+    keeps that policy even after CodeMind's adapter default changes to
     --ask-for-approval on-request. In that case, resuming is actively harmful:
     the session can neither request host approvals nor prove host-only Android
     commands. Clear it so the next primary command starts fresh.
@@ -278,7 +278,7 @@ def _record_primary_session(task_dir: Path, agent: str, session_id: str, phase: 
         "agent": agent,
         "sessionId": session_id,
         "policy": "primary-persistent",
-        "role": "planner_generator_repair",
+        "role": "conversation_orchestrator" if phase == "conversation" else "planner_generator_repair",
         "lastPhase": phase,
         "lastAction": action,
         "createdAt": created_at or datetime.now().isoformat(timespec="seconds"),
@@ -288,7 +288,10 @@ def _record_primary_session(task_dir: Path, agent: str, session_id: str, phase: 
     if isinstance(meta, dict):
         bypass = bool(meta.get("agentExecutionBypass"))
         sessions["primary"]["agentExecutionBypass"] = bypass
-        sessions["primary"]["executionMode"] = "dangerous_bypass" if bypass else "normal"
+        sessions["primary"]["executionMode"] = str(
+            meta.get("executionMode")
+            or ("dangerous_bypass" if bypass else "normal")
+        )
         if agent == "codex" and bypass:
             sessions["primary"]["codexDangerousBypass"] = True  # legacy audit field
     _write_agent_sessions(task_dir, sessions)
@@ -398,6 +401,84 @@ def build_agent_cli_command(agent: str, prompt: str, task_dir: Path, phase: str 
             "-C", str(AUTOMIND_WORKSPACE_ROOT),
             prompt,
         ], meta
+
+    if role == "primary" and normalized_phase == "conversation":
+        # Conversation orchestration always persists its own restricted session.
+        # It must never fall through to Planner/Generator bypass commands even
+        # when AUTOMIND_AGENT_SESSION_POLICY disables implementation sessions.
+        meta["sessionPolicy"] = "primary-persistent"
+        primary = _primary_session_for(task_dir, agent)
+        if primary and primary.get("executionMode") != "conversation_read_only":
+            clear_task_primary_session(task_dir, reason="conversation_requires_read_only_session")
+            primary = {}
+        session_id = str(primary.get("sessionId") or "")
+        meta.update({
+            "sessionAction": "resume" if primary else "new",
+            "sessionId": session_id,
+            "agentExecutionBypass": False,
+            "executionMode": "conversation_read_only",
+            "executionModeReason": "conversation_actions_execute_only_through_capability_registry",
+        })
+        if agent == "codex":
+            if session_id:
+                return [
+                    "codex",
+                    "--ask-for-approval",
+                    "never",
+                    "exec",
+                    "resume",
+                    "--skip-git-repo-check",
+                    "--",
+                    session_id,
+                    prompt,
+                ], meta
+            return [
+                "codex",
+                "--ask-for-approval",
+                "never",
+                "exec",
+                "--sandbox",
+                "read-only",
+                "--skip-git-repo-check",
+                "-C",
+                str(AUTOMIND_WORKSPACE_ROOT),
+                prompt,
+            ], meta
+        if agent == "claude":
+            session_id = session_id or str(uuid.uuid4())
+            meta["sessionId"] = session_id
+            session_args = ["--resume", session_id] if primary else ["--session-id", session_id]
+            stream_flags = CLAUDE_STREAM_JSON_FLAGS if _claude_stream_json_enabled() else []
+            return [
+                "claude",
+                "--print",
+                *stream_flags,
+                "--permission-mode",
+                "plan",
+                "--tools",
+                "",
+                *session_args,
+                prompt,
+            ], meta
+        if agent in {"trae", "trae-cn"}:
+            session_id = session_id or str(uuid.uuid4())
+            meta["sessionId"] = session_id
+            session_args = ["--resume", session_id] if primary else ["--session-id", session_id]
+            return [
+                "traecli",
+                "-p",
+                prompt,
+                *session_args,
+                "--disallowed-tool",
+                "Bash",
+                "--disallowed-tool",
+                "Edit",
+                "--disallowed-tool",
+                "Replace",
+                "--disallowed-tool",
+                "Write",
+                "--json",
+            ], meta
 
     if role == "primary" and primary_enabled and agent == "codex":
         bypass_enabled = _agent_bypass_approvals_enabled(task_dir)
@@ -545,7 +626,7 @@ def run_agent(
     if mode == "cli":
         resolved_agent, info = resolve_agent(agent)
         if not resolved_agent:
-            return -1, "[CodeAutonomy] Agent preflight failed:\n" + format_preflight_failure(info)
+            return -1, "[CodeMind] Agent preflight failed:\n" + format_preflight_failure(info)
         if info.get("requested") == "auto" and not quiet:
             log(f"Auto-selected coding agent: {resolved_agent}")
         return run_agent_cli(resolved_agent, prompt, task_dir, phase=phase, quiet=quiet)

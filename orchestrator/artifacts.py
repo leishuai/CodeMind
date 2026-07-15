@@ -1,4 +1,4 @@
-"""Markdown artifact, testcase, evidence, and ID helpers for CodeAutonomy.
+"""Markdown artifact, testcase, evidence, and ID helpers for CodeMind.
 
 These utilities are intentionally side-effect-light and are shared by workflow,
 completion, status, and summary code. Keeping them outside ``main.py`` makes the
@@ -238,7 +238,7 @@ def extract_declared_testcases(task_dir: Path) -> list[dict]:
     """Extract declared TestCases.md rows for completion gating.
 
     This parser intentionally stays lightweight and markdown-oriented. It reads
-    the canonical CodeAutonomy table shape but also falls back to discovered `TC-*`
+    the canonical CodeMind table shape but also falls back to discovered `TC-*`
     identifiers when the table is incomplete.
     """
     path = task_dir / "TestCases.md"

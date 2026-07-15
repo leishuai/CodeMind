@@ -1,4 +1,4 @@
-"""Runtime-state helpers for standalone CodeAutonomy scripts.
+"""Runtime-state helpers for standalone CodeMind scripts.
 
 Standalone scripts run with only ``scripts/`` on sys.path, so they cannot always
 import ``orchestrator.state`` safely. Keep this tiny helper in the script layer;

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Suggest/apply minimal probe-flow repairs from CodeAutonomy evaluation artifacts.
+"""Suggest/apply minimal probe-flow repairs from CodeMind evaluation artifacts.
 
 Conservative by design:
 - suggest mode never mutates files;
@@ -54,7 +54,7 @@ def load_flow(task_dir: Path) -> tuple[Path, dict[str, Any]]:
         return new_path, load_json(new_path)
     if legacy_path.exists():
         print(
-            f"[CodeAutonomy] WARN: `{legacy_path.name}` is deprecated; rename to `probe-flow.android.json` (Android) or `probe-flow.ios.json` (iOS).",
+            f"[CodeMind] WARN: `{legacy_path.name}` is deprecated; rename to `probe-flow.android.json` (Android) or `probe-flow.ios.json` (iOS).",
             file=sys.stderr,
         )
         return legacy_path, load_json(legacy_path)
@@ -304,7 +304,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("task", help="Task code or path under .automind/tasks")
     ap.add_argument("--root", default=None, help="Target workspace root. Defaults to $AUTOMIND_WORKSPACE_ROOT or current directory.")
-    ap.add_argument("--runtime-root", default=None, help="CodeAutonomy runtime checkout. Defaults to this script's checkout.")
+    ap.add_argument("--runtime-root", default=None, help="CodeMind runtime checkout. Defaults to this script's checkout.")
     ap.add_argument("--apply", action="store_true", help="Apply safe suggestions to probe-flow.json after creating a backup")
     ap.add_argument("--rerun", action="store_true", help="Apply safe suggestions and rerun android-probe-flow if the flow changed")
     ap.add_argument("--dry-run", action="store_true", help="With --rerun, rerun android-probe-flow in dry-run mode")

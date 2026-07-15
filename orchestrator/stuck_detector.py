@@ -1,4 +1,4 @@
-"""StuckDetector — detect repetitive failure loops in the CodeAutonomy harness.
+"""StuckDetector — detect repetitive failure loops in the CodeMind harness.
 
 Inspired by OpenHands StuckDetector. Uses a coarse signature
 ``(action_kind, error_class)`` rather than full observation hashing so that

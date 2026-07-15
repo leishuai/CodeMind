@@ -41,7 +41,7 @@ def test_workflow_contract_uses_compact_testcase_intent(tmp_path: Path) -> None:
     long_expected = "music_audio_stop observed " * 300
     (task / "TestCases.md").write_text(
         "# TestCases\n\n"
-        "| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n"
+        "| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n"
         "|----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|\n"
         f"| TC-F01 | R01 / AC-001 | Functional | device | Android device | ./gradlew test {long_steps} | {long_steps} | {long_expected} | - | yes |\n"
     )

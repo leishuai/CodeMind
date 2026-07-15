@@ -1,7 +1,7 @@
 # Probe-flow Starter Examples
 
 This folder contains small public-safe JSON examples that show the shape of
-CodeAutonomy probe-flow/action-intent files.
+CodeMind probe-flow/action-intent files.
 
 They are intentionally not complete app-specific tests. A real task should
 generate or refine its own flow from:

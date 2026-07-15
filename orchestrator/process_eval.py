@@ -1,4 +1,4 @@
-"""Process evals for CodeAutonomy runs.
+"""Process evals for CodeMind runs.
 
 Process evals check whether the harness behaved correctly, not whether the final
 product output is correct.  They complement workflow-check/completion-check and

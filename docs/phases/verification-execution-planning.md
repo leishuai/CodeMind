@@ -29,7 +29,7 @@ TestCases maps Requirements acceptance criteria to concrete verification rows. E
 - mapped Rxx / AC-xxx refs;
 - runtime level: `unit`, `integration`, `runtime`, `device`, `static`, or `manual`;
 - preconditions/tools/fixtures;
-- command, CodeAutonomy command, or action sequence;
+- command, CodeMind command, or action sequence;
 - assertions and expected result;
 - concrete evidence path/type;
 - dependency and required flag;
@@ -49,7 +49,7 @@ For App/UI/client-facing work, TestCases must explicitly settle:
 - evidence;
 - tool/command.
 
-Every UI action needs a post-action assertion. Do not claim CodeAutonomy cannot operate an app just because the flow needs taps/clicks/input/navigation; use Android probe-flow, iOS XCUITest/probe-flow/action-plan, browser automation, project-native tests, logs, screenshots, and UI hierarchy where applicable.
+Every UI action needs a post-action assertion. Do not claim CodeMind cannot operate an app just because the flow needs taps/clicks/input/navigation; use Android probe-flow, iOS XCUITest/probe-flow/action-plan, browser automation, project-native tests, logs, screenshots, and UI hierarchy where applicable.
 
 For layout/visual requirements, prefer measurable evidence first: frame/bounds/bounding box, screenshot diff with tolerance, snapshot/golden comparison, DOMRect/Playwright bounding box, XCUITest accessibility frame, Android UI hierarchy bounds, OCR, or project-native layout assertion. AI Visual Review is supplementary semantic review or fallback when deterministic proof cannot settle the visual claim.
 

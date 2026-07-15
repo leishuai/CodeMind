@@ -1,4 +1,4 @@
-"""Machine-readable workflow contract helpers for CodeAutonomy.
+"""Machine-readable workflow contract helpers for CodeMind.
 
 `workflow.json` is the executable contract that connects the human-readable
 Phase 2 artifacts (Requirements.md / TestCases.md / Plan.md) with Generator,

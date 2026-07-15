@@ -1,6 +1,6 @@
 """Lightweight runtime-path failure classification helpers.
 
-CodeAutonomy intentionally keeps runtime-path memory small: no separate ledger is
+CodeMind intentionally keeps runtime-path memory small: no separate ledger is
 required for v1. Evaluators/Generators can add ``runtimePath`` and
 ``failureClass`` directly to existing ``evaluation.json`` testcase rows (or
 failedChecks). These helpers normalize the common taxonomy, render concise

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared failure classification helpers for CodeAutonomy.
+"""Shared failure classification helpers for CodeMind.
 
 This module centralizes common log-signature -> category decisions so Android,
 iOS, script-command, and future adapters don't each invent their own wording.
@@ -374,7 +374,7 @@ def classify(platform: str, phase: str, log: str, exit_code: int | None = None, 
                 "The connection between the Mac and the iPhone dropped before the test session "
                 "started (device-side link instability, not signing/code). This is usually "
                 "transient. Retry the same run first. If it keeps dropping, record "
-                "deviceLinkRetryExhausted in the failure context so CodeAutonomy asks the user to "
+                "deviceLinkRetryExhausted in the failure context so CodeMind asks the user to "
                 "physically recover the link.",
                 "retry_generator",
                 f"{p}.device.link_lost_before_session",
@@ -572,7 +572,7 @@ def classify(platform: str, phase: str, log: str, exit_code: int | None = None, 
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Classify CodeAutonomy failure logs")
+    parser = argparse.ArgumentParser(description="Classify CodeMind failure logs")
     parser.add_argument("--platform", default="generic")
     parser.add_argument("--phase", default="unknown")
     parser.add_argument("--exit-code", type=int)

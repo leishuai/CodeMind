@@ -1,4 +1,4 @@
-"""Metrics collection for CodeAutonomy task execution.
+"""Metrics collection for CodeMind task execution.
 
 This module provides a lightweight, structured metrics system to track:
 - Phase durations (Planning, Generator, Evaluator, Summary)
@@ -43,7 +43,7 @@ SUBPHASE_WARM_BUILD_WAIT = "warm_build_wait"
 
 
 class MetricsCollector:
-    """Collect and manage metrics for a single CodeAutonomy task."""
+    """Collect and manage metrics for a single CodeMind task."""
 
     def __init__(self, task_dir: Path):
         self.task_dir = task_dir
@@ -199,6 +199,17 @@ class MetricsCollector:
     def flush(self) -> None:
         """Write all metrics to metrics.json and keep a reference in runtime-state.json."""
         data = self.to_dict()
+        existing = read_metrics(self.task_dir)
+        existing_aggregates = (
+            existing.get("aggregates")
+            if isinstance(existing.get("aggregates"), dict)
+            else {}
+        )
+        for name, aggregate in existing_aggregates.items():
+            # Preserve externally ingested metric families that this in-memory
+            # collector does not own; never merge a collector's own samples
+            # twice across repeated flushes.
+            data["aggregates"].setdefault(name, aggregate)
         self.task_dir.mkdir(parents=True, exist_ok=True)
         path = self.task_dir / "metrics.json"
         path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
@@ -314,3 +325,47 @@ def record_llm_usage(task_dir: Path, prompt_tokens: int, completion_tokens: int,
 def flush_metrics(task_dir: Path) -> None:
     """Flush all metrics to runtime-state.json."""
     get_metrics(task_dir).flush()
+
+
+def merge_metric_observations(
+    task_dir: Path,
+    observations: list[dict],
+) -> Path:
+    """Merge external metric samples into the existing aggregate metrics file."""
+    data = read_metrics(task_dir)
+    if not isinstance(data, dict):
+        data = {}
+    aggregates = data.get("aggregates")
+    if not isinstance(aggregates, dict):
+        aggregates = {}
+
+    for observation in observations:
+        name = str(observation["name"])
+        value = float(observation["value"])
+        unit = str(observation.get("unit") or "")
+        previous = aggregates.get(name)
+        previous = previous if isinstance(previous, dict) else {}
+        old_count = int(previous.get("count") or 0)
+        old_sum = float(previous.get("sum") or 0.0)
+        old_min = float(previous.get("min") if previous.get("min") is not None else value)
+        old_max = float(previous.get("max") if previous.get("max") is not None else value)
+        count = old_count + 1
+        total = old_sum + value
+        aggregates[name] = {
+            "min": round(min(old_min, value), 3),
+            "max": round(max(old_max, value), 3),
+            "avg": round(total / count, 3),
+            "sum": round(total, 3),
+            "count": count,
+            "unit": unit or str(previous.get("unit") or ""),
+        }
+
+    data["schemaVersion"] = 1
+    data["collectedAt"] = time.strftime("%Y-%m-%dT%H:%M:%S")
+    data.setdefault("taskDuration", 0)
+    data["aggregates"] = aggregates
+    task_dir.mkdir(parents=True, exist_ok=True)
+    path = metrics_path(task_dir)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    update_runtime_state(task_dir, metricsRef="metrics.json")
+    return path

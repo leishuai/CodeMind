@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "schemas/automind-workflow-state.schema.json",
-  "title": "CodeAutonomy Workflow State",
+  "title": "CodeMind Workflow State",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "taskId", "version", "status", "currentStage", "currentPhase", "currentAction", "currentOwner", "nextAction", "nextPhase", "iteration", "stateHealth", "lastEventId", "updatedAt"],

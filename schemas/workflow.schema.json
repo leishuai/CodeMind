@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://automind.local/schemas/workflow.schema.json",
-  "title": "CodeAutonomy workflow.json",
-  "description": "Derived CodeAutonomy orchestration contract/gate surface. workflow.json indexes phase inputs/outputs/gates plus testcase/runtime policy for deterministic gates and adapters; live current/next task state lives in runtime-state.json.stateSummary.",
+  "title": "CodeMind workflow.json",
+  "description": "Derived CodeMind orchestration contract/gate surface. workflow.json indexes phase inputs/outputs/gates plus testcase/runtime policy for deterministic gates and adapters; live current/next task state lives in runtime-state.json.stateSummary.",
   "type": "object",
   "required": [
     "version",

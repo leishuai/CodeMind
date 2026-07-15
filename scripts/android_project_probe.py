@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Read-only Android project probe for CodeAutonomy.
+"""Read-only Android project probe for CodeMind.
 
-Purpose: collect the minimum information needed before CodeAutonomy attaches a
+Purpose: collect the minimum information needed before CodeMind attaches a
 real Android app to the harness loop. It intentionally does not modify the
 project and does not download dependencies by default.
 """

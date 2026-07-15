@@ -1,7 +1,7 @@
-# CodeAutonomy Demos
+# CodeMind Demos
 
 `demos/` contains runnable platform demo projects and smoke fixtures for the full
-CodeAutonomy checkout. These demos are for CodeAutonomy maintainers and users who want to
+CodeMind checkout. These demos are for CodeMind maintainers and users who want to
 verify platform-specific capabilities locally.
 
 For the public-safe, no-device starter examples, use [`../examples/`](../examples/)
@@ -12,7 +12,7 @@ instead.
 - Minimal Android projects/APK builders for probe-flow, self-repair, and agent
   repair experiments.
 - Minimal iOS simulator or external XCUITest runner projects.
-- Small fixtures used by CodeAutonomy platform smoke tests.
+- Small fixtures used by CodeMind platform smoke tests.
 
 ## What does not belong here
 
@@ -45,7 +45,7 @@ Typical requirements:
 
 - Android SDK / platform tools when actually building or running;
 - a simulator/emulator or physical device for dynamic execution;
-- project-local CodeAutonomy helper venv only when the selected verifier needs it.
+- project-local CodeMind helper venv only when the selected verifier needs it.
 
 ### iOS demos
 
@@ -76,6 +76,6 @@ should not contain private data. Fresh runtime evidence should be generated unde
 
 ## Export boundary
 
-The default CodeAutonomy skill export intentionally omits `demos/`. Skill users get
+The default CodeMind skill export intentionally omits `demos/`. Skill users get
 lightweight examples from `examples/`; full runtime users can inspect or run
 `demos/` from the repository checkout when they have the required platform tools.

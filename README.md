@@ -1,369 +1,196 @@
-# CodeAutonomy
+# CodeMind
 
 [中文](README.zh-CN.md) | English
 
-**CodeAutonomy, formerly AutoMind, is an autonomous coding harness with evidence-driven self-verification, real UI operation, structured recovery, and self-evolving project knowledge.**
+**CodeMind is an evidence-driven execution loop for coding agents. It helps an
+agent plan, implement, verify, repair, and report real engineering work instead
+of stopping at a plausible answer.**
 
-It does not replace Codex, Claude Code, Trae, or other agents. It gives them a disciplined execution loop for turning a request into requirements, code changes, real build/test/device/UI evidence, retry/replan decisions, a human-readable report, and reusable project knowledge.
+It works with Codex, Claude Code, Trae, and other coding agents. CodeMind does
+not replace them; it gives them a disciplined way to keep working until the
+result is supported by build, test, device, UI, or other concrete evidence.
 
 > Give coding agents a harness, not just a prompt.
 
-CodeAutonomy highlights:
+## Why CodeMind
 
-- **Highly automated loop** — drives Planner → Generator → Evaluator → repair/re-verify cycles until evidence passes, user input is needed, or a real blocker is proven.
-- **Loop over prompt** — uses prompts to guide agents, but relies on the harness loop, gates, evidence, and recovery policy to improve task completion quality.
-- **Real UI and device operation** — supports app/UI interaction as a first-class verification path, including Android `adb`/`uiautomator2`, iOS XCUITest/probe-flow, web probe-flow, screenshots, hierarchy, logs, and post-action assertions. Startup/discovery evidence helps find a path; required runtime TCs need proof actions plus satisfied postChecks. See [`docs/references/app-use-verification.md`](docs/references/app-use-verification.md) for app-use path exploration, soft-failure explanation, and action-ladder evidence rules.
-- **File-protocol continuity** — keeps phases aligned through Markdown artifacts plus machine-readable JSON contracts such as `workflow.json`, phase sidecars, and `evaluation.json`, reducing model drift between planning, coding, and verification.
-- **Structured recovery** — uses `evaluation.json` to decide whether to retry, repair, replan, ask the user, or stop.
-- **Human-readable handoff** — generates `Report.html` with per-TC `Key Evidence`,
-  screenshots when available, concise runtime proof links, and a natural-language
-  final summary that tells users what was done and what to inspect first.
-- **Self-evolving knowledge** — writes summaries, reuse indexes, successful paths, and avoid paths so future tasks can reuse proven commands, environments, and project-specific lessons.
-- **Evidence over vibes** — prefers deterministic build/test/device/UI evidence over model self-confidence and prevents false finish with `completion-check`.
-- **Continuously optimized for speed** — warm-build pre-compilation and a UI path cache cut repeated build/deploy and UI-navigation time across iterations, with cache hit/miss stats tracked in `metrics.json`.
-- **Measured and auditable** — records phase/iteration durations, agent-call and LLM token usage in `metrics.json`, and logs every key decision, gate result, and recovery attempt to `audit.jsonl` / `audit.json` so you can trace *why* CodeAutonomy acted — part of an ongoing push to make the loop faster and more transparent.
+Coding agents are fast, but real tasks often fail at the edges: unclear
+requirements, missing tests, broken environments, UI flows that were never
+actually exercised, and “done” claims without proof.
 
-## How it works
+CodeMind adds the engineering loop around the agent:
 
-CodeAutonomy runs each task as a self-repairing harness loop:
+- **Plan before changing code** — clarify the goal, scope, risks, and what must
+  pass.
+- **Verify the real result** — run project builds, tests, apps, devices, and UI
+  flows when the task requires them.
+- **Repair instead of stopping** — use failure evidence to fix the product or
+  verification path, then verify again.
+- **Pause only for real decisions** — ask for help when user intent, permission,
+  signing, a device, or a sensitive action genuinely requires it.
+- **Produce a reviewable handoff** — deliver code changes, evidence, a readable
+  report, and reusable lessons for future work.
+
+## How a task completes
 
 ```text
-Request
-  -> Brainstorm: clarify intent, context, risks, options, and recommendation
-  -> Requirements + TestCases + Plan
-  -> workflow.json + phase sidecars preserve the contract between phases
-  -> Pre-implementation review: auto-proceed or ask_user for direction/risks/device choice
-  -> workflow-check gates coding readiness and catches drift
-  -> Generator implements or repairs
-  -> Evaluator verifies with build/test/device/UI evidence
-  -> if verification fails: evaluation.json routes back to Generator for repair
-  -> Generator repairs, then Evaluator re-verifies
-  -> repeat until evidence passes, user input is needed, or a real blocker is proven
-  -> completion-check gates done
-  -> Report.html + natural-language handoff + summaries become reusable project knowledge
+Your request
+  -> clarify and plan
+  -> implement
+  -> build and verify
+  -> diagnose failures
+  -> repair and verify again
+  -> finish only when the result is proven
+  -> report and reuse what worked
 ```
 
-The key behavior is the repair loop: the Evaluator does not just say "failed". It records evidence and a structured next action, then CodeAutonomy sends the task back to the Generator to fix and re-evaluate. The model is still trusted to understand UI state, choose paths, and diagnose failures; the loop decides when evidence is strong enough. For UI/runtime tasks, proof means executing the relevant action path and satisfying postChecks, not merely launching the app or taking a screenshot. The key continuity mechanism is the file protocol: human-readable Markdown explains intent, while JSON contracts carry phase state, coverage, next actions, and gates so the model cannot silently drift to a different requirement or test target. Before implementation, CodeAutonomy also makes the plan review explicit: low-risk tasks can auto-proceed, while unclear direction, risk, authorization, signing/device choice, or other human decisions become an `ask_user` gate.
+CodeMind keeps the task recoverable on disk. If an agent process or verification
+step is interrupted, the next run can continue from the recorded task state
+instead of relying on chat memory.
 
----
-
-## Why CodeAutonomy
-
-Modern coding agents are fast, but real engineering work often fails at the edges: vague requirements, missing acceptance criteria, stale tests, environment blockers, weak verification, UI flows that require real interaction, and “done” claims without evidence.
-
-CodeAutonomy helps an agent:
-
-- turn a user request into explicit `Requirements.md`, `TestCases.md`, and `Plan.md`;
-- keep implementation and verification connected through task artifacts;
-- operate real apps and UI flows when the task requires runtime evidence;
-- prefer deterministic build/test/device/UI evidence over model vibes;
-- retry, repair, replan, or ask the user based on structured `evaluation.json` results;
-- prevent false finish with `completion-check`;
-- produce a reviewable `Report.html`, a natural-language handoff pointing to the
-  key evidence, plus reusable summaries and local knowledge for future work.
-
-For the design rationale, read [`automind_design.md`](automind_design.md).
-
----
+For the complete workflow and evidence contract, see
+[docs/workflow.md](docs/workflow.md).
 
 ## Quick start
 
-Install with the bootstrap command:
+Install CodeMind:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/leishuai/CodeAutonomy/main/install-curl.sh | bash
+curl -fsSL https://raw.githubusercontent.com/leishuai/CodeMind/main/install-curl.sh | bash
 ```
 
-The installer:
-
-- installs the CodeAutonomy runtime under `~/.automind/automind` by default (`AUTOMIND_HOME=/custom/path` overrides it);
-- creates the primary CLI wrapper `~/.local/bin/codeautonomy` and the `automind` compatibility wrapper (`AUTOMIND_BIN_DIR=/custom/bin` overrides the directory);
-- runs initialization;
-- installs the CodeAutonomy skill and `/codeautonomy` command, plus legacy `automind` aliases, for Claude Code, Codex, Trae, and Trae-CN user folders when available.
-
-Runtime and workspace are separate: CodeAutonomy itself lives under `~/.automind/automind`, while task artifacts are written under the target project workspace (`<workspace>/.automind/tasks/<task-code>/`). The `automind` CLI and `.automind/` workspace directory are retained for compatibility. See [`docs/references/installation-runtime.md`](docs/references/installation-runtime.md) for install paths, runtime-root rules, helper venvs, and coding-agent skill/command targets.
-
-Compatibility policy: `codeautonomy` and `/codeautonomy` are the primary new entrypoints. Existing `automind`, `/automind`, `automind-skill`, `.automind/`, `AUTOMIND_*`, and machine-readable `automind-*` artifact/schema names remain supported so existing tasks and integrations continue to work.
-
-If `~/.local/bin` is not on `PATH`, the installer prints the line to add.
-
-Verify the install:
+Run the no-device smoke test:
 
 ```bash
-automind smoke offline-demo
+codemind smoke offline-demo
 ```
 
-This no-device smoke test creates `.automind/tasks/offline_demo_smoke/` and verifies the basic loop: command evidence, `evaluation.json`, completion check, summary, and record check.
-
-### Updating
-
-To update to the latest release, the recommended way is:
+Update later with:
 
 ```bash
-automind update
+codemind update
 ```
 
-Alternatively, rerun the same one-line install command:
+Install paths and environment requirements are documented in
+[installation-runtime.md](docs/references/installation-runtime.md).
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/leishuai/CodeAutonomy/main/install-curl.sh | bash
-```
-
-Install and update are the same flow: CodeAutonomy fetches the latest version, refreshes the runtime under `~/.automind/automind`, and reinstalls the agent skill/command files. Your local data is preserved — task artifacts and reuse memory under `.automind/tasks/` and `.automind/summary/` are never removed. Pin a specific version with `AUTOMIND_BRANCH`:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/leishuai/CodeAutonomy/main/install-curl.sh | AUTOMIND_BRANCH=v0.2.0 bash
-```
-
----
-
-## Usage
+## Use CodeMind
 
 ### In Codex / Claude Code / Trae
 
-After installing, restart or reload your coding agent, then run:
+After installation, restart or reload your coding agent, then run:
 
 ```text
-/codeautonomy Fix the login crash and verify it
+/codemind Fix the login crash and verify it
 ```
 
-Equivalent current-session form:
-
-```text
-/codeautonomy ask Fix the login crash and verify it
-```
-
-In slash-command mode, CodeAutonomy keeps the current coding-agent session as Planner/Generator, creates task artifacts under the target project's `.automind/tasks/<task-code>/`, runs helper gates, and keeps looping Evaluator verify -> Generator repair -> Evaluator re-verify until evidence passes, user input is needed, or a real blocker/max-iteration guard occurs.
-
-It does **not** start a separate agent session by default.
+CodeMind uses the current coding-agent session to plan and implement, then keeps
+the verification and repair loop moving until the result passes, needs a real
+decision, or reaches a proven blocker.
 
 ### In a terminal
 
-Run commands from the target project root so `.automind/tasks` is created in that project:
+Run from the project you want CodeMind to work on:
 
 ```bash
 cd /path/to/your-project
-automind
+codemind ask "Fix the login crash and verify it"
 ```
 
-Bare `automind` opens the interactive shell. If you chat before a current task exists, that terminal gets its own hidden TUI chat session, and a later `ask ...` in the same shell can reuse that coding-agent session.
-
-To let CodeAutonomy own a separate CLI-driven loop:
+Useful commands:
 
 ```bash
-automind ask "Fix the login crash and verify it"
+codemind                         # open the interactive shell
+codemind ask "..."               # start a task
+codemind status <task-code>      # inspect progress and the next action
+codemind resume <task-code>      # continue a saved task
+codemind report <task-code>      # generate the human-readable report
+codemind update                  # update CodeMind
 ```
 
-When no agent is specified, `ask`, `plan`, and `resume` use `auto` selection: CodeAutonomy tries `codex`, then `claude`, then Trae/Trae-CN and runs the first CLI that passes preflight; if none are available, it reports the checked adapters and suggests current-session mode. Planner/Generator approval-bypass follows the task-level `agentExecutionPolicy` in `runtime-state.json` (missing policy falls back to bypass), so automation stays high while sensitive/destructive/system-changing actions still route through CodeAutonomy's `ask_user` guard. Model Evaluator runs are always fresh-isolated and bypassed so they can collect evidence without approval deadlocks.
+Run `codemind help` for the full command list. Existing `automind` and
+`/automind` entrypoints remain supported as compatibility aliases.
 
-If an agent shell is not in the target project root, set `AUTOMIND_WORKSPACE_ROOT=/path/to/project` first. Runtime and workspace are separate: the runtime stays under `~/.automind/automind` (or `$AUTOMIND_HOME`), while task artifacts live in the project where CodeAutonomy runs. Resolve helper paths from the current runtime/workspace or task `logs/iter-N/env.json`, not from absolute paths copied out of old logs.
+Existing installations and task history remain compatible. CodeMind continues
+to use the `.automind/` data directory and `AUTOMIND_*` environment variables,
+so no task migration is required.
 
----
+### In Lark / Feishu
 
-## Choose a mode
-
-| Need | Use |
-|---|---|
-| You are already inside Codex / Claude Code / Trae | `/codeautonomy <request>` |
-| You want an interactive terminal shell | `automind` |
-| You want CodeAutonomy to own a separate CLI-driven loop | `automind ask "..."` |
-| You want detached mode from a slash command | `/codeautonomy detached ask <request>` |
-| You only need task artifacts for current-session work | `automind scaffold "..."` |
-| You need to continue a previous task | `automind resume <task-code>` or `automind continue [task-code]` |
-
-Advanced helper/gate commands such as `scaffold`, `workflow-contract`, `phase-gate`, `context-pack`, `completion-check`, and `record-check` are mainly for the CodeAutonomy skill, slash-command current-session flow, CI/regression fixtures, and debugging. New users normally do not need to run them manually.
-
----
-
-## Full-auto mode (run to completion without interruption)
-
-By default, non-trivial implementation tasks pause once at the pre-implementation review to confirm scope, approach, risks, and authorization. If you want CodeAutonomy to run end-to-end autonomously without that interruption, opt into **full-auto mode**:
-
-- **Declare it in the original request** — include a full-auto phrase such as `full auto` or `no confirmation`, e.g.:
-
-  ```text
-  /codeautonomy Fix the login crash and verify it, full auto
-  ```
-  ```bash
-  automind ask "Fix the login crash and verify it, full auto"
-  ```
-
-- **Or choose it when prompted** — at the pre-implementation `ask_user` gate, select the `Full auto mode` option, or simply reply `full auto`.
-
-Once enabled, CodeAutonomy records your stated scope/goals/authorization in `runtime-state.json` (`preImplementationReview.fullAuto=true`) and auto-proceeds at every subsequent completion gate without asking again. This is the user-intent override: it authoritatively skips the ask_user pauses the risk model would otherwise raise.
-
-**What full-auto does not bypass:** truly sensitive/irreversible actions you did not pre-authorize — account/credential login, payment, destructive delete/reset/force-push, or a real device/signing/permission gate — still surface for a decision, and the host coding agent's own command-approval prompts may still appear. To pre-authorize specific destructive actions, list them in the pre-implementation decision bundle's `destructiveActionsAllowList`.
-
----
-
-## Common commands
-
-### Start and resume
+CodeMind can connect to a Lark/Feishu bot so you can chat naturally, confirm a
+development task, follow progress, answer pending questions, and receive the
+final result in Lark.
 
 ```bash
-automind                         # interactive shell
-automind ask "Fix login crash"    # start a CLI-owned loop
-automind list                    # list tasks
-automind resume <task-code>      # resume from persisted state
-automind continue [task-code]    # print the shared next-step instruction
-automind answer <task-code> --text "..."  # answer a pending ask_user decision
+codemind channel start [botId]
+codemind channel dashboard
 ```
 
-### Inspect and report
+- Omit `botId` to connect all registered bots.
+- Pass `botId` to configure or start one specific bot.
 
-```bash
-automind status <task-code>        # state, next action, suggested commands, gate summaries
-automind tui <task-code>           # TUI snapshot/watch/interactive view
-automind notifications <task-code> # tail long-running task notifications
-automind doctor <task-code>        # diagnose stale or long-running tasks
-automind report <task-code>        # generate Report.html
-automind logs [task-code]          # show logs
-```
+See [Lark Bridge](lark-bridge/README.md) for setup and usage.
 
-`report` generates `.automind/tasks/<task-code>/Report.html`, a human-readable handoff page with requirements, blockers, and summary/knowledge deposition. In `Test Results`, each TC row should show a concise `Key Evidence` column first: screenshots, machine anchors / hardMetrics, and the few runtime proof files users should inspect. The full `Evidence / Screenshots / Logs` artifact list remains available for traceability without becoming the primary reading path.
+## Full-auto mode
 
-### Gates and helpers
+By default, a non-trivial implementation task may pause once before coding so
+you can confirm the direction, scope, risks, and expected verification.
 
-The loop is kept honest by gates (`workflow-check` before coding,
-`completion-check` before finish) and by verification/summary helpers
-(`script-command`, `quality-check`, `setup-automation-tools`, `visual-inspect`,
-`summary`, `reuse`, `checkpoint`, and more). Most users do not run these
-directly. Run `automind help` for the full command list, and see
-[automind_design.md](automind_design.md) for the contracts behind the gates.
-
-Safe runtime interruptions (agent timeout/network/process hiccups,
-context-window overflow) are retried and resumed automatically from the durable
-task artifacts.
-
----
-
-## How a task flows
+To let CodeMind continue end to end without that planning confirmation, include
+`full auto` or `no confirmation` in the request:
 
 ```text
-User request
-  -> Brainstorm.md
-  -> Requirements.md
-  -> TestCases.md
-  -> Plan.md
-  -> workflow.json + phase JSON sidecars
-  -> Pre-implementation review / ask_user when needed
-  -> workflow-check
-  -> Generator -> Delivery.md
-  -> Evaluator -> Validation.md + evaluation.json
-  -> Retry Generator / Replan / Ask Human / Stop / Finish
-  -> completion-check
-  -> Report.html + natural-language handoff + Summary / Reuse
+/codemind Fix the login crash and verify it, full auto
 ```
 
-The important idea is continuity:
+```bash
+codemind ask "Fix the login crash and verify it, full auto"
+```
 
-1. **Brainstorm first** — clarify user intent, project context, assumptions, risks, options, recommendation, and verification strategy before freezing requirements.
-2. **Define the contract** — turn the chosen direction into `Requirements.md`, acceptance criteria, `TestCases.md`, and `Plan.md`.
-3. **Preserve continuity with file protocol** — `workflow.json` and phase JSON sidecars carry requirements, AC/TC coverage, gate state, and handoff state between phases so the next model turn does not reinterpret the task from scratch.
-4. **Review before coding** — resolve the pre-implementation gate: auto-proceed for clear/low-risk work, or `ask_user` for unclear direction, risk, authorization, signing/device choice, or other human decisions.
-5. **Check before coding** — `workflow-check` catches gaps and model drift before implementation.
-6. **Generate or repair** — the current agent or detached adapter changes code/config/docs and writes `Delivery.md`.
-7. **Evaluate with evidence** — prefer project tests, build commands, device/UI probes, logs, screenshots, and other concrete evidence. Model evaluation should be isolated from Generator context when used.
-8. **Self-repair from `evaluation.json`** — failed evidence routes back to Generator for repair, then Evaluator re-verifies; `finish`, `retry_generator`, `replan`, `ask_user`, or `stop` drives the next step.
-9. **Gate completion** — `completion-check` prevents false finish.
-10. **Report and reuse** — `Report.html`, the final natural-language handoff,
-    `summary.md`, and reuse records make the result reviewable and useful later.
+Full-auto mode still does not silently approve account access, payment,
+destructive operations, production-impacting actions, or genuine device,
+signing, and permission gates.
 
-For the full workflow contract, see [`docs/workflow.md`](docs/workflow.md).
+## What you get
 
----
-
-## What CodeAutonomy produces
-
-Each task gets a workspace under:
+Every completed task produces a durable workspace under:
 
 ```text
 .automind/tasks/<task-code>/
 ```
 
-The files most users care about are:
+The main results are:
 
-- **Planning:** `Brainstorm.md`, `Requirements.md`, `TestCases.md`, `Plan.md`
-- **Implementation handoff:** `Delivery.md`
-- **Verification:** `Validation.md`, `evaluation.json`, `logs/iter-N/*`
-- **Completion proof:** `VerificationLedger.json`, `completion-report.json`
-- **Human review:** `Report.html` with per-TC `Key Evidence`, screenshots for runtime/UI TCs when available, and concise links to the proof files users should inspect first.
-- **Reuse:** `summary.md`, `Reuse.md`
+- the implementation or repair;
+- the requirements and verification plan used for the task;
+- build, test, device, UI, and log evidence when applicable;
+- a record of failures, recovery, and remaining blockers;
+- `Report.html`, the first place to review the result;
+- a reusable summary of successful and failed approaches.
 
-Most users should inspect tasks with:
-
-```bash
-automind status <task-code>
-automind report <task-code>
-automind summary <task-code>
-```
-
-CodeAutonomy also maintains machine-readable state, sidecars, traces, process evals, and knowledge indexes for gates, adapters, TUI/status, and future reuse. The full file protocol is documented in [`docs/workflow.md`](docs/workflow.md).
-
-Repository layout:
-
-```text
-.
-├── automind.sh        # CLI entry point used by the wrapper
-├── install.sh         # one-command installer
-├── orchestrator/      # loop engine, runtime state, gates, context packs
-├── scripts/           # execution/evidence adapters and export helpers
-├── requirements/      # optional mobile helper constraints
-├── docs/              # workflow and references
-├── schemas/           # machine-readable contracts
-├── templates/         # planner/generator/evaluator prompts
-├── examples/          # public-safe starter examples
-├── summaries/         # curated reusable technical lessons
-└── .automind/         # generated local runtime data
-```
-
----
-
-## Examples
-
-Start with:
-
-- [`examples/README.md`](examples/README.md)
-- [`examples/offline-script-demo/`](examples/offline-script-demo/)
-
-Best first run:
+Open a task with:
 
 ```bash
-automind smoke offline-demo
-automind status offline_demo_smoke
-automind summary offline_demo_smoke
-automind record-check offline_demo_smoke
+codemind status <task-code>
+codemind report <task-code>
 ```
 
-Platform demos may require local Android/iOS tooling, simulators, or devices.
+## Safety boundaries
 
----
+CodeMind is designed for high automation, but it does not treat every failure or
+instruction as permission to mutate the machine.
 
-## Dependencies and safety policy
-
-Basic install requires `bash` (or a compatible shell), `git`, and `python3`.
-
-The public installer does **not** install or modify system SDKs (Xcode, Android
-Studio, Android SDK/platform-tools, `adb`), iOS signing/keychains/profiles, or
-device trust settings. When mobile/visual verification needs low-risk Python
-helpers, CodeAutonomy may create local virtualenvs (`.venv-android-tools/`,
-`.venv-ios-tools/`, `.venv-visual-tools/`) in the target workspace via
-`automind setup-automation-tools [android|ios|visual]`.
-
-For web/client/server dependencies, CodeAutonomy uses the target project's native
-commands and lockfiles rather than installing arbitrary packages;
-`automind dependency-check` is an optional read-only aid when the path is
-unclear. Sensitive or system-changing actions — signing, trust changes, sudo
-services, browser drivers, destructive app actions, registry credentials,
-Docker/database startup, account/payment/privacy/legal decisions — require
-explicit user approval. Environment, device, signing, and permission failures
-are blockers, not product-code failures.
-
----
+- It does not silently install system SDKs, signing material, device trust,
+  privileged services, or private credentials.
+- Sensitive or irreversible actions require explicit authorization.
+- Environment, device, signing, and permission failures are reported as
+  blockers instead of being misrepresented as product-code failures.
+- Runtime and UI claims require runtime evidence when a runnable path exists.
+- Completion is checked against evidence, not only the agent's final message.
 
 ## Troubleshooting
 
-### `automind: command not found`
+### `codemind: command not found`
 
 Add the wrapper directory to your shell profile, usually:
 
@@ -371,57 +198,46 @@ Add the wrapper directory to your shell profile, usually:
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Then restart the shell and run `automind help`.
+Restart the shell and run `codemind help`.
 
-### `/codeautonomy` is not visible
+### `/codemind` is not visible
 
-Restart or reload the coding agent. Confirm the relevant user-level files exist, for example `~/.codex/commands/codeautonomy.md` and `~/.codex/skills/codeautonomy-skill` for Codex. Legacy `/automind` remains supported.
+Restart or reload the coding agent after installation.
 
-### Mobile tooling is missing
+### A task is stuck or keeps failing
 
-Install the required platform tooling manually and rerun preflight. CodeAutonomy can create Python helper virtualenvs, but it does not install Xcode, Android Studio, SDKs, signing assets, or device trust settings.
-
-### The loop keeps failing
-
-Run:
+Start with:
 
 ```bash
-automind status <task-code>
-automind workflow-check <task-code>
-automind completion-check <task-code>
-automind doctor <task-code>
+codemind status <task-code>
+codemind resume <task-code>
 ```
 
-If the same failure repeats, CodeAutonomy may keep giving the model repair attempts; use `replan` when evidence shows the strategy or validation target is wrong.
+The status output explains the current blocker and recommended next action.
+Detailed diagnostic and verification commands are listed in the
+[command catalog](docs/references/command-script-catalog.md).
 
-### The agent says done but completion fails
+### Mobile or UI tooling is missing
 
-Trust `completion-check`. Add missing evidence, fix failed `TC-*`, cover missing `AC-*`, or repair the implementation before claiming completion.
+Install the required platform tooling explicitly, then resume the task. CodeMind
+can prepare its own low-risk helper packages, but it does not install Xcode,
+Android Studio, signing assets, or device trust settings for you.
 
----
+## Learn more
 
-## Important docs
+- [Product design](automind_design.md) — why CodeMind is loop-first and
+  evidence-driven.
+- [Complete workflow](docs/workflow.md) — phases, recovery, and evidence rules.
+- [Installation and runtime](docs/references/installation-runtime.md) — install
+  paths, project workspaces, and prerequisites.
+- [Lark / Feishu usage](lark-bridge/README.md) — connect and use a bot.
+- [Documentation map](docs/README.md) — all advanced and platform-specific
+  references.
 
-- [`automind_design.md`](automind_design.md) — product idea, design principles, and reliability mechanisms.
-- [`docs/workflow.md`](docs/workflow.md) — canonical file protocol and loop semantics.
-- [`docs/tui-session-observability.md`](docs/tui-session-observability.md) — TUI, shared sessions, traces, process evals, and status/report observability.
-- [`docs/README.md`](docs/README.md) — documentation map.
-- [`docs/references/installation-runtime.md`](docs/references/installation-runtime.md) — install paths, runtime root, workspace root, helper venvs, and coding-agent skill/command targets.
-- [`docs/references/command-script-catalog.md`](docs/references/command-script-catalog.md) — command/script selection guide.
-- [`docs/references/app-use-verification.md`](docs/references/app-use-verification.md) — app-use verification contract for UI path exploration, structured success/failure explanation, and launch/action ladders.
-- [`docs/references/verification-flow.md`](docs/references/verification-flow.md) — cross-platform verification command flow, with [`verification-flow-ios.md`](docs/references/verification-flow-ios.md) and [`verification-flow-android.md`](docs/references/verification-flow-android.md) for per-platform device flows and the UI-runner ladder.
-- [`docs/agent-adapters.md`](docs/agent-adapters.md) — detached adapters and Evaluator isolation.
-- [`docs/phase1-initialization.md`](docs/phase1-initialization.md) — environment/task workspace setup.
-- [`docs/phase2-requirement.md`](docs/phase2-requirement.md) — model-driven planning/refinement.
-- [`docs/references/test-design-guide.md`](docs/references/test-design-guide.md) — concrete `TestCases.md` runbook and artifact examples.
-- [`docs/phase3-verification.md`](docs/phase3-verification.md) — verification and Evaluator behavior.
-- [`docs/phase4-summary.md`](docs/phase4-summary.md) — summary, reuse, and knowledge deposition.
-- [`schemas/runtime-state.schema.json`](schemas/runtime-state.schema.json), [`schemas/evaluation.schema.json`](schemas/evaluation.schema.json), [`schemas/probe-flow.schema.json`](schemas/probe-flow.schema.json) — machine-readable contracts.
+## What CodeMind is not
 
----
+CodeMind is not another coding agent, a replacement for project-native tests or
+platform SDKs, or a guarantee that every task can be solved automatically.
 
-## What CodeAutonomy is not
-
-CodeAutonomy is not another coding agent, a replacement for project-native tests or platform SDKs, a tool that silently bypasses signing/permissions, or a guarantee of correctness.
-
-It is the engineering loop around coding agents: preflight, plan, generate, verify, recover, summarize, report, and reuse.
+It is the engineering loop around coding agents: plan, implement, verify,
+recover, report, and reuse.

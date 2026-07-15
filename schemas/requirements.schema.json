@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://automind.local/schemas/requirements.schema.json",
-  "title": "CodeAutonomy requirements.json",
+  "title": "CodeMind requirements.json",
   "type": "object",
   "required": ["version", "phase", "sourceRefs", "goal", "requirements", "acceptanceCriteria"],
   "properties": {

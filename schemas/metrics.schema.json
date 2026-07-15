@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://automind.local/schemas/metrics.schema.json",
-  "title": "CodeAutonomy Metrics",
-  "description": "Standalone metrics file for a CodeAutonomy task. Contains phase durations, sub-phase timings, iteration breakdowns, agent call stats, LLM token usage, and aggregated statistics. Written by metrics.py flush(); referenced from runtime-state.json via metricsRef.",
+  "title": "CodeMind Metrics",
+  "description": "Standalone metrics file for a CodeMind task. Contains phase durations, sub-phase timings, iteration breakdowns, agent call stats, LLM token usage, and aggregated statistics. Written by metrics.py flush(); referenced from runtime-state.json via metricsRef.",
   "type": "object",
   "additionalProperties": true,
   "required": ["collectedAt"],

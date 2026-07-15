@@ -11,7 +11,7 @@ def _base_task(task: Path) -> None:
     task.mkdir(parents=True)
     (task / "Brainstorm.md").write_text("# Brainstorm\n")
     (task / "Requirements.md").write_text("# Requirements\n")
-    (task / "TestCases.md").write_text("# TestCases\n\n| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n|----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|\n| TC-F04 | R01 / AC-004 | Functional | runtime | app | probe | find play path | music_audio_stop | - | yes |\n")
+    (task / "TestCases.md").write_text("# TestCases\n\n| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n|----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|\n| TC-F04 | R01 / AC-004 | Functional | runtime | app | probe | find play path | music_audio_stop | - | yes |\n")
     (task / "Plan.md").write_text("# Plan\n")
     (task / "Validation.md").write_text("# Validation\n")
     (task / "Delivery.md").write_text("# Delivery\n")

@@ -1,4 +1,4 @@
-"""Console and command helpers for the CodeAutonomy orchestrator."""
+"""Console and command helpers for the CodeMind orchestrator."""
 from __future__ import annotations
 
 import os
@@ -10,19 +10,19 @@ from orchestrator.config import AUTOMIND_WORKSPACE_ROOT, BLUE, GREEN, NC, RED, Y
 
 
 def log(msg: str):
-    print(f"{BLUE}[CodeAutonomy]{NC} {msg}")
+    print(f"{BLUE}[CodeMind]{NC} {msg}")
 
 
 def success(msg: str):
-    print(f"{GREEN}[CodeAutonomy]{NC} {msg}")
+    print(f"{GREEN}[CodeMind]{NC} {msg}")
 
 
 def warn(msg: str):
-    print(f"{YELLOW}[CodeAutonomy]{NC} {msg}")
+    print(f"{YELLOW}[CodeMind]{NC} {msg}")
 
 
 def error(msg: str):
-    print(f"{RED}[CodeAutonomy]{NC} {msg}", file=sys.stderr)
+    print(f"{RED}[CodeMind]{NC} {msg}", file=sys.stderr)
 
 
 def run_cmd(cmd: list, capture: bool = True, cwd: str = None, timeout: int | None = None) -> tuple:

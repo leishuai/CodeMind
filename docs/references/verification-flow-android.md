@@ -1,13 +1,13 @@
 # Android Verification Flow Reference
 
-Android-specific verification commands and flows for CodeAutonomy. This is loaded on
+Android-specific verification commands and flows for CodeMind. This is loaded on
 demand for Android tasks; the cross-platform skeleton (generic script validation,
 visual, external-sink, verification-unblock policy, probe-flow, evidence,
 `Validation.md`/`evaluation.json`, retry semantics) lives in
 [`verification-flow.md`](verification-flow.md). The iOS equivalent is
 [`verification-flow-ios.md`](verification-flow-ios.md).
 
-CodeAutonomy should classify environment/device/tool blockers separately from
+CodeMind should classify environment/device/tool blockers separately from
 product-code failures. Evidence beats guesses.
 
 ## Operational priority quick reference
@@ -88,7 +88,7 @@ Recommended project-local Python toolchain:
 automind setup-automation-tools android
 ```
 
-Preflight/evaluator may run this automatically when Android probe-flow requires the helper and it is missing; users can also run it up front. It creates `.venv-android-tools` in the target workspace and installs packages from the CodeAutonomy runtime `requirements/android-tools.txt`; it does not install Android Studio, Android SDK/platform-tools, `adb`, or change device settings. CodeAutonomy should prefer a project-local `.venv-android-tools/bin/python` only when it imports the required helper modules; if it exists but is broken and the CodeAutonomy runtime `.venv-android-tools` is ready, reuse the runtime helper venv and record the actual interpreter in `logs/iter-N/env.json`.
+Preflight/evaluator may run this automatically when Android probe-flow requires the helper and it is missing; users can also run it up front. It creates `.venv-android-tools` in the target workspace and installs packages from the CodeMind runtime `requirements/android-tools.txt`; it does not install Android Studio, Android SDK/platform-tools, `adb`, or change device settings. CodeMind should prefer a project-local `.venv-android-tools/bin/python` only when it imports the required helper modules; if it exists but is broken and the CodeMind runtime `.venv-android-tools` is ready, reuse the runtime helper venv and record the actual interpreter in `logs/iter-N/env.json`.
 
 ### Android real-device preflight
 
@@ -163,13 +163,13 @@ upload, signing/device trust, or ambiguous consent.
 
 When the device is connected and authorized (`adb state=device`), driving these
 in-app actions — play, skip/next, trigger an error, interrupt/pause, navigate —
-and then capturing logcat is CodeAutonomy's own verification work. Encode the steps
+and then capturing logcat is CodeMind's own verification work. Encode the steps
 as probe-flow actions and run them; do not stop and ask the user "I cannot
 operate your physical device, please confirm how to verify". That phrasing is a
 non-whitelisted soft pause. Only escalate to `ask_user(real_device_or_signing)`
 for a genuine human/system gate: no device in `state=device`, an unresolved
 unlock / Developer-Mode / USB-debugging / trust prompt, or missing signing
-material — and then say exactly what CodeAutonomy detected and the single physical
+material — and then say exactly what CodeMind detected and the single physical
 action needed.
 
 Tier-1 hard evidence here is logcat with matched keywords
@@ -206,7 +206,7 @@ of collapsing every `adb devices` failure into "no device". Use these categories
 5. `android_install_or_launch_failed` — device is `state=device`, but APK
    install/start/probe-flow fails.
 
-For macOS developer machines, CodeAutonomy should prefer explicit SDK adb paths when
+For macOS developer machines, CodeMind should prefer explicit SDK adb paths when
 agent shells have incomplete PATHs, especially:
 
 ```text
@@ -216,7 +216,7 @@ $HOME/Library/Android/sdk/platform-tools/adb
 ```
 
 If a normal host shell can see a device with the same adb binary, but the coding
-agent / CodeAutonomy preflight cannot, classify it as an adb daemon or process
+agent / CodeMind preflight cannot, classify it as an adb daemon or process
 environment issue, not as a physical device absence. Record the adb path,
 `ANDROID_HOME`, `ANDROID_SDK_ROOT`, `PATH`, exit code, raw `adb devices -l`
 output, and adb startup log path before asking the user to reconnect the device.

@@ -11,7 +11,7 @@ def write_testcases(task_dir: Path) -> None:
     (task_dir / "TestCases.md").write_text("""
 # TestCases
 
-| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |
+| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |
 |----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|
 | TC-F04 | R01 / AC-001 | Functional | device | adb | android-probe-flow | Play then pause. | music_audio_finish + stop_reason | - | yes |
 """)

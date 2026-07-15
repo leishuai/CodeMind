@@ -41,7 +41,7 @@ be inferred automatically.
 - Environment blockers, startup-only checks, and preflight-only checks cannot satisfy required runtime TCs.
 - Weak/current/advisory results cannot overwrite final completion pass.
 - Captured-but-missing evidence is still evidence: use `signal: "missing:<name>"` or `missingSignals[]` when a log/screenshot/report was collected but did not show the expected signal.
-- Prefer project-native tests/reports, CodeAutonomy runner/probe-flow artifacts, runtime or scoped diagnostic logs, and mock/test sink evidence before raw DB/file/state inspection.
+- Prefer project-native tests/reports, CodeMind runner/probe-flow artifacts, runtime or scoped diagnostic logs, and mock/test sink evidence before raw DB/file/state inspection.
 - Database/file/state inspection is optional project-specific evidence; do not make raw DB access the default proof path when log/test/probe/diagnostic evidence can prove the case more safely.
 
 ## Downstream contract

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CodeAutonomy Orchestrator
+CodeMind Orchestrator
 Core orchestrator: manage tasks, generate artifacts, and run the Agent Loop
 """
 
@@ -91,7 +91,7 @@ from orchestrator.evaluation_result import apply_evaluation_result
 from orchestrator.harness_profiles import get_harness_profile
 from orchestrator.probe_records import init_task_artifacts, write_json_file, write_probe_record
 from orchestrator.validation_history import append_validation_history
-from orchestrator.commands.session import cmd_answer, cmd_chat_create, cmd_continue, cmd_event, cmd_message, cmd_phase_gate, cmd_report, cmd_trace, cmd_tui, print_answer_usage
+from orchestrator.commands.session import cmd_answer, cmd_chat_create, cmd_classify, cmd_continue, cmd_converse, cmd_event, cmd_message, cmd_observe, cmd_phase_gate, cmd_report, cmd_trace, cmd_tui, print_answer_usage
 from orchestrator.commands.status import cmd_logs, cmd_status
 from orchestrator.commands.knowledge import cmd_completion_check, cmd_doctor, cmd_doctor_scan, cmd_improve_suggestions, cmd_knowledge, cmd_notifications, cmd_preloaded_check, cmd_process_check, cmd_record_check, cmd_reuse, cmd_reuse_ack, cmd_summary, cmd_summary_compact, cmd_tick_iteration, cmd_workflow_check, cmd_workflow_contract
 from orchestrator.evidence_contract import attach_required_test_results
@@ -325,7 +325,7 @@ def resolve_probe_flow_path(task_dir: Path, platform: str) -> Path:
     Prefers the platform-suffixed name (`probe-flow.android.json` /
     `probe-flow.ios.json`). When the new file is absent but the legacy
     `probe-flow.json` exists, returns the legacy path and emits a one-time
-    deprecation warning. CodeAutonomy never renames files on disk automatically.
+    deprecation warning. CodeMind never renames files on disk automatically.
     """
     suffix = "android" if platform == "android" else "ios"
     new_path = task_dir / f"probe-flow.{suffix}.json"
@@ -401,7 +401,7 @@ def extract_ios_app_config(user_input: str) -> dict:
     - targetBundleId/appUnderTest: `...` (the app the UI runner should drive,
       e.g. a real product like com.example.app; distinct from the runner/host bundleId)
 
-    For the local CodeAutonomy iOS demo, provide a convenience default when the ask
+    For the local CodeMind iOS demo, provide a convenience default when the ask
     explicitly mentions the demo/XCUITest path. This is a local sample profile,
     not a framework assumption for arbitrary iOS projects.
     """
@@ -526,7 +526,7 @@ def infer_workspace_client_platforms() -> set[str]:
     """Best-effort client platform detection from the target workspace root.
 
     Keep this conservative: only root/near-root project markers count, and demo
-    folders in the CodeAutonomy runtime are ignored.
+    folders in the CodeMind runtime are ignored.
     """
     root = AUTOMIND_WORKSPACE_ROOT
     platforms: set[str] = set()
@@ -889,7 +889,7 @@ def format_device_discovery_diagnostic(device_discovery: dict) -> str:
     if adb_path:
         parts.append(f"adb={adb_path}")
     elif android.get("strategy") == "not_found":
-        parts.append("adb binary not found in CodeAutonomy/Codex environment")
+        parts.append("adb binary not found in CodeMind/Codex environment")
     if non_ready:
         states = ", ".join(f"{item.get('id')}:{item.get('state')}" for item in non_ready if isinstance(item, dict))
         if states:
@@ -1007,7 +1007,7 @@ def mobile_task_needs_verification_target_review_detail(user_input: str, task_ty
         }
     # If the user mentions "真机不可用" / "device unavailable", do NOT treat
     # that as a positive real-device choice. Keep the mobile target review
-    # active so CodeAutonomy can record the simulator/emulator fallback policy.
+    # active so CodeMind can record the simulator/emulator fallback policy.
     if mentions_hardstop_device_unavailable_phrasing(user_input):
         return {
             "needsReview": True, "triageSource": "code_deterministic",
@@ -1089,7 +1089,7 @@ def mobile_verification_mentions_simulator_only_detail(user_input: str, task_typ
 def mobile_verification_mentions_simulator_only(user_input: str, task_type: str | None = None) -> bool:
     """Return True when a mobile task explicitly selects simulator/emulator only.
 
-    NOTE: When the user explicitly chose simulator/emulator, CodeAutonomy respects
+    NOTE: When the user explicitly chose simulator/emulator, CodeMind respects
     that choice. We still record this signal so audit logs/reuse can show the
     decision, but it MUST NOT escalate to ``ask_user`` — see the
     "follow-user-stated-target" policy in AGENTS.md / docs/workflow.md.
@@ -1122,7 +1122,7 @@ def detect_brainstorm_questions_detail(user_input: str) -> dict[str, Any]:
         seeded_reasons.append("verification_method_unclear")
     if mobile_task_needs_verification_target_review(user_input, task_type):
         questions.append(
-            "Mobile verification target is unclear: should CodeAutonomy verify on a real physical device or on a simulator/emulator? "
+            "Mobile verification target is unclear: should CodeMind verify on a real physical device or on a simulator/emulator? "
             "Recommended: use a real device for device-specific behavior and a simulator/emulator for faster smoke checks when acceptable. Real-device verification may require user authorization such as trusting the computer, enabling Developer Mode/USB debugging, unlocking the device, and approving signing or permission prompts."
         )
         seeded_reasons.append("mobile_target_unclear")
@@ -1234,7 +1234,7 @@ def build_pre_implementation_review_state(user_input: str, questions: list[str] 
         if connected_device_count == 1:
             review_questions.append(
                 "Real-device verification is the default for this client/app task. "
-                f"CodeAutonomy detected one connected physical device ({connected_device_text}) and will use it by default for development, debugging, verification, and screenshot evidence unless the user explicitly chooses another target. "
+                f"CodeMind detected one connected physical device ({connected_device_text}) and will use it by default for development, debugging, verification, and screenshot evidence unless the user explicitly chooses another target. "
                 "Screenshot capture is default allowed verification evidence; separate ask_user is still required for sensitive actions such as uninstall, re-signing/signing-material changes, sudo/tunneld, keychain/certificate/private-key changes, account/payment/production/external-upload actions, or unrelated data deletion."
             )
         elif connected_device_count > 1:
@@ -1242,26 +1242,26 @@ def build_pre_implementation_review_state(user_input: str, questions: list[str] 
             review_questions.append(
                 "Multiple connected physical devices were detected for this client/app task: "
                 f"{connected_device_text}. "
-                "Please choose which real device CodeAutonomy should use for development, debugging, verification, and screenshot evidence. "
+                "Please choose which real device CodeMind should use for development, debugging, verification, and screenshot evidence. "
                 "Screenshot capture is default allowed verification evidence; separate ask_user is still required for sensitive actions such as uninstall, re-signing/signing-material changes, sudo/tunneld, keychain/certificate/private-key changes, account/payment/production/external-upload actions, or unrelated data deletion."
             )
         else:
             diagnostic_sentence = f" Discovery diagnostic: {device_diagnostic_text}." if device_diagnostic_text else ""
             review_questions.append(
-                "Real-device verification is preferred for this client/app task, but no authorized connected physical device was detected by CodeAutonomy. "
+                "Real-device verification is preferred for this client/app task, but no authorized connected physical device was detected by CodeMind. "
                 f"{diagnostic_sentence} "
-                "CodeAutonomy will try simulator/emulator verification by default when real-device verification is unavailable. "
+                "CodeMind will try simulator/emulator verification by default when real-device verification is unavailable. "
                 "Screenshot capture is default allowed verification evidence once a runnable target exists. "
                 "Ask_user is still required only for sensitive actions such as uninstall, re-signing/signing-material changes, sudo/tunneld, keychain/certificate/private-key changes, account/payment/production/external-upload actions, unrelated data deletion, or static-only verification when no runnable simulator/emulator path exists."
             )
-    # When the user explicitly chose simulator/emulator, CodeAutonomy respects that
+    # When the user explicitly chose simulator/emulator, CodeMind respects that
     # choice. We still record the signal in mobileVerification for audit/reuse,
     # but never escalate to ask_user even if connected devices are detected.
     # See "follow-user-stated-target" policy in AGENTS.md / docs/workflow.md.
 
     # Default mobile verification policy: iOS/Android real-device verification
     # and screenshot collection are normal verification behaviors, not
-    # permission-worthy actions by themselves. CodeAutonomy should prefer a
+    # permission-worthy actions by themselves. CodeMind should prefer a
     # detected physical device automatically and continue without ask_user.
     # ask_user is reserved for meaningful downgrades (no device available and
     # must fall back to simulator/static-only) or separate sensitive actions
@@ -1473,7 +1473,7 @@ def build_pre_implementation_review_state(user_input: str, questions: list[str] 
         ),
         "questions": deduped_questions,
         # User-stated autonomy intent. `fullAuto` is the ground-truth signal that
-        # the user explicitly asked CodeAutonomy not to interrupt (一站到底/全自动/
+        # the user explicitly asked CodeMind not to interrupt (一站到底/全自动/
         # 不用确认/full-auto/no-confirmation). The completion gate honors this as
         # an authoritative override so even a model-declared sensitive_hard_gate
         # is auto-handled instead of paused -- "拦不拦截以用户诉求为准".
@@ -1624,7 +1624,7 @@ def format_pre_implementation_ask_question(review_questions: list[str], review: 
             ]
         else:
             questions = [
-                "Please confirm whether CodeAutonomy may proceed with the Requirements/TestCases/Plan and this decision bundle; if not, specify the requirement, testcase, event contract, verification target, or authorization boundary to change."
+                "Please confirm whether CodeMind may proceed with the Requirements/TestCases/Plan and this decision bundle; if not, specify the requirement, testcase, event contract, verification target, or authorization boundary to change."
             ]
     reason = str(review.get("reason") or "").strip()
     approval_scope = str(review.get("approvalScope") or "goal/scope/approach/assumptions/verification/evidence").strip()
@@ -1633,8 +1633,8 @@ def format_pre_implementation_ask_question(review_questions: list[str], review: 
 
     if language == "zh":
         lines = [
-            "预实现确认：CodeAutonomy 在修改产品代码前需要一次性确认规划和授权。",
-            "提示：如果你只想让 CodeAutonomy 自主跑完全流程、不再打断你，请回复「全自动」或选择「全自动模式 / Full auto mode」选项。CodeAutonomy 将把你说的范围、目标、授权一次性记录到 runtime-state，并在此后每个 completion gate 自动放行，不再询问。",
+            "预实现确认：CodeMind 在修改产品代码前需要一次性确认规划和授权。",
+            "提示：如果你只想让 CodeMind 自主跑完全流程、不再打断你，请回复「全自动」或选择「全自动模式 / Full auto mode」选项。CodeMind 将把你说的范围、目标、授权一次性记录到 runtime-state，并在此后每个 completion gate 自动放行，不再询问。",
             "请先快速检查下面的 Requirements / TestCases 重点摘要；摘要只是帮助 review，不能替代 decision bundle 本身。完整细节仍以 Requirements.md、TestCases.md、Brainstorm.md、Plan.md 为准。",
         ]
         if requirement_lines:
@@ -1658,8 +1658,8 @@ def format_pre_implementation_ask_question(review_questions: list[str], review: 
         lines.extend(["", "需要确认的问题/决策："])
     else:
         lines = [
-            "Pre-implementation decision bundle: CodeAutonomy needs one consolidated confirmation before changing product code.",
-            "Tip: to let CodeAutonomy run autonomously end-to-end without further interruption, reply \"full auto\" or select the \"全自动模式 / Full auto mode\" option. CodeAutonomy records your stated scope/goals/authorization in runtime-state and auto-proceeds at every subsequent completion gate.",
+            "Pre-implementation decision bundle: CodeMind needs one consolidated confirmation before changing product code.",
+            "Tip: to let CodeMind run autonomously end-to-end without further interruption, reply \"full auto\" or select the \"全自动模式 / Full auto mode\" option. CodeMind records your stated scope/goals/authorization in runtime-state and auto-proceeds at every subsequent completion gate.",
             "First review the Requirements/TestCases highlights below. The highlights are only a review aid; they do not replace the decision bundle itself. Full details remain in Requirements.md, TestCases.md, Brainstorm.md, and Plan.md.",
         ]
         if requirement_lines:
@@ -1863,7 +1863,7 @@ def generate_testcases_md(task_dir: Path, user_input: str) -> str:
 
 ## Design principles
 
-- Key Path: covers the main flow and key CodeAutonomy loop capabilities; failures deserve evidence analysis and repair.
+- Key Path: covers the main flow and key CodeMind loop capabilities; failures deserve evidence analysis and repair.
 - Smoke: non-critical coverage; one successful run and evidence is enough, no excessive polishing.
 - Quality: beyond function itself, explicitly consider performance duration, interaction smoothness, stability, architecture boundaries, and class/function relationship sanity; explain when not applicable.
 - Each TestCase must map to `Requirements.md` requirement units and acceptance criteria, and must produce evidence.
@@ -1881,7 +1881,7 @@ def generate_testcases_md(task_dir: Path, user_input: str) -> str:
 
 ## Testcase list
 
-| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |
+| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |
 |----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|
 {table}
 
@@ -1952,7 +1952,7 @@ def generate_requirements_md(task_dir: Path, user_input: str) -> str:
     requirements_path = task_dir / "Requirements.md"
     requirements_md = (
         "# Requirements\n\n"
-        "<!-- CodeAutonomy canonical contract: Requirements.md is the single source of truth.\n"
+        "<!-- CodeMind canonical contract: Requirements.md is the single source of truth.\n"
         "     New tasks must not generate or depend on Spec.md / Require.md. -->\n\n"
         "## User Request\n\n"
         f"{user_input}\n\n"
@@ -2573,7 +2573,7 @@ def normalize_evaluation(task_dir: Path, raw: Optional[dict], iteration: int) ->
 
     if next_action == "ask_user" and not normalized.get("askUserQuestion"):
         normalized["askUserQuestion"] = {
-            "question": "CodeAutonomy needs a human/system decision before continuing this verification loop. Fix the listed blocker, choose a verification target, or replan?",
+            "question": "CodeMind needs a human/system decision before continuing this verification loop. Fix the listed blocker, choose a verification target, or replan?",
             "reason": summary,
             "options": [
                 {"id": "fix_and_resume", "label": "Fix and resume", "impact": "Resolve the environment/device/tool/permission issue and continue the same task."},
@@ -2706,7 +2706,7 @@ def apply_tc_reflection_budget(task_dir: Path, evaluation: dict, iteration: int)
     the legacy per-TC ``tcReflectionCounts`` is preserved for visibility, while a
     per-(TC, failure-signature) ``tcFailureSignatureCounts`` drives convergence
     so that a *changed* failure signature (real progress) resets the budget for
-    that path. When a signature is repeated up to the budget, CodeAutonomy first runs
+    that path. When a signature is repeated up to the budget, CodeMind first runs
     a bounded number of autonomous ``replan`` rounds and only escalates to a
     human ``ask_user`` after those are exhausted.
     """
@@ -2841,7 +2841,7 @@ def apply_tc_reflection_budget(task_dir: Path, evaluation: dict, iteration: int)
     evaluation["summary"] = "TC reflection budget exhausted: " + str(evaluation.get("summary") or "verification keeps failing")
     evaluation["askUserQuestion"] = {
         "category": "repeated_same_failure",
-        "question": f"CodeAutonomy has retried the same TestCase(s) up to the per-TC reflection limit ({MAX_REFLECTIONS_PER_TC}) and autonomous replan did not resolve it. Continue, replan, or pause?",
+        "question": f"CodeMind has retried the same TestCase(s) up to the per-TC reflection limit ({MAX_REFLECTIONS_PER_TC}) and autonomous replan did not resolve it. Continue, replan, or pause?",
         "reason": evaluation["summary"],
         "options": [
             {"id": "replan_strategy", "label": "Replan strategy", "impact": "Revise TestCases/Plan or choose another verifier before continuing."},
@@ -3216,7 +3216,7 @@ def is_safe_auto_recovery_failure(category: str) -> bool:
     """Return whether an agent/runtime failure can continue without ask_user.
 
     These categories are infrastructure/runtime interruptions. Retrying or
-    resuming the same CodeAutonomy task preserves local artifacts and does not grant
+    resuming the same CodeMind task preserves local artifacts and does not grant
     new data access, change user data, switch accounts, alter device trust, or
     perform destructive actions. Keep this whitelist intentionally narrow.
     """
@@ -3234,7 +3234,7 @@ def write_agent_failure_iteration_records(
 ) -> None:
     """Write minimum reusable records when an agent process fails.
 
-    Agent/runtime failures happen outside Generator/Evaluator control. CodeAutonomy
+    Agent/runtime failures happen outside Generator/Evaluator control. CodeMind
     still needs complete iteration records so resume, record-check, and future
     local reuse do not have to parse partial stdout.
     """
@@ -3334,7 +3334,7 @@ Evaluator evidence. Do not claim finish from this blocked agent invocation.
 
 - Environment: cwd=`{AUTOMIND_WORKSPACE_ROOT}`; runtime=`{AUTOMIND_ROOT}`; agent=`{agent}`
 - Commands: see `logs/iter-{iteration}/commands.md`; retry with `automind resume {task_dir.name} {agent}` after runtime recovery.
-- Result: BLOCKED. The Generator agent did not complete, so CodeAutonomy does not claim a completed implementation for this invocation.
+- Result: BLOCKED. The Generator agent did not complete, so CodeMind does not claim a completed implementation for this invocation.
 - Failure category: `{env.get('failureCategory')}`
 - Evidence:
   - `logs/iter-{iteration}/{phase}.log`
@@ -3342,7 +3342,7 @@ Evaluator evidence. Do not claim finish from this blocked agent invocation.
   - `logs/iter-{iteration}/env.json`
   - `logs/iter-{iteration}/workspace-status.txt`
 - Covered testcases: none proven by this blocked Generator invocation; required `TC-*` rows remain pending until a later successful Generator/Evaluator round.
-- Reusable findings: Long agent runs may need `AUTOMIND_AGENT_TIMEOUT=<seconds>`; external agent/runtime interruption is recoverable through `resume`. If failure category is `agent_context_overflow`, retry with `AUTOMIND_AGENT_SESSION_POLICY=fresh` or after CodeAutonomy clears the stale primary session.
+- Reusable findings: Long agent runs may need `AUTOMIND_AGENT_TIMEOUT=<seconds>`; external agent/runtime interruption is recoverable through `resume`. If failure category is `agent_context_overflow`, retry with `AUTOMIND_AGENT_SESSION_POLICY=fresh` or after CodeMind clears the stale primary session.
 - Avoid repeating: Do not treat this blocked Delivery as proof of product/runtime completion. Inspect working-tree diff if the agent may have made partial edits before timing out.
 """)
 
@@ -3430,7 +3430,7 @@ def extract_android_app_config(task_dir: Path) -> tuple[Optional[dict], list[str
     if {"apk", "package", "activity"}.issubset(app):
         return app, warnings
 
-    # 4) CodeAutonomy demo \u573a\u666f fallback：\u4ec5\u5bf9\u660e\u786e demo/probe/minimal \u8f93\u5165\u4f7f\u7528。
+    # 4) CodeMind demo \u573a\u666f fallback：\u4ec5\u5bf9\u660e\u786e demo/probe/minimal \u8f93\u5165\u4f7f\u7528。
     user_input = state.get("userInput", "")
     demo_keywords = ["demo", "minimal", "probe", "\u6700\u5c0f", "\u6f14\u793a", "\u6837\u4f8b"]
     if any(k in user_input.lower() for k in demo_keywords) or any(k in user_input for k in demo_keywords):
@@ -3496,9 +3496,9 @@ def build_default_android_probe_steps(req_text: str, app: Optional[dict] = None)
             if text not in expected_texts:
                 expected_texts.append(text)
 
-    # CodeAutonomy demo conventions.
-    if "CodeAutonomy Android Harness Demo" in req_text or "probe_button" in req_text or "Probe state" in req_text:
-        for text in ["CodeAutonomy Android Harness Demo", "Probe state: Idle"]:
+    # CodeMind demo conventions.
+    if "CodeMind Android Harness Demo" in req_text or "probe_button" in req_text or "Probe state" in req_text:
+        for text in ["CodeMind Android Harness Demo", "Probe state: Idle"]:
             if text not in expected_texts:
                 expected_texts.append(text)
 
@@ -4079,7 +4079,7 @@ def _task_dir_from_probe_summary_path(summary_path: Path) -> Path:
 
 
 def probe_summary_to_evaluation(summary: dict, iteration: int, summary_path: Path) -> dict:
-    """Convert probe-flow-summary.json into CodeAutonomy evaluation.json."""
+    """Convert probe-flow-summary.json into CodeMind evaluation.json."""
     task_dir = _task_dir_from_probe_summary_path(summary_path)
     result = summary.get("result", "fail")
     failed_checks = []
@@ -4256,11 +4256,11 @@ def probe_summary_to_evaluation(summary: dict, iteration: int, summary_path: Pat
         if overlay_sensitive_candidates:
             evaluation["askUserQuestion"] = {
                 "category": "unauthorized_destructive_or_sensitive",
-                "question": "A UI overlay blocks the Android verification flow, but the available action is sensitive or ambiguous. May CodeAutonomy perform the explicitly listed action for this verification run?",
+                "question": "A UI overlay blocks the Android verification flow, but the available action is sensitive or ambiguous. May CodeMind perform the explicitly listed action for this verification run?",
                 "reason": "Auto-unblock is limited to safe dismiss/close actions. Sensitive candidates were detected in overlay-unblock evidence.",
                 "options": [
-                    {"id": "authorize_once", "label": "Authorize this action once", "impact": "CodeAutonomy may continue the same runtime verification path for this task only."},
-                    {"id": "manual_handle", "label": "I will handle it manually", "impact": "User clears the overlay/device state, then CodeAutonomy retries verification."},
+                    {"id": "authorize_once", "label": "Authorize this action once", "impact": "CodeMind may continue the same runtime verification path for this task only."},
+                    {"id": "manual_handle", "label": "I will handle it manually", "impact": "User clears the overlay/device state, then CodeMind retries verification."},
                     {"id": "replan", "label": "Replan verification", "impact": "Avoid this sensitive overlay or use another verifier path."},
                 ],
                 "recommended": "manual_handle",
@@ -4357,7 +4357,7 @@ def run_script_command_evaluator(task_dir: Path, iteration: int, iter_log_dir: P
     """Run a project-agnostic verification command and emit evaluation.json.
 
     This is the minimal non-mobile harness path: any stack can participate in
-    CodeAutonomy if it can expose a command whose exit code represents pass/fail.
+    CodeMind if it can expose a command whose exit code represents pass/fail.
     """
     command, warnings = extract_script_command(task_dir)
     ensure_dir(iter_log_dir)
@@ -4711,7 +4711,7 @@ def run_android_probe_flow_evaluator(task_dir: Path, iteration: int, iter_log_di
         evaluation["attempts"] = attempts
         if next_action == "ask_user":
             evaluation["askUserQuestion"] = {
-                "question": "Android probe-flow could not run because required device/tool readiness is missing. What should CodeAutonomy do next?",
+                "question": "Android probe-flow could not run because required device/tool readiness is missing. What should CodeMind do next?",
                 "reason": output[-1000:] or f"runner exited with code {code}",
                 "options": [
                     {"id": "fix_and_retry", "label": "Fix readiness and retry", "impact": "Connect/authorize device or repair local helper tools, then continue real verification."},
@@ -4906,7 +4906,7 @@ def should_try_platform_self_repair(task_dir: Path, evaluation: dict) -> bool:
 def can_run_evaluator_without_generator(task_dir: Path) -> bool:
     """Return True when the task already has a concrete evaluator command.
 
-    This keeps CodeAutonomy useful for existing projects: if a project already
+    This keeps CodeMind useful for existing projects: if a project already
     exposes `npm test`, `pytest`, `gradle test`, etc., we can run the harness
     and produce evaluation without requiring a Coding Agent Generator first.
     """
@@ -5184,7 +5184,7 @@ def run_pre_build_workflow_gate(
     }
     if next_action == "ask_user":
         evaluation["askUserQuestion"] = {
-            "question": "workflow-check failed before implementation. Please review/correct Brainstorm.md, Requirements.md, TestCases.md, Plan.md, and the pre-implementation review decision before CodeAutonomy edits code.",
+            "question": "workflow-check failed before implementation. Please review/correct Brainstorm.md, Requirements.md, TestCases.md, Plan.md, and the pre-implementation review decision before CodeMind edits code.",
             "options": [],
             "source": "pre_build_workflow_gate",
             "issues": workflow_report.get("issues", []),
@@ -5240,7 +5240,7 @@ def write_planner_fallback_record(task_dir: Path, agent: str, reason: str, outpu
     (planner_dir / "planner.log").write_text(output or reason)
     (planner_dir / "commands.md").write_text(
         "# Commands\n\n"
-        "No AI Phase 2 Refiner command completed successfully. CodeAutonomy used the deterministic scaffold generated by orchestrator/main.py.\n"
+        "No AI Phase 2 Refiner command completed successfully. CodeMind used the deterministic scaffold generated by orchestrator/main.py.\n"
     )
     (planner_dir / "env.json").write_text(json.dumps({
         "timestamp": datetime.now().isoformat(timespec="seconds"),
@@ -5254,7 +5254,7 @@ def write_planner_fallback_record(task_dir: Path, agent: str, reason: str, outpu
         "- Commands: see `logs/planner/commands.md`\n"
         "- Result: BLOCKED for AI planning; deterministic scaffold kept the task usable.\n"
         f"- Evidence: `logs/planner/planner.log`, `logs/planner/env.json`\n"
-        "- Reusable findings: If the agent CLI is unavailable, CodeAutonomy can still create a conservative scaffold and let skill-mode agents refine it manually.\n"
+        "- Reusable findings: If the agent CLI is unavailable, CodeMind can still create a conservative scaffold and let skill-mode agents refine it manually.\n"
         "- Avoid repeating: Do not treat scaffold TestCases as final when richer model planning is available.\n"
     )
 
@@ -5305,7 +5305,7 @@ def build_replan_context(task_dir: Path) -> str:
         "",
         "## Replan context: do not repeat what already failed",
         "",
-        "CodeAutonomy is replanning because earlier attempts kept failing the same way. "
+        "CodeMind is replanning because earlier attempts kept failing the same way. "
         "Choose a materially different path; do not re-propose a path matching a "
         "repeated failure signature or an already ruled-out hypothesis below.",
     ]
@@ -5545,7 +5545,7 @@ def run_harness_loop(
 
     # Resume optimization: if the task is already waiting after an Android
     # probe-flow failure, first try to repair the verification flow itself.
-    # This preserves CodeAutonomy's core goal: don't ask the Coding Agent to change
+    # This preserves CodeMind's core goal: don't ask the Coding Agent to change
     # product code until verifier/environment issues have been ruled out.
     if state.get("status") == "retry_pending" and existing_evaluation and should_try_platform_self_repair(task_dir, existing_evaluation):
         log("Resume preflight: try platform self-repair before Generator retry")
@@ -5682,7 +5682,7 @@ def run_harness_loop(
                 evaluation = {
                     "iteration": max(iteration, 1),
                     "result": "fail",
-                    "summary": "Pre-implementation review requested a self-serviceable verification unblock; CodeAutonomy must continue autonomously.",
+                    "summary": "Pre-implementation review requested a self-serviceable verification unblock; CodeMind must continue autonomously.",
                     "failedChecks": [{
                         "name": "pre_implementation_review_soft_pause",
                         "reason": policy_issues[0],
@@ -5902,7 +5902,7 @@ def run_harness_loop(
                     }
                 elif next_action == "ask_user":
                     evaluation["askUserQuestion"] = {
-                        "question": "Generator agent/runtime did not complete. Should CodeAutonomy resume after the runtime is available or adjust the agent/timeout?",
+                        "question": "Generator agent/runtime did not complete. Should CodeMind resume after the runtime is available or adjust the agent/timeout?",
                         "reason": evaluation["summary"],
                         "options": [
                             {"id": "resume_after_recovery", "label": "Resume after recovery", "impact": "Keep task artifacts and rerun the Generator phase after CLI/auth/network/runtime is fixed."},
@@ -6120,7 +6120,7 @@ def run_harness_loop(
                 }
             elif next_action == "ask_user":
                 evaluation["askUserQuestion"] = {
-                    "question": "Evaluator agent/runtime did not complete. Should CodeAutonomy resume verification after the runtime is available or switch to a deterministic verifier?",
+                    "question": "Evaluator agent/runtime did not complete. Should CodeMind resume verification after the runtime is available or switch to a deterministic verifier?",
                     "reason": evaluation["summary"],
                     "options": [
                         {"id": "resume_after_recovery", "label": "Resume evaluator", "impact": "Keep artifacts and rerun the isolated Evaluator after CLI/auth/network/runtime is fixed."},
@@ -6398,7 +6398,7 @@ def run_harness_loop(
         nextAction="ask_user",
         lastResult="max_iterations_reached",
         askUserQuestion={
-            "question": f"CodeAutonomy reached the maximum iteration limit ({loop_limit}) without proving completion. What should happen next?",
+            "question": f"CodeMind reached the maximum iteration limit ({loop_limit}) without proving completion. What should happen next?",
             "reason": "The loop stopped to avoid unbounded repeated attempts.",
             "options": [
                 {
@@ -6455,10 +6455,10 @@ def cmd_list():
 
 
 def scaffold_task_artifacts(user_input: str) -> tuple[str, Path]:
-    """Create a task and deterministic CodeAutonomy artifacts without launching an agent loop.
+    """Create a task and deterministic CodeMind artifacts without launching an agent loop.
 
     This is used by current-session integrations such as slash commands: the
-    host coding agent keeps using its current model/session, while CodeAutonomy CLI
+    host coding agent keeps using its current model/session, while CodeMind CLI
     only prepares the artifact container and later runs deterministic gates.
     """
     task_code, task_dir = create_task(user_input)
@@ -6487,7 +6487,7 @@ def scaffold_task_artifacts(user_input: str) -> tuple[str, Path]:
     # Do not ask the user immediately after deterministic scaffold. The scaffold
     # may record hard/preflight questions (device/signing/safety), but Phase 2
     # Refiner must first inspect the requirement and project context, produce
-    # soft implementation-quality questions, and then CodeAutonomy asks one bundled
+    # soft implementation-quality questions, and then CodeMind asks one bundled
     # pre-implementation question if still needed. This keeps TUI and skill mode
     # aligned: scaffold -> model/current-agent refinement -> one-shot ask_user.
     update_runtime_state(
@@ -6505,13 +6505,14 @@ def scaffold_task_artifacts(user_input: str) -> tuple[str, Path]:
     return task_code, task_dir
 
 
-def cmd_scaffold(user_input: str):
+def cmd_scaffold(user_input: str, *, set_current: bool = True):
     """Create task artifacts for current-session slash-command/skill mode."""
     task_code, task_dir = scaffold_task_artifacts(user_input)
     # Skill-mode automation: persist active task code so Hook scripts and
     # subsequent CLI calls can pick it up via three-level fallback.
-    write_current_task(task_code)
-    success("CodeAutonomy task scaffolded for current-session mode.")
+    if set_current:
+        write_current_task(task_code)
+    success("CodeMind task scaffolded for current-session mode.")
     print(f"TASK_CODE={task_code}")
     print(f"TASK_DIR={task_dir}")
     state = read_runtime_state(task_dir) or {}
@@ -6744,19 +6745,19 @@ def cmd_dependency_setup_smoke():
 def cmd_ui_action_capability_smoke():
     """Verify docs/prompts/export templates advertise real App UI action capability."""
     required = {
-        "AGENTS.md": ["CodeAutonomy can operate real apps", "android-probe-flow", "ios-xcuitest"],
+        "AGENTS.md": ["CodeMind can operate real apps", "android-probe-flow", "ios-xcuitest"],
         "docs/workflow.md": ["UI interaction as an available verification capability", "probe-flow.ios.json", "Do not random-click"],
-        "docs/phase2-requirement.md": ["do not say CodeAutonomy cannot operate the app", "android-probe-flow", "ios-probe-flow-materialize"],
+        "docs/phase2-requirement.md": ["do not say CodeMind cannot operate the app", "android-probe-flow", "ios-probe-flow-materialize"],
         "docs/references/test-design-guide.md": ["Mobile App/UI automation capability is first-class", "tap_if_present", "Use coordinate taps only as a documented"],
         "docs/references/probe-flow-generation.md": ["UI action capability contract", "Android executes task-local `probe-flow.android.json`", "iOS executes through XCUITest"],
         "docs/references/verification-flow.md": ["External sink", "probe-flow", "tap_if_present", "Direct-route page load", "low-fidelity last resort"],
-        "docs/references/verification-flow-ios.md": ["CodeAutonomy can operate iOS apps through XCUITest/probe-flow", "ios-xcuitest", "tap_if_present"],
+        "docs/references/verification-flow-ios.md": ["CodeMind can operate iOS apps through XCUITest/probe-flow", "ios-xcuitest", "tap_if_present"],
         "docs/references/verification-flow-android.md": ["Android probe-flow can install/launch", "uiautomator", "tap_if_present"],
-        "templates/phase2_planner_prompt.md": ["Do not state that CodeAutonomy cannot operate the app", "Mobile App/UI action policy", "Every action must have a post-action assertion"],
-        "templates/evaluator_prompt.md": ["Treat in-app UI interaction as an available CodeAutonomy verification capability", "Do not stop at", "android-probe-flow"],
-        "templates/generator_prompt.md": ["implementation requires app interaction", "probe-flow.ios.json", "Do not claim CodeAutonomy is unable to click"],
-        "scripts/export_skill.py": ["CodeAutonomy can operate real apps", "android-preflight", "ios-xcuitest"],
-        "scripts/export_command.py": ["CodeAutonomy verification is action-capable", "Android probe-flow", "iOS XCUITest"],
+        "templates/phase2_planner_prompt.md": ["Do not state that CodeMind cannot operate the app", "Mobile App/UI action policy", "Every action must have a post-action assertion"],
+        "templates/evaluator_prompt.md": ["Treat in-app UI interaction as an available CodeMind verification capability", "Do not stop at", "android-probe-flow"],
+        "templates/generator_prompt.md": ["implementation requires app interaction", "probe-flow.ios.json", "Do not claim CodeMind is unable to click"],
+        "scripts/export_skill.py": ["CodeMind can operate real apps", "android-preflight", "ios-xcuitest"],
+        "scripts/export_command.py": ["CodeMind verification is action-capable", "Android probe-flow", "iOS XCUITest"],
     }
     for rel, needles in required.items():
         content = (AUTOMIND_ROOT / rel).read_text(errors="ignore")
@@ -6787,7 +6788,7 @@ def cmd_delivery_gate_smoke():
         ".user_input.txt": "delivery gate smoke",
         "Brainstorm.md": "# Brainstorm\n\n## Assumptions / Questions\n- Assumption: fixture only.\n\n## Pre-implementation user review decision\n- decision: auto_proceed\n- reason: fixture only.\n",
         "Requirements.md": "# Requirements\n\n## Requirements with inline Acceptance Criteria\n\n### R01 — Delivery handoff\n- **AC-001**: Missing Delivery.md after Generator output blocks verification handoff.\n  - Verification method: TC-001\n",
-        "TestCases.md": "# Test Cases\n\nQuality coverage: not applicable for this fixture.\n\n| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n|----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|\n| TC-001 | R01 / AC-001 | Functional | runtime | Fixture generator output exists; logs/iter-1/generator.log is present; Delivery.md is intentionally missing. | automind workflow-check delivery_gate_smoke and automind context-pack delivery_gate_smoke 1 | Run workflow-check after Generator output; run context-pack; assert both fail before model Evaluator. | workflow-check issue and logs/iter-1/evaluator-context.json required-file issue. | - | yes |\n",
+        "TestCases.md": "# Test Cases\n\nQuality coverage: not applicable for this fixture.\n\n| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n|----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|\n| TC-001 | R01 / AC-001 | Functional | runtime | Fixture generator output exists; logs/iter-1/generator.log is present; Delivery.md is intentionally missing. | automind workflow-check delivery_gate_smoke and automind context-pack delivery_gate_smoke 1 | Run workflow-check after Generator output; run context-pack; assert both fail before model Evaluator. | workflow-check issue and logs/iter-1/evaluator-context.json required-file issue. | - | yes |\n",
         "Plan.md": "# Plan\n\n## First functional batch\n- TC-001\n\n## Verification command\n- `automind workflow-check delivery_gate_smoke`\n- `automind context-pack delivery_gate_smoke 1`\n\n## Implementation Checklist\n| ID | Source | Status | Owner | Evidence | Notes |\n|----|--------|--------|-------|----------|-------|\n| T01 | R01 / AC-001 / TC-001 | done | generator | logs/iter-1/generator.log | Generator ran but omitted Delivery.md. |\n\n## Verification Checklist\n| ID | Required | Status | Owner | Evidence | Notes |\n|----|----------|--------|-------|----------|-------|\n| TC-001 | yes | todo | evaluator | logs/iter-1/evaluator-context.json | Gates should fail before model Evaluator. |\n",
         "Validation.md": "# Validation\n",
         "runtime-state.json": json.dumps({
@@ -7056,7 +7057,7 @@ def normalize_unanswered_pending_question_state(task_dir: Path) -> None:
 def render_pending_question_guidance(task_code: str, task_dir: Path, agent: str = "auto") -> str:
     """Render actionable CLI guidance for a pending ask_user gate."""
     pending = normalize_pending_question(task_dir) or {}
-    question = str(pending.get("question") or "CodeAutonomy needs user input before continuing.")
+    question = str(pending.get("question") or "CodeMind needs user input before continuing.")
     options = pending.get("options") if isinstance(pending.get("options"), list) else []
     lines = [
         "Task is waiting for human input.",
@@ -7094,7 +7095,7 @@ def recover_task_bound_agent(state: dict) -> str | None:
     """Recover the coding agent a task was originally created/run with.
 
     A task records its bound agent in several places. When the user resumes
-    without naming an agent, CodeAutonomy must keep using that same agent instead of
+    without naming an agent, CodeMind must keep using that same agent instead of
     re-running codex-first `auto` discovery, which would silently switch e.g. a
     claude task onto codex. Precedence: live primary session -> execution policy
     -> planner. Returns a supported agent name, or None when nothing reusable is
@@ -7339,7 +7340,7 @@ def _is_git_free_runtime_install(runtime_root: Path) -> bool:
         return any(
             text in marker
             for text in (
-                "CodeAutonomy runtime install is intentionally not a Git checkout",
+                "CodeMind runtime install is intentionally not a Git checkout",
                 "AutoMind runtime install is intentionally not a Git checkout",
             )
         )
@@ -7348,20 +7349,20 @@ def _is_git_free_runtime_install(runtime_root: Path) -> bool:
 
 
 def cmd_update(argv_tail: list[str] | None = None) -> None:
-    """Update the installed CodeAutonomy runtime and agent integrations."""
+    """Update the installed CodeMind runtime and agent integrations."""
     argv_tail = argv_tail or []
     if any(arg in {"-h", "--help"} for arg in argv_tail):
         print("""
-CodeAutonomy update
+CodeMind update
 
 Usage:
-  automind update
+  codemind update
 
 What it does:
   - Prefer the bundled install-curl.sh bootstrap.
   - Update the installer git cache from AUTOMIND_REPO/AUTOMIND_BRANCH.
   - Sync the git-free runtime into AUTOMIND_HOME (default: ~/.automind/automind).
-  - Refresh the automind CLI wrapper plus agent skill/command integrations.
+  - Refresh the codemind CLI, legacy aliases, and agent integrations.
 
 Useful environment overrides:
   AUTOMIND_BRANCH=<ref>           Update to a branch/tag/ref. Default: main.
@@ -7390,33 +7391,33 @@ Useful environment overrides:
         env.setdefault("AUTOMIND_HOME", str(AUTOMIND_ROOT))
 
     if bootstrap.exists():
-        log(f"Updating CodeAutonomy with bootstrap: {bootstrap}")
+        log(f"Updating CodeMind with bootstrap: {bootstrap}")
         subprocess.run(["bash", str(bootstrap)], check=True, env=env)
-        success("CodeAutonomy update complete")
+        success("CodeMind update complete")
         return
 
     if installer.exists():
         warn("install-curl.sh not found; refreshing from local install.sh without fetching remote updates")
         subprocess.run(["bash", str(installer)], check=True, env=env, cwd=str(AUTOMIND_ROOT))
-        success("CodeAutonomy local refresh complete")
+        success("CodeMind local refresh complete")
         return
 
-    error(f"No CodeAutonomy installer found under runtime root: {AUTOMIND_ROOT}")
+    error(f"No CodeMind installer found under runtime root: {AUTOMIND_ROOT}")
     sys.exit(1)
 
 
 def cmd_help():
     """Show help."""
     print("""
-CodeAutonomy - evidence-driven harness loop for coding agents
+CodeMind - evidence-driven harness loop for coding agents
 
 Usage: python orchestrator.py <command> [args]
 
 Commands:
   list                      List tasks
-  shell                         Open CodeAutonomy interactive command shell
-  update                    Update CodeAutonomy runtime, CLI wrapper, skill, and slash command
-  ask <requirement> [agent] [--tui|--detached]  Create a task and start a CodeAutonomy-owned CLI/TUI harness loop
+  shell                         Open CodeMind interactive command shell
+  update                    Update CodeMind runtime, CLI wrapper, skill, and slash command
+  ask <requirement> [agent] [--tui|--detached]  Create a task and start a CodeMind-owned CLI/TUI harness loop
                           agent options: auto (default) / codex / claude / trae / trae-cn
   scaffold <requirement>     Create task artifacts for current-session skill/slash-command mode
   context-pack <task-code> [iteration] Create Evaluator context pack without launching an agent
@@ -7424,6 +7425,8 @@ Commands:
   trace <task-code> [--json|--write] Show or write formal trace spans
   process-check <task-code> [--json|--soft] Evaluate whether the harness process followed required gates
   message <task-code> --text TEXT [--resume agent] Record natural-language user message for current task/session
+  converse <task-code> --text PROMPT --user-text TEXT [--agent agent] Run a persistent read-only conversation turn
+  observe <task-code> --json JSON Record a validated external audit/metrics observation batch
   plan <task-code> [agent]  Run AI Phase 2 Refiner without implementation
   summary <task-code> [--ai agent] Generate deterministic summary, optionally AI-refined
   summary-refine <task-code> [agent] Run AI Summary Refiner and regenerate summary
@@ -7446,7 +7449,7 @@ Commands:
   ios-command-probe <workspace> [task-code] Read-only probe for iOS command surface
   android-probe-flow <task-code> [iteration] [--dry-run] Run Android dynamic probe-flow evaluator
   script-command <task-code> [iteration] Run generic script-command evaluator
-  version                   Show CodeAutonomy runtime version
+  version                   Show CodeMind runtime version
   help                      Show help
 
 Examples:
@@ -7542,7 +7545,7 @@ def main():
             print("Example: python orchestrator.py scaffold \"Build a calculator\"")
             sys.exit(1)
         user_input = sys.argv[2]
-        cmd_scaffold(user_input)
+        cmd_scaffold(user_input, set_current="--no-current" not in sys.argv[3:])
 
     elif cmd == "context-pack":
         if len(sys.argv) < 3:
@@ -7653,12 +7656,31 @@ def main():
             error("Usage: chat-create <task-code> [--status chat] [--json]")
             sys.exit(1)
         cmd_chat_create(argv_tail[0], argv_tail[1:])
+    elif cmd == "classify":
+        argv_tail = sys.argv[2:]
+        if len(argv_tail) < 1:
+            error("Usage: classify <task-code> --text TEXT [--agent AGENT]")
+            sys.exit(1)
+        cmd_classify(argv_tail[0], argv_tail[1:])
+
+    elif cmd == "converse":
+        argv_tail = sys.argv[2:]
+        if not argv_tail:
+            error("Usage: converse <task-code> --text PROMPT --user-text TEXT [--agent AGENT]")
+            sys.exit(1)
+        cmd_converse(argv_tail[0], argv_tail[1:])
     elif cmd == "event":
         argv_tail = sys.argv[2:]
         if len(argv_tail) < 1:
             error("Usage: event <task-code> [--type TYPE] [--message TEXT] [--phase PHASE] [--replace-key KEY]")
             sys.exit(1)
         cmd_event(argv_tail[0], argv_tail[1:])
+    elif cmd == "observe":
+        argv_tail = sys.argv[2:]
+        if len(argv_tail) < 1:
+            error("Usage: observe <chat-or-task-code> --json JSON")
+            sys.exit(1)
+        cmd_observe(argv_tail[0], argv_tail[1:])
     elif cmd == "trace":
         argv_tail = sys.argv[2:]
         if len(argv_tail) < 1:

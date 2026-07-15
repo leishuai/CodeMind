@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "schemas/automind-stage-state.schema.json",
-  "title": "CodeAutonomy Stage State",
+  "title": "CodeMind Stage State",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "stage", "version", "status", "currentPhase", "currentAction", "owner", "nextAction", "nextPhase", "lastEventId", "updatedAt"],

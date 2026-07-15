@@ -155,16 +155,16 @@ def build_next_instruction(task_code: str, task_dir: Path) -> dict[str, Any]:
         owner = str(state.get("currentOwner") or "")
         if pending_answer_for_question:
             instruction = (
-                "The pending CodeAutonomy question already has a recorded answer awaiting delivery/application. "
+                "The pending CodeMind question already has a recorded answer awaiting delivery/application. "
                 "Do not ask the user again; wait for the current agent turn to apply the answer and update artifacts."
             )
         elif owner and owner != "human":
             instruction = (
-                f"A pending CodeAutonomy question exists, but the current owner is still {owner}. "
+                f"A pending CodeMind question exists, but the current owner is still {owner}. "
                 "Wait for the current agent turn to finish; then ask the user and record the answer with automind answer before continuing."
             )
         else:
-            instruction = "Ask the user the pending CodeAutonomy question, then record the answer with automind answer before continuing."
+            instruction = "Ask the user the pending CodeMind question, then record the answer with automind answer before continuing."
     elif not workflow_ok:
         phase = effective_next.get("phase") or "planning"
         blocker_count = effective_next.get("blockerCount", 0)
@@ -188,12 +188,12 @@ def build_next_instruction(task_code: str, task_dir: Path) -> dict[str, Any]:
         phase = effective_next.get("phase") or next_action
         if phase == "completion":
             instruction = (
-                "Continue CodeAutonomy workflow. Effective next gate: completion-check. "
+                "Continue CodeMind workflow. Effective next gate: completion-check. "
                 "Continue Generator/Evaluator work as needed, and only mark finish after completion-check passes."
             )
         else:
             instruction = (
-                f"Continue CodeAutonomy workflow. Effective next phase: {phase}. "
+                f"Continue CodeMind workflow. Effective next phase: {phase}. "
                 "Follow Plan.md/TestCases.md and finish only after completion-check passes."
             )
 

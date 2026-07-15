@@ -22,7 +22,7 @@ def _run_android_probe_flow_evaluator(*args, **kwargs):
 
 
 def cmd_ios_project_probe(project: str, task_code: str = "ios_project_probe", extra_args: Optional[list[str]] = None):
-    """Run read-only iOS project probe and write standard CodeAutonomy task artifacts."""
+    """Run read-only iOS project probe and write standard CodeMind task artifacts."""
     extra_args = extra_args or []
     task_dir = get_task_dir(task_code)
     iter_dir = task_dir / "logs" / "iter-1"
@@ -30,7 +30,7 @@ def cmd_ios_project_probe(project: str, task_code: str = "ios_project_probe", ex
         task_dir,
         "iOS Project Probe",
         f"Read-only probe for iOS project: `{project}`.",
-        "Run read-only iOS project discovery and classify readiness for CodeAutonomy attachment.",
+        "Run read-only iOS project discovery and classify readiness for CodeMind attachment.",
     )
     out = iter_dir / "ios-project-probe.json"
     script = AUTOMIND_ROOT / "scripts" / "ios_project_probe.py"
@@ -97,7 +97,7 @@ def cmd_ios_project_probe(project: str, task_code: str = "ios_project_probe", ex
     print(json.dumps({"task": task_code, "result": result, "nextAction": evaluation["nextAction"], "probe": str(out), "issues": issues}, ensure_ascii=False, indent=2))
 
 def cmd_ios_command_probe(workspace: str, task_code: str = "ios_command_probe", extra_args: Optional[list[str]] = None):
-    """Run read-only iOS command-surface probe and write standard CodeAutonomy task artifacts."""
+    """Run read-only iOS command-surface probe and write standard CodeMind task artifacts."""
     extra_args = extra_args or []
     task_dir = get_task_dir(task_code)
     iter_dir = task_dir / "logs" / "iter-1"
@@ -172,7 +172,7 @@ def cmd_ios_command_probe(workspace: str, task_code: str = "ios_command_probe", 
     print(json.dumps({"task": task_code, "result": result, "nextAction": evaluation["nextAction"], "probe": str(out), "issues": issues}, ensure_ascii=False, indent=2))
 
 def cmd_android_project_probe(project: str, task_code: str = "android_project_probe"):
-    """Run a read-only Android project preflight probe and store the result as a CodeAutonomy task artifact."""
+    """Run a read-only Android project preflight probe and store the result as a CodeMind task artifact."""
     task_dir = TASKS_DIR / task_code
     ensure_dir(task_dir)
     out = task_dir / "android-project-probe.json"
@@ -265,7 +265,7 @@ def cmd_android_project_probe(project: str, task_code: str = "android_project_pr
     }, ensure_ascii=False, indent=2))
 
 def cmd_android_probe_flow(task_code: str, iteration: Optional[int] = None, dry_run: bool = False, retries: int = 0):
-    """Run Android dynamic probe-flow evaluator for an existing CodeAutonomy task."""
+    """Run Android dynamic probe-flow evaluator for an existing CodeMind task."""
     task_dir = TASKS_DIR / task_code
     if not task_dir.exists():
         error(f"Task does not exist: {task_code}")

@@ -1,4 +1,4 @@
-# CodeAutonomy AI Visual Review Prompt
+# CodeMind AI Visual Review Prompt
 
 Use this prompt only after the Evaluator has captured real visual evidence such
 as screenshots, UI hierarchy/accessibility tree, browser trace, `.xcresult`, or
@@ -20,7 +20,7 @@ evidence.
 
 ## Role
 
-You are an AI Visual Reviewer for CodeAutonomy.
+You are an AI Visual Reviewer for CodeMind.
 
 Your job is to inspect provided UI screenshots/images and compare them with the
 task's explicit requirements, acceptance criteria, and TestCases. Use image

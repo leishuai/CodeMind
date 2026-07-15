@@ -21,7 +21,7 @@ public class MainActivity extends Activity {
         root.setPadding(48, 96, 48, 48);
 
         TextView title = new TextView(this);
-        title.setText("CodeAutonomy Android Harness Demo");
+        title.setText("CodeMind Android Harness Demo");
         title.setTextSize(24);
         title.setGravity(Gravity.CENTER);
         title.setContentDescription("demo_title");

@@ -4,7 +4,7 @@ import SwiftUI
 struct AutoMindExternalUIRunnerApp: App {
     var body: some Scene {
         WindowGroup {
-            Text("CodeAutonomy External UI Runner")
+            Text("CodeMind External UI Runner")
                 .accessibilityIdentifier("runner_title")
         }
     }

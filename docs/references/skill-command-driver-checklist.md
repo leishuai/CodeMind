@@ -15,7 +15,7 @@ or reconcile it.
 
 # Skill / Command Phase Handoff Checklist
 
-Use this checklist when CodeAutonomy is running as a skill or slash command, where the host coding agent drives the loop instead of the CLI/TUI orchestrator.
+Use this checklist when CodeMind is running as a skill or slash command, where the host coding agent drives the loop instead of the CLI/TUI orchestrator.
 
 ## Preferred path: script-gated handoff
 
@@ -97,7 +97,7 @@ real device):
 
 Rules of thumb:
 
-- `command` is optional. Use it only when the item needs a CodeAutonomy CLI helper/gate such as `workflow-check`, `phase-gate`, `context-pack`, `completion-check`, `summary`, or `report`.
+- `command` is optional. Use it only when the item needs a CodeMind CLI helper/gate such as `workflow-check`, `phase-gate`, `context-pack`, `completion-check`, `summary`, or `report`.
 - For normal coding-agent work — reading files, editing code, refining Markdown, writing Delivery/Validation, or reasoning about implementation — rely on the host agent's native abilities and TODO/checkbox tool.
 - `done` is a best-effort projection from artifacts/gates; hard authority remains `workflow-check`, `phase-gate`, `evaluation.json`, and `completion-check`.
 

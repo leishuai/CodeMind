@@ -14,8 +14,8 @@ ACTIVITY=".MainActivity"
 export PATH="$HOME/Library/Android/sdk/platform-tools:$PATH"
 
 if [[ ! -x "$PY" ]]; then
-  echo "[CodeAutonomy] Android tools python not found: $PY" >&2
-  echo "[CodeAutonomy] Expected project venv: $WORKSPACE_ROOT/.venv-android-tools/" >&2
+  echo "[CodeMind] Android tools python not found: $PY" >&2
+  echo "[CodeMind] Expected project venv: $WORKSPACE_ROOT/.venv-android-tools/" >&2
   exit 2
 fi
 
@@ -23,7 +23,7 @@ fi
 import importlib.util, sys
 missing = [m for m in ["adbutils", "uiautomator2"] if importlib.util.find_spec(m) is None]
 if missing:
-    print("[CodeAutonomy] Missing Android python modules: " + ", ".join(missing), file=sys.stderr)
+    print("[CodeMind] Missing Android python modules: " + ", ".join(missing), file=sys.stderr)
     sys.exit(2)
 PY
 
@@ -60,7 +60,7 @@ cat > "$TASK_DIR/Requirements.md" <<'MD'
 ### R01 — Android probe-flow self-repair
 - **AC-001**: Launch demo APK package `ai.openclaw.automind.demo` activity `.MainActivity`.
   - Verification method: android-probe-flow / TC-F01
-- **AC-002**: Assert `CodeAutonomy Android Harness Demo` and `Probe state: Idle`, tap `probe_button` / `Run Probe`, then assert `Probe state: Completed`.
+- **AC-002**: Assert `CodeMind Android Harness Demo` and `Probe state: Idle`, tap `probe_button` / `Run Probe`, then assert `Probe state: Completed`.
   - Verification method: android-probe-flow / TC-F01
 MD
 
@@ -76,7 +76,7 @@ cat > "$FLOW" <<JSON
   "steps": [
     {"type": "install", "name": "install apk"},
     {"type": "launch", "name": "launch app"},
-    {"type": "assert_text", "name": "assert title", "text": "CodeAutonomy Android Harness Demo"},
+    {"type": "assert_text", "name": "assert title", "text": "CodeMind Android Harness Demo"},
     {"type": "assert_text", "name": "assert idle", "text": "Probe state: Idle"},
     {"type": "tap", "name": "tap probe button", "selector": {"desc": "probe_button", "text": "Run Probe"}},
     {"type": "assert_text", "name": "assert completed", "text": "Probe state: Completed"},
@@ -103,7 +103,7 @@ set +e
 ITER1_CODE=$?
 set -e
 if [[ "$ITER1_CODE" -eq 0 ]]; then
-  echo "[CodeAutonomy] Expected iter-1 dynamic probe-flow to fail, but it passed" >&2
+  echo "[CodeMind] Expected iter-1 dynamic probe-flow to fail, but it passed" >&2
   exit 1
 fi
 

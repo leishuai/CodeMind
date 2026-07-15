@@ -1,12 +1,12 @@
 # Offline Script Demo
 
-This is the easiest CodeAutonomy example because it requires no Android or iOS device.
+This is the easiest CodeMind example because it requires no Android or iOS device.
 
 This folder is intentionally small: it does not store a pre-generated task. The
 smoke command below creates fresh runtime artifacts in `.automind/tasks/` so the
 example stays public-safe and does not ship local evidence logs.
 
-Run it from the CodeAutonomy checkout:
+Run it from the CodeMind checkout:
 
 ```bash
 ./automind.sh smoke offline-demo
@@ -18,7 +18,7 @@ The smoke writes a fresh local task under:
 .automind/tasks/offline_demo_smoke/
 ```
 
-That task demonstrates the basic CodeAutonomy loop:
+That task demonstrates the basic CodeMind loop:
 
 ```text
 script command -> command/log evidence -> evaluation.json -> summary -> record-check

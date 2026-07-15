@@ -1,4 +1,4 @@
-"""Record completeness checks for CodeAutonomy task artifacts.
+"""Record completeness checks for CodeMind task artifacts.
 
 Record-check is the final audit that task artifacts are reusable by future
 tasks. It is distinct from workflow-check and completion-check.

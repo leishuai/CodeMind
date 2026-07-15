@@ -22,7 +22,7 @@ def _write_common_task(task_dir: Path) -> None:
     )
     (task_dir / "TestCases.md").write_text(
         "# TestCases\n\n"
-        "| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n"
+        "| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n"
         "|----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|\n"
         "| TC-F01 | R01 / AC-001 | Functional | runtime | preflight ready | command: pytest | run command | logs/iter-1/evidence.txt exists and pass | none | yes |\n"
     )

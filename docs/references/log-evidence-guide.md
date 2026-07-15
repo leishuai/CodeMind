@@ -1,6 +1,6 @@
 # Log Evidence Guide
 
-CodeAutonomy keeps raw logs as evidence, but agents should not read large logs by default. The goal is faster, more reliable loop execution without losing auditability.
+CodeMind keeps raw logs as evidence, but agents should not read large logs by default. The goal is faster, more reliable loop execution without losing auditability.
 
 ## Reading order
 

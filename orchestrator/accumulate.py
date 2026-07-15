@@ -1,13 +1,13 @@
-"""Machine-global lesson accumulation for CodeAutonomy.
+"""Machine-global lesson accumulation for CodeMind.
 
 When a task finishes, ``generate_summary`` already writes project-local memory
 under the workspace ``.automind/summary/``. This module adds the second tier the
-user asked for: durable, cross-task lessons that live in the CodeAutonomy runtime
+user asked for: durable, cross-task lessons that live in the CodeMind runtime
 install under ``summaries/accumulated/``.
 
 First-principles design:
 
-- Users cannot push to the CodeAutonomy repo, so ``summaries/preloaded/`` (the
+- Users cannot push to the CodeMind repo, so ``summaries/preloaded/`` (the
   maintainer-distributed pack) is read-only for them. The only place a user can
   durably accumulate is ``summaries/accumulated/`` (install-exclude protected).
 - Therefore there are exactly two auto-sink destinations, split by a single
@@ -211,7 +211,7 @@ def _ensure_body_file(path: Path, *, scope: str, title: str, note: str,
     )
     body = (
         f"# {title}\n\n{note}\n\n"
-        "Entries below are auto-accumulated by CodeAutonomy task summaries. "
+        "Entries below are auto-accumulated by CodeMind task summaries. "
         "Treat them as local reuse hints; current Requirements/TestCases and "
         "fresh evidence always win.\n"
     )

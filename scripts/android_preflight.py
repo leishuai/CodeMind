@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Android device readiness preflight for CodeAutonomy."""
+"""Android device readiness preflight for CodeMind."""
 
 from __future__ import annotations
 
@@ -110,13 +110,13 @@ def diagnose_device_interactivity(power_text: str, window_policy_text: str, focu
         blockers.append({
             "name": "screen state",
             "category": "mobile_device_unavailable",
-            "reason": "CodeAutonomy detected the Android screen is off/not interactive from dumpsys power/window policy; turn the screen on and retry.",
+            "reason": "CodeMind detected the Android screen is off/not interactive from dumpsys power/window policy; turn the screen on and retry.",
         })
     elif not screen_on:
         warnings.append({
             "name": "screen state",
             "category": "mobile_device_state_unknown",
-            "reason": "CodeAutonomy could not prove the Android screen is on from dumpsys output; continuing unless UI execution proves otherwise.",
+            "reason": "CodeMind could not prove the Android screen is on from dumpsys output; continuing unless UI execution proves otherwise.",
         })
 
     focused_lines = "\n".join(focus_summary.values()).lower()
@@ -126,14 +126,14 @@ def diagnose_device_interactivity(power_text: str, window_policy_text: str, focu
         blockers.append({
             "name": "lockscreen focus",
             "category": "mobile_device_unavailable",
-            "reason": "CodeAutonomy detected lockscreen/keyguard as the focused UI from dumpsys window; unlock the device and retry.",
+            "reason": "CodeMind detected lockscreen/keyguard as the focused UI from dumpsys window; unlock the device and retry.",
             "focus": focus_summary,
         })
     elif any(marker in focused_lines for marker in notification_markers):
         warnings.append({
             "name": "system overlay focus",
             "category": "mobile_device_overlay",
-            "reason": "CodeAutonomy detected a focused SystemUI/notification surface; it can usually be cleared/retried automatically before app launch.",
+            "reason": "CodeMind detected a focused SystemUI/notification surface; it can usually be cleared/retried automatically before app launch.",
             "focus": focus_summary,
         })
     elif "statusbar" in focus_lower or "navigation_bar" in focus_lower:
@@ -168,8 +168,8 @@ def build_ask_user_question(failed: list[dict[str, Any]], warnings: list[dict[st
     text = "\n".join(f.get("name", "") + " " + f.get("reason", "") for f in failed + warnings).lower()
     if "adbutils" in text or "uiautomator2" in text or "tool" in text:
         return {
-            "question": "Android verification tools are still unavailable after CodeAutonomy tried local helper setup. What should happen next?",
-            "reason": "CodeAutonomy can auto-create .venv-android-tools for low-risk Python helper packages, but the required adbutils/uiautomator2 modules are still unavailable. This may require fixing network/proxy/Python/pip or using a lower-capability adb-only fallback.",
+            "question": "Android verification tools are still unavailable after CodeMind tried local helper setup. What should happen next?",
+            "reason": "CodeMind can auto-create .venv-android-tools for low-risk Python helper packages, but the required adbutils/uiautomator2 modules are still unavailable. This may require fixing network/proxy/Python/pip or using a lower-capability adb-only fallback.",
             "options": [
                 {"id": "A", "label": "I will fix Python/pip/network and retry setup.", "impact": "Keeps full Android probe-flow capability.", "requiresConfirmation": False},
                 {"id": "B", "label": "Use adb fallback.", "impact": "Lower capability, but installs no new packages.", "requiresConfirmation": False},
@@ -194,7 +194,7 @@ def build_ask_user_question(failed: list[dict[str, Any]], warnings: list[dict[st
         }
     if "screen is off" in text or "screen off" in text or "keyguard" in text or "lockscreen" in text or "locked" in text:
         return {
-            "question": "CodeAutonomy detected the Android device is not interactive for UI automation. Please unlock/turn on the device, then retry.",
+            "question": "CodeMind detected the Android device is not interactive for UI automation. Please unlock/turn on the device, then retry.",
             "reason": "The diagnosis came from adb/dumpsys evidence, not a guess. UI hierarchy/tap/assert requires an unlocked, screen-on foreground device.",
             "options": [
                 {"id": "A", "label": "I fixed the device state; retry now.", "impact": "Clear the device-state blocker and run the real UI proof.", "requiresConfirmation": False},
@@ -340,7 +340,7 @@ def main() -> int:
         failed.append({
             "name": "android tools auto setup",
             "category": "tool_missing",
-            "reason": "CodeAutonomy tried to create/repair .venv-android-tools from requirements/android-tools.txt, but required modules are still missing: " + ", ".join(missing_after_setup),
+            "reason": "CodeMind tried to create/repair .venv-android-tools from requirements/android-tools.txt, but required modules are still missing: " + ", ".join(missing_after_setup),
             "evidence": [
                 f"logs/iter-{args.iteration}/android-tools-auto-setup.log",
                 f"logs/iter-{args.iteration}/python-packages-after-setup.log",
@@ -371,7 +371,7 @@ def main() -> int:
     else:
         preflight_result = "blocked" if failed else "pass"
     # Preflight only proves device/tool readiness. For app/runtime tasks it must
-    # not finish the CodeAutonomy task or mark required TC proof as complete.
+    # not finish the CodeMind task or mark required TC proof as complete.
     result = "blocked" if preflight_result == "blocked" else "partial"
     summary = (
         "Android device preflight passed; proof flow or script-command testResults are still required"

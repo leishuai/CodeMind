@@ -73,8 +73,8 @@ def run_ios_tools_auto_setup(log_dir: Path) -> tuple[int, str, dict[str, Any]]:
 
 def build_ios_tools_ask(reason: str) -> dict[str, Any]:
     return {
-        "question": "Optional iOS screenshot helper tools are still unavailable after CodeAutonomy tried local helper setup. What should happen next?",
-        "reason": reason + " CodeAutonomy can auto-create .venv-ios-tools for low-risk Python helper packages, but pymobiledevice3 is still unavailable. This may require fixing network/proxy/Python/pip, or continuing without screenshot evidence.",
+        "question": "Optional iOS screenshot helper tools are still unavailable after CodeMind tried local helper setup. What should happen next?",
+        "reason": reason + " CodeMind can auto-create .venv-ios-tools for low-risk Python helper packages, but pymobiledevice3 is still unavailable. This may require fixing network/proxy/Python/pip, or continuing without screenshot evidence.",
         "options": [
             {"id": "A", "label": "I will fix Python/pip/network and retry setup.", "impact": "Keeps screenshot capability.", "requiresConfirmation": False},
             {"id": "B", "label": "Continue without screenshot.", "impact": "Uses devicectl process/display/log evidence only.", "requiresConfirmation": False},
@@ -305,7 +305,7 @@ def main() -> int:
         evaluation.setdefault("warnings", []).append({
             "name": "ios_app_smoke_screenshot_tools",
             "category": "tool_missing",
-            "reason": "CodeAutonomy tried to create/repair .venv-ios-tools from requirements/ios-tools.txt, but screenshot helper tools are still unavailable: " + screenshot.get("reason", "iOS screenshot helper tools missing"),
+            "reason": "CodeMind tried to create/repair .venv-ios-tools from requirements/ios-tools.txt, but screenshot helper tools are still unavailable: " + screenshot.get("reason", "iOS screenshot helper tools missing"),
             "setupCommand": screenshot.get("setupCommand", "automind setup-automation-tools ios"),
             "autoSetupAttempted": bool(screenshot.get("autoSetupAttempted")),
         })

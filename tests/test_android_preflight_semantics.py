@@ -160,6 +160,6 @@ def test_android_preflight_keyguard_focus_reports_deterministic_ask_user(monkeyp
     evaluation = json.loads((task_dir / "evaluation.json").read_text())
     assert evaluation["preflightResult"] == "blocked"
     assert evaluation["nextAction"] == "ask_user"
-    assert "CodeAutonomy detected" in evaluation["askUserQuestion"]["question"]
+    assert "CodeMind detected" in evaluation["askUserQuestion"]["question"]
     assert "Is it" not in evaluation["askUserQuestion"]["question"]
     assert evaluation["failedChecks"][0]["name"] == "lockscreen focus"

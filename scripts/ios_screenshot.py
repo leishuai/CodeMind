@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""iOS physical screenshot evaluator for CodeAutonomy.
+"""iOS physical screenshot evaluator for CodeMind.
 
 Primary backend: pymobiledevice3 developer dvt screenshot over an already running
 RSD/tunneld. Starting tunneld may require sudo, so this evaluator does not start
@@ -92,8 +92,8 @@ def run_ios_tools_auto_setup(iter_dir: pathlib.Path) -> tuple[int, str, dict[str
 
 def build_ios_tools_ask(reason: str) -> dict[str, Any]:
     return {
-        "question": "iOS screenshot helper tools are still unavailable after CodeAutonomy tried local helper setup. What should happen next?",
-        "reason": reason + " CodeAutonomy can auto-create .venv-ios-tools for low-risk Python helper packages, but pymobiledevice3 is still unavailable. This may require fixing network/proxy/Python/pip, or skipping physical screenshot evidence.",
+        "question": "iOS screenshot helper tools are still unavailable after CodeMind tried local helper setup. What should happen next?",
+        "reason": reason + " CodeMind can auto-create .venv-ios-tools for low-risk Python helper packages, but pymobiledevice3 is still unavailable. This may require fixing network/proxy/Python/pip, or skipping physical screenshot evidence.",
         "options": [
             {"id": "A", "label": "I will fix Python/pip/network and retry setup.", "impact": "Keeps physical screenshot capability.", "requiresConfirmation": False},
             {"id": "B", "label": "Skip physical-device screenshot.", "impact": "Continue with XCUITest/devicectl/log evidence if sufficient.", "requiresConfirmation": False},
@@ -110,7 +110,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Capture iOS physical screenshot")
     parser.add_argument("task_code")
     parser.add_argument("iteration", nargs="?", type=int, default=1)
-    parser.add_argument("--device-id", default=None, help="xcodebuild/traditional UDID for pymobiledevice3 --tunnel. If omitted, CodeAutonomy reads runtime-state iosApp/iosDevice fields.")
+    parser.add_argument("--device-id", default=None, help="xcodebuild/traditional UDID for pymobiledevice3 --tunnel. If omitted, CodeMind reads runtime-state iosApp/iosDevice fields.")
     parser.add_argument("--output", default=None)
     args = parser.parse_args()
 
@@ -168,7 +168,7 @@ def main() -> int:
             category = "mobile_device_unavailable"
             next_action = "ask_user"
             ask = {
-                "question": "Which iOS device id should CodeAutonomy use for screenshot capture?",
+                "question": "Which iOS device id should CodeMind use for screenshot capture?",
                 "reason": "The screenshot runner needs a traditional/xcodebuild UDID for pymobiledevice3 --tunnel, and no device id was provided or found in runtime-state.json.",
                 "options": [
                     {"id": "A", "label": "I will provide --device-id and retry.", "impact": "Continue screenshot capture with explicit device selection.", "requiresConfirmation": False},
@@ -182,7 +182,7 @@ def main() -> int:
             category = "permission_blocked"
             next_action = "ask_user"
             ask = {
-                "question": "Has pymobiledevice3 tunneld been started, or may CodeAutonomy temporarily start it with sudo?",
+                "question": "Has pymobiledevice3 tunneld been started, or may CodeMind temporarily start it with sudo?",
                 "reason": "iOS 17+/18 physical-device screenshots require RSD/tunneld. Without it, the developer screenshot service cannot be reached.",
                 "options": [
                     {"id": "A", "label": "I have manually started tunneld; retry screenshot.", "impact": "Continue automatic screenshot capture.", "requiresConfirmation": False},

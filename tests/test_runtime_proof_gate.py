@@ -49,7 +49,7 @@ def _write_runtime_task(
     required_label = "yes" if tc_required else "no"
     (task_dir / "TestCases.md").write_text(
         "# TestCases\n\n"
-        "| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n"
+        "| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n"
         "|----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|\n"
         f"| TC-F01 | R01 / AC-001 | Functional | {tc_runtime_level} | preflight ready | command: pytest | run command | logs/iter-1/evidence.txt exists and pass | none | {required_label} |\n"
     )
@@ -414,7 +414,7 @@ def _write_workflow_task(
     (task_dir / "TestCases.md").write_text(
         "# TestCases\n\n"
         "Quality coverage: not applicable for this runtime gate fixture.\n\n"
-        "| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeAutonomy command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n"
+        "| ID | Requirement/AC | Type | Runtime level | Preconditions / tools | Command / CodeMind command | Steps / verification method | Expected evidence/result | Dependency | Required? |\n"
         "|----|----------------|------|---------------|-----------------------|--------------------------|-----------------------------|--------------------------|------------|-----------|\n"
         "| TC-F01 | R01 / AC-001 | Functional | runtime | preflight | command: pytest | run command -> assert pass | logs/iter-1/evidence.txt | none | yes |\n"
     )

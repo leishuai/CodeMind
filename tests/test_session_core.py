@@ -128,7 +128,7 @@ def test_latest_answer_prompt_context_and_delivery(tmp_path: Path) -> None:
     task_dir = _write_workflow_task(tmp_path, verification_target="real_device")
     apply_user_answer(task_dir, answer_text="继续按Home方案", selected_option="confirm", answered_by="test")
     context = latest_answer_prompt_context(task_dir)
-    assert "Latest CodeAutonomy user answer" in context
+    assert "Latest CodeMind user answer" in context
     assert "继续按Home方案" in context
     mark_latest_answer_delivered(task_dir, mode="generator_prompt")
     answers = read_answers(task_dir)
@@ -192,7 +192,7 @@ def test_user_message_context_delivery(tmp_path: Path) -> None:
     message = append_user_message(task_dir, "请优先复用项目里的验证脚本", source="test")
     context = pending_user_messages_prompt_context(task_dir)
     assert message["delivery"]["status"] == "pending"
-    assert "CodeAutonomy user messages" in context
+    assert "CodeMind user messages" in context
     assert "请优先复用" in context
     mark_pending_user_messages_delivered(task_dir, mode="planner_prompt")
     assert read_user_messages(task_dir)[-1]["delivery"]["status"] == "delivered"
@@ -353,7 +353,7 @@ def test_cmd_help_includes_update_command(capsys) -> None:
     out = capsys.readouterr().out
 
     assert "update" in out
-    assert "Update CodeAutonomy runtime" in out
+    assert "Update CodeMind runtime" in out
 
 
 def test_cmd_update_prefers_install_curl_bootstrap(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -375,7 +375,7 @@ def test_cmd_update_prefers_install_curl_bootstrap(tmp_path: Path, monkeypatch, 
     assert calls
     assert calls[0][0] == ["bash", str(bootstrap)]
     assert calls[0][1]["env"]["AUTOMIND_UPDATE"] == "1"
-    assert "CodeAutonomy update complete" in out
+    assert "CodeMind update complete" in out
 
 
 def test_cmd_update_falls_back_to_local_install_without_bootstrap(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -396,7 +396,7 @@ def test_cmd_update_falls_back_to_local_install_without_bootstrap(tmp_path: Path
     assert calls[0][0] == ["bash", str(installer)]
     assert calls[0][1]["cwd"] == str(runtime)
     assert "without fetching remote updates" in captured.out
-    assert "CodeAutonomy local refresh complete" in captured.out
+    assert "CodeMind local refresh complete" in captured.out
 
 
 def test_cmd_update_git_free_runtime_sets_current_automind_home(tmp_path: Path, monkeypatch) -> None:
@@ -407,7 +407,7 @@ def test_cmd_update_git_free_runtime_sets_current_automind_home(tmp_path: Path, 
     bootstrap = runtime / "install-curl.sh"
     bootstrap.write_text("#!/usr/bin/env bash\n")
     (runtime / ".git").write_text(
-        "CodeAutonomy runtime install is intentionally not a Git checkout.\n",
+        "CodeMind runtime install is intentionally not a Git checkout.\n",
         encoding="utf-8",
     )
     calls = []
@@ -420,6 +420,16 @@ def test_cmd_update_git_free_runtime_sets_current_automind_home(tmp_path: Path, 
     assert calls
     assert calls[0][0] == ["bash", str(bootstrap)]
     assert calls[0][1]["env"]["AUTOMIND_HOME"] == str(runtime)
+
+
+def test_cmd_update_recognizes_legacy_automind_git_guard(tmp_path: Path) -> None:
+    from orchestrator.main import _is_git_free_runtime_install
+
+    (tmp_path / ".git").write_text(
+        "AutoMind runtime install is intentionally not a Git checkout.\n",
+        encoding="utf-8",
+    )
+    assert _is_git_free_runtime_install(tmp_path) is True
 
 
 def test_cmd_update_source_checkout_does_not_bind_automind_home_to_source(tmp_path: Path, monkeypatch) -> None:
@@ -468,6 +478,50 @@ def test_cmd_message_hidden_tui_chat_reuses_cached_agent(tmp_path: Path, monkeyp
     assert "codex>" in out
     assert "You're welcome!" in out
     assert called == {"agent": "codex", "quiet": True}
+
+
+def test_cmd_classify_is_stateless_and_never_pollutes_chat(tmp_path: Path, monkeypatch, capsys) -> None:
+    """classify must not append_user_message and must run a fresh classify phase."""
+    import orchestrator.commands.session as session_cmd
+
+    task_code = "__classify_chat__"
+    task_dir = tmp_path / task_code
+    task_dir.mkdir(parents=True)
+    # A resident chat session with a persistent primary session: classify must
+    # NOT touch it (no append_user_message, no primary session resume/record).
+    write_runtime_state(task_dir, {
+        "taskId": task_code,
+        "status": "chat",
+        "agentSessions": {"primary": {"agent": "codex", "sessionId": "sess-keep"}},
+    })
+    monkeypatch.setattr(session_cmd, "get_task_dir", lambda code: task_dir)
+
+    def _fail_append(*_args, **_kwargs):
+        raise AssertionError("classify must not append_user_message (S_chat pollution)")
+
+    monkeypatch.setattr(session_cmd, "append_user_message", _fail_append)
+
+    called = {}
+
+    def fake_run_agent(mode, agent, prompt, agent_task_dir, phase="generic", quiet=False):
+        called.update({"mode": mode, "agent": agent, "prompt": prompt, "phase": phase, "quiet": quiet})
+        return 0, '{"intent":"develop"}'
+
+    monkeypatch.setattr(session_cmd, "run_agent", fake_run_agent)
+
+    session_cmd.cmd_classify(task_code, ["--text", "帮我做登录", "--agent", "auto"])
+    out = capsys.readouterr().out
+    assert '{"intent":"develop"}' in out
+    assert called == {
+        "mode": "cli",
+        "agent": "auto",
+        "prompt": "帮我做登录",
+        "phase": "classify",
+        "quiet": True,
+    }
+    # The persistent primary session must be left untouched.
+    state = read_runtime_state(task_dir) or {}
+    assert state["agentSessions"]["primary"]["sessionId"] == "sess-keep"
 
 
 def test_tui_owned_loop_heartbeat_status_uses_replace_key(tmp_path: Path, monkeypatch) -> None:
@@ -581,7 +635,7 @@ def test_tui_owned_loop_prints_welcome_logo(tmp_path: Path, capsys) -> None:
 
     assert LOGO.splitlines()[0] in out
     assert automind_version_label() in out
-    assert "TUI-owned CodeAutonomy session" in out
+    assert "TUI-owned CodeMind session" in out
     assert out.count(automind_version_label()) == 1
 
 
@@ -710,12 +764,12 @@ def test_tui_snapshot_formats_agent_grep_line_numbers(tmp_path: Path) -> None:
     from orchestrator.tui.app import render_tui_snapshot
 
     task_dir = _write_workflow_task(tmp_path, verification_target="real_device")
-    append_event(task_dir, "agent_output", "13:- CodeAutonomy release readiness entry", phase="planner", source="codex")
+    append_event(task_dir, "agent_output", "13:- CodeMind release readiness entry", phase="planner", source="codex")
 
     out = render_tui_snapshot("task01", task_dir, show_logo=False)
 
     assert "L13" in out
-    assert "CodeAutonomy release readiness entry" in out
+    assert "CodeMind release readiness entry" in out
 
 
 def test_render_timeline_events_only_replaces_heartbeat(tmp_path: Path) -> None:
@@ -890,7 +944,7 @@ def test_pre_implementation_ask_question_bundles_direction_risk_and_device() -> 
         [
             "Please confirm the Brainstorm/Spec direction before implementation: goal and scope.",
             "Confirm the concrete success criteria and verification evidence before implementation.",
-            "Real-device-first policy: CodeAutonomy detected connected physical device(s): ANDROID HRY.",
+            "Real-device-first policy: CodeMind detected connected physical device(s): ANDROID HRY.",
         ],
         {"reason": "Non-trivial implementation and device target need confirmation.", "approvalScope": "scope/risks/verification"},
     )
@@ -1153,7 +1207,7 @@ def test_tui_snapshot_shows_effective_next_and_running_status(tmp_path: Path, mo
     assert "Phase next:" in out
     assert "Effective next:" in out
     assert "workflow-check blocker" in out
-    assert "Input disabled: CodeAutonomy is running." in out
+    assert "Input disabled: CodeMind is running." in out
     assert "Last heartbeat:" in out
     assert "Last event:" in out
     assert "quiet for several minutes" in out
@@ -1249,7 +1303,7 @@ def test_tui_input_wraps_ansi_prompt_for_readline_width(monkeypatch) -> None:
 
     prompts = []
     long_text = "ask long input that should keep readline prompt width stable"
-    ansi_prompt = f"\033[1m{BLUE}automind> \033[0m"
+    ansi_prompt = f"\033[1m{BLUE}codemind> \033[0m"
     monkeypatch.setattr(builtins, "input", lambda prompt="": prompts.append(prompt) or long_text)
     monkeypatch.setattr(tui_input_mod, "enable_line_editing", lambda: True)
 
@@ -1268,7 +1322,7 @@ def test_command_shell_uses_tui_input(monkeypatch) -> None:
     monkeypatch.setattr(shell_mod, "tui_input", lambda prompt="": prompts.append(prompt) or next(values))
 
     assert shell_mod.run_command_shell() == 0
-    assert prompts and "automind" in prompts[0]
+    assert prompts and "codemind" in prompts[0]
 
 
 def test_tui_terminal_input_preserves_bracketed_multiline_paste() -> None:
@@ -1290,7 +1344,7 @@ def test_tui_terminal_input_preserves_bracketed_multiline_paste() -> None:
         from pathlib import Path
         sys.path.insert(0, {str(Path.cwd())!r})
         from orchestrator.tui.input import _terminal_input
-        value = _terminal_input('automind> ')
+        value = _terminal_input('codemind> ')
         Path({str(result_path)!r}).write_text(json.dumps({{'value': value}}))
     """)
     proc = subprocess.Popen([sys.executable, '-c', code], stdin=slave, stdout=slave, stderr=slave, close_fds=True)
@@ -1300,11 +1354,11 @@ def test_tui_terminal_input_preserves_bracketed_multiline_paste() -> None:
         for _ in range(30):
             if select.select([master], [], [], 0.05)[0]:
                 initial += os.read(master, 4096)
-                if b'automind> ' in initial:
+                if b'codemind> ' in initial:
                     break
             if proc.poll() is not None:
                 break
-        assert b'automind> ' in initial, initial
+        assert b'codemind> ' in initial, initial
         os.write(master, b'\x1b[200~first line\nsecond line\x1b[201~')
         rendered = b''
         for _ in range(20):
@@ -1355,7 +1409,7 @@ def test_tui_terminal_input_long_paste_stays_single_line_preview() -> None:
         sys.path.insert(0, {str(Path.cwd())!r})
         import orchestrator.tui.input as input_mod
         input_mod.shutil.get_terminal_size = lambda fallback=(80, 20): shutil.os.terminal_size((40, 20))
-        value = input_mod._terminal_input('automind> ')
+        value = input_mod._terminal_input('codemind> ')
         Path({str(result_path)!r}).write_text(json.dumps({{'value': value}}))
     """)
     proc = subprocess.Popen([sys.executable, '-c', code], stdin=slave, stdout=slave, stderr=slave, close_fds=True)
@@ -1366,11 +1420,11 @@ def test_tui_terminal_input_long_paste_stays_single_line_preview() -> None:
         for _ in range(30):
             if select.select([master], [], [], 0.05)[0]:
                 initial += os.read(master, 4096)
-                if b'automind> ' in initial:
+                if b'codemind> ' in initial:
                     break
             if proc.poll() is not None:
                 break
-        assert b'automind> ' in initial, initial
+        assert b'codemind> ' in initial, initial
         os.write(master, b'\x1b[200~' + pasted.encode() + b'\x1b[201~')
         rendered = b''
         for _ in range(20):
@@ -1379,7 +1433,7 @@ def test_tui_terminal_input_long_paste_stays_single_line_preview() -> None:
                 if b'\xe2\x80\xa6' in rendered or b'line 11' in rendered:
                     break
         # The preview must not redraw by printing many physical wrapped prompt rows.
-        assert rendered.count(b'automind> ') <= 1, rendered
+        assert rendered.count(b'codemind> ') <= 1, rendered
         os.write(master, b'\r')
         for _ in range(60):
             if proc.poll() is not None:
@@ -1800,7 +1854,7 @@ def test_tui_hides_agent_output_when_waiting_for_human_answer(tmp_path: Path, mo
 
     out = app.render_tui_snapshot("task01", task_dir, show_logo=False)
 
-    assert "Input enabled: CodeAutonomy needs user input." in out
+    assert "Input enabled: CodeMind needs user input." in out
     assert "Retry environment?" in out
     assert "stale codex project analysis" not in out
     assert "agent output lines hidden" in out
@@ -2427,7 +2481,7 @@ def test_genuine_signing_ask_user_still_allowed() -> None:
         "nextAction": "ask_user",
         "askUserQuestion": {
             "category": "real_device_or_signing",
-            "question": "No valid signing identity found. Which signing path should CodeAutonomy use?",
+            "question": "No valid signing identity found. Which signing path should CodeMind use?",
             "reason": "Code signing failed: errSecInternalComponent.",
             "options": [{"id": "configure", "label": "Configure signing"}],
         },
@@ -2478,7 +2532,7 @@ def test_genuine_device_gate_ask_user_still_allowed() -> None:
         "nextAction": "ask_user",
         "askUserQuestion": {
             "category": "real_device_or_signing",
-            "question": "No device in state=device — CodeAutonomy cannot operate the phone until you unlock it and approve the USB debugging trust prompt.",
+            "question": "No device in state=device — CodeMind cannot operate the phone until you unlock it and approve the USB debugging trust prompt.",
             "reason": "adb devices shows no device; trust prompt unresolved.",
             "options": [{"id": "connect", "label": "Connect and trust"}],
         },
@@ -2515,7 +2569,7 @@ def test_completion_gate_rewrites_long_running_ask_user_to_retry() -> None:
 
 def test_temporary_unblock_patch_ask_user_is_rejected() -> None:
     """Authorizing a temporary verification-unblock code/script/wrapper patch is
-    CodeAutonomy's own job and must not pause the loop."""
+    CodeMind's own job and must not pause the loop."""
     from orchestrator.completion import validate_ask_user_category
 
     evaluation = {
@@ -2567,7 +2621,7 @@ def test_destructive_patch_ask_user_still_allowed() -> None:
 
 def test_signing_temp_patch_is_auto_handled_not_paused() -> None:
     """Signing/certificate/keychain-for-signing is NOT a sensitive guard:
-    CodeAutonomy may re-sign with the user's own certs / automatic signing, so a
+    CodeMind may re-sign with the user's own certs / automatic signing, so a
     temporary signing patch is auto-handled (rewritten back to retry) rather than
     paused."""
     from orchestrator.completion import validate_ask_user_category
@@ -2587,7 +2641,7 @@ def test_signing_temp_patch_is_auto_handled_not_paused() -> None:
 
 def test_compatible_runner_runtime_proof_ask_user_is_rejected() -> None:
     """A local reversible compatible/external runner unblock for runtime proof
-    is CodeAutonomy's own job and must not ask_user."""
+    is CodeMind's own job and must not ask_user."""
     from orchestrator.completion import validate_ask_user_category
 
     evaluation = {
@@ -2667,7 +2721,7 @@ def test_completion_gate_keeps_legitimate_ask_user_despite_boundary_violation() 
             "nextAction": "ask_user",
             "askUserQuestion": {
                 "category": "real_device_or_signing",
-                "question": "No valid signing identity found. Which signing path should CodeAutonomy use?",
+                "question": "No valid signing identity found. Which signing path should CodeMind use?",
                 "reason": "Code signing failed: errSecInternalComponent.",
                 "options": [{"id": "configure", "label": "Configure signing"}],
             },
@@ -2711,7 +2765,7 @@ def test_completion_gate_boundary_violation_clears_pending_when_rewriting() -> N
 
 
 def test_risk_tier_safe_self_service_ask_user_is_rejected() -> None:
-    """When the model self-assesses riskTier=safe_self_service, CodeAutonomy trusts it
+    """When the model self-assesses riskTier=safe_self_service, CodeMind trusts it
     and rejects the pause regardless of wording."""
     from orchestrator.completion import validate_ask_user_category
 
